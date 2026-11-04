@@ -1,31 +1,25 @@
-**Ludora - the Client for all Game Clients** · Release 0.5.0
+**Ludora - the Client for all Game Clients** · Release 0.6.0
 
 ### What's new
-- **Updates with one click:** when a new release is out, a green download icon appears at the top right next to your name – click it and Ludora downloads, installs and restarts (Windows, macOS and Linux). From this version on, you never need to download installers manually again.
-- **Chat with Riot and Epic friends** right in Ludora – same chat window and notifications as for Steam (Riot via the running Riot Client; Epic live, history is saved by Ludora from now on)
-- **Friends lists update in real time**
-  - Epic: connection no longer drops silently, statuses don't freeze anymore
-  - Riot: matches the Riot Client – mobile-only friends count as offline, the Riot Client itself isn't shown as a game, VALORANT shows mode and score
-  - GOG: correct online state, new friends appear automatically
-  - Steam: live connection is restored automatically
-  - Ludora friends: you appear offline immediately when you quit Ludora
-  - Every tab shows when it was last updated
-- **Ludora account:** linking finds the verification function even if it was renamed; Steam links show your display name
+- **Ludora remembers your sign-ins:** Steam, Epic, GOG and your Ludora account stay signed in across restarts – no more signing in again after a short network hiccup; Ludora just retries.
+- **Sign in once, everywhere:** with a Ludora account, your Steam, Epic and GOG sign-ins come along to your other PCs and laptops – **end-to-end encrypted** with a key derived from your Ludora password (the server can't read them). Sign in to Ludora on a new device and you're signed in to the launchers too.
+- Server owners: run the new `supabase/04_vault.sql` once in the Supabase SQL Editor.
+- After updating, sign out of your Ludora account and back in once so sync can be turned on.
 
 ### Downloads
 | System | File |
 |---|---|
-| Windows 10/11 | `Ludora-Setup-0.5.0.exe` |
-| macOS (Apple Silicon M1–M4) | `Ludora-0.5.0-arm64.dmg` (or `.zip`) |
-| macOS (Intel) | `Ludora-0.5.0-x64.dmg` (or `.zip`) |
-| Linux (any distribution) | `Ludora-0.5.0-x86_64.AppImage` |
-| Debian / Ubuntu | `Ludora-0.5.0-amd64.deb` |
+| Windows 10/11 | `Ludora-Setup-0.6.0.exe` |
+| macOS (Apple Silicon M1–M4) | `Ludora-0.6.0-arm64.dmg` (or `.zip`) |
+| macOS (Intel) | `Ludora-0.6.0-x64.dmg` (or `.zip`) |
+| Linux (any distribution) | `Ludora-0.6.0-x86_64.AppImage` |
+| Debian / Ubuntu | `Ludora-0.6.0-amd64.deb` |
 
 The files are not code-signed: on Windows click **More info → Run anyway**, on macOS **right-click → Open** on the first start.
 [Installation](https://github.com/MaxiMagDich93/ludora#installation) · [Anleitung auf Deutsch](https://github.com/MaxiMagDich93/ludora/blob/main/README.de.md#installation)
 
 ---
 
-**Deutsch:** Neue Versionen installierst du ab jetzt mit einem Klick auf das grüne Download-Symbol oben rechts. Chat mit Riot- und Epic-Freunden direkt in Ludora, Freundeslisten aktualisieren sich in Echtzeit (Epic, Riot, GOG, Steam, Ludora), Verknüpfen des Ludora-Kontos repariert.
+**Deutsch:** Ludora merkt sich deine Anmeldungen bei Steam, Epic, GOG und Ludora dauerhaft und versucht es bei Netzwerkproblemen selbst erneut. Mit Ludora-Konto kommen die Anmeldungen Ende-zu-Ende-verschlüsselt auf deine anderen Geräte mit – einmal bei Ludora anmelden, überall drin. Nach dem Update einmal vom Ludora-Konto ab- und wieder anmelden. Server: `supabase/04_vault.sql` im SQL Editor ausführen.
 
 Ludora is not affiliated with Valve, Epic Games, GOG, EA, Ubisoft, Blizzard, Riot Games, Rockstar Games or Amazon.
