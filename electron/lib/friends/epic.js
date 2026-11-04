@@ -169,14 +169,30 @@ function stopXmpp() {
   ws = null;
 }
 
+/** <presence …/> und <presence …>…</presence> aus einer Nachricht lösen (Kind-Elemente wie <delay/> beachten) */
+function splitPresences(msg) {
+  const out = [];
+  const re = /<presence\b[^>]*?(\/?)>/g;
+  let m;
+  while ((m = re.exec(msg))) {
+    if (m[1] === '/') { out.push(m[0]); continue; }
+    const end = msg.indexOf('</presence>', re.lastIndex);
+    if (end < 0) { out.push(m[0]); continue; }
+    out.push(msg.slice(m.index, end + 11));
+    re.lastIndex = end + 11;
+  }
+  return out;
+}
+
 /** Eine Presence-Nachricht auswerten (für Tests getrennt) */
 function handlePresence(xml) {
-  const from = xml.match(/from="([^"]+)"/)?.[1];
+  const head = xml.match(/^<presence\b[^>]*>/)?.[0] || xml;
+  const from = head.match(/from=["']([^"']+)["']/)?.[1];
   if (!from) return false;
   const [bare, resource = ''] = from.split('/');
   const id = bare.split('@')[0];
   if (!id || id === auth?.account_id) return false;
-  const type = xml.match(/type="([^"]+)"/)?.[1];
+  const type = head.match(/type=["']([^"']+)["']/)?.[1];
   const map = presence.get(id) || new Map();
   if (type === 'unavailable') map.delete(resource);
   else {
@@ -223,11 +239,17 @@ function startXmpp(my) {
       // Eigener Status "Abwesend" – nötig, damit Epic die Status der Freunde schickt
       const status = escapeXml(JSON.stringify({ Status: '', bIsPlaying: false, bIsJoinable: false, bHasVoiceSupport: false, SessionId: '', Properties: {} }));
       send(`<presence><show>away</show><status>${status}</status></presence>`);
-      pingTimer = setInterval(() => send(`<iq type="get" id="ping${Date.now()}"><ping xmlns="urn:xmpp:ping"/></iq>`), 60000);
+      pingTimer = setInterval(() => { send(`<iq type="get" id="ping${Date.now()}"><ping xmlns="urn:xmpp:ping"/></iq>`); publish(); }, 45000);
     } else if (step === 'ready') {
+      // Ping vom Server beantworten – sonst trennt Epic nach ein paar Minuten und Status bleiben stehen
+      for (const ping of msg.match(/<iq[^>]*type=["']get["'][^>]*>\s*<ping[^>]*\/>\s*<\/iq>/g) || []) {
+        const id = ping.match(/id=["']([^"']+)["']/)?.[1];
+        const from = ping.match(/from=["']([^"']+)["']/)?.[1];
+        send(`<iq type="result"${id ? ` id="${escapeXml(id)}"` : ''}${from ? ` to="${escapeXml(from)}"` : ''}/>`);
+      }
       // Eine Nachricht kann mehrere <presence> enthalten
       let changed = false;
-      for (const m of msg.match(/<presence[\s\S]*?(?:\/>|<\/presence>)/g) || []) changed = handlePresence(m) || changed;
+      for (const m of splitPresences(msg)) changed = handlePresence(m) || changed;
       if (changed) schedulePublish();
     }
   });
@@ -235,7 +257,9 @@ function startXmpp(my) {
     if (my !== gen || ws !== sock) return;
     ws = null;
     clearInterval(pingTimer);
-    setTimeout(() => { if (my === gen && auth) ensureToken().then(() => startXmpp(my)).catch(() => {}); }, 15000);
+    presence.clear(); // nach dem Neuverbinden schickt Epic die aktuellen Status neu
+    schedulePublish();
+    setTimeout(() => { if (my === gen && auth) ensureToken().then(() => startXmpp(my)).catch(() => {}); }, 5000);
   };
   sock.addEventListener('close', reconnect);
   sock.addEventListener('error', () => { try { sock.close(); } catch { /* egal */ } });
@@ -280,6 +304,7 @@ function init() {
 }
 
 module.exports = {
+  _splitPresences: splitPresences,
   id: 'epic',
   async getLinkProof() { if (!auth) return null; const a = await ensureToken(); return { token: a.access_token, accountId: a.account_id }; },
   name: 'Epic Games',

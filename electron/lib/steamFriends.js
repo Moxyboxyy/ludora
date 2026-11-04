@@ -39,7 +39,7 @@ let chatTimer = null;
 let fastPoll = false;
 
 function emit(patch) {
-  state = { ...state, ...patch };
+  state = { ...state, ...patch, ...(patch.friends ? { updatedAt: Date.now() } : {}) };
   for (const l of listeners) { try { l(state); } catch { /* egal */ } }
 }
 function emitChat(ev) {
@@ -206,6 +206,7 @@ async function resolveGameNames(appids) {
 
 const STATE_NAMES = { 0: 'offline', 1: 'online', 2: 'busy', 3: 'away', 4: 'snooze', 5: 'online', 6: 'online', 7: 'offline' };
 
+let lastChatTry = 0;
 function stopPoll() { clearTimeout(pollTimer); pollTimer = null; }
 function schedulePoll(ms) { stopPoll(); pollTimer = setTimeout(poll, ms); }
 
@@ -239,6 +240,12 @@ async function poll() {
       await checkMessages(my);
       scheduleLive(0);
       return;
+    }
+    // Keine Live-Verbindung (z. B. beim Start fehlgeschlagen)? Alle 2 Minuten neu versuchen –
+    // bis dahin kommt der Status über die Web-API.
+    if (!chatUser && !chatReady && Date.now() - lastChatTry > 120000) {
+      lastChatTry = Date.now();
+      ensureChat().then(() => scheduleLive(1500)).catch(() => {});
     }
     const ids = await loadFriendIds();
     const details = ids.length ? await loadDetails(ids) : new Map();
@@ -281,7 +288,7 @@ async function poll() {
   } catch (err) {
     if (my === gen) emit({ error: t("Freunde konnten nicht geladen werden: {0}", [err.message]) });
   } finally {
-    if (my === gen && state.status === 'connected') schedulePoll(fastPoll ? 8000 : 20000);
+    if (my === gen && state.status === 'connected') schedulePoll(fastPoll ? 5000 : 15000);
   }
 }
 
@@ -466,7 +473,8 @@ function ensureChat() {
       chatReady = null;
       if (my === gen && state.status === 'connected') {
         clearTimeout(chatRetry);
-        chatRetry = setTimeout(() => ensureChat().catch(() => {}), 30000);
+        chatRetry = setTimeout(() => ensureChat().then(() => scheduleLive(1500)).catch(() => {}), 10000);
+        schedulePoll(500); // bis dahin über die Web-API
       }
     };
     u.on('disconnected', lost);

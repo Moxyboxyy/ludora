@@ -71,8 +71,17 @@ async function logout() {
 }
 
 /** Freunde + Online-Liste -> einheitliches Format (für Tests getrennt) */
+// presence.gog.com liefert pro Nutzer einen Eintrag; ob online, steht (je nach Version) in presence/status/state
+const OFFLINE = /^(offline|invisible|unavailable)$/i;
+function isOnline(x) {
+  const v = x.presence ?? x.status ?? x.state ?? x.online;
+  if (v === undefined || v === null) return true; // nur online Nutzer gelistet
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'object') return !OFFLINE.test(String(v.status || v.presence || v.state || 'online'));
+  return !OFFLINE.test(String(v));
+}
 function merge(items, online) {
-  const on = new Set((online || []).map((x) => String(x.user_id)));
+  const on = new Set((online || []).filter(isOnline).map((x) => String(x.user_id ?? x.userId ?? x.id)));
   return (items || []).map((f) => ({
     id: String(f.user_id),
     name: f.username || String(f.user_id),
@@ -90,7 +99,9 @@ async function poll(loadList = false) {
   try {
     const a = await ensureToken();
     const h = { authorization: `Bearer ${a.access_token}` };
-    if (loadList || !friends.length) {
+    // Freundesliste selbst alle 10 Minuten neu (neue Freunde), Status bei jedem Durchlauf
+    if (loadList || !friends.length || Date.now() - (poll.listAt || 0) > 600000) {
+      poll.listAt = Date.now();
       friends = (await getJson(`https://chat.gog.com/users/${a.user_id}/friends`, { headers: h })).items || [];
     }
     let online = [];
@@ -109,7 +120,7 @@ async function poll(loadList = false) {
     }
     store.set({ status: 'error', error: `GOG: ${err.message}` });
   } finally {
-    if (my === gen && auth) timer = setTimeout(() => poll(false), fast ? 10000 : 30000);
+    if (my === gen && auth) timer = setTimeout(() => poll(false), fast ? 5000 : 15000);
   }
 }
 

@@ -61,6 +61,15 @@ function fromOther(launcher, f) {
   return { ...f, key: `${launcher}:${f.id}`, launcher, name: f.tag ? `${f.name}#${f.tag}` : f.name, shortName: f.name };
 }
 
+/** "Aktualisiert vor 3 s" – zeigt, wie frisch die Liste ist */
+function Freshness({ at, label }) {
+  const [, setTick] = useState(0);
+  useEffect(() => { const timer = setInterval(() => setTick((x) => x + 1), 1000); return () => clearInterval(timer); }, []);
+  const sec = at ? Math.max(0, Math.round((Date.now() - at) / 1000)) : null;
+  const age = sec === null ? '' : sec < 60 ? t("vor {0} s", [sec]) : t("vor {0} Min.", [Math.round(sec / 60)]);
+  return <span className={`muted small freshness ${sec !== null && sec > 90 ? 'stale' : ''}`}>{label}{age ? ` · ${t("aktualisiert {0}", [age])}` : ''}</span>;
+}
+
 export default function FriendsPanel({ open, onClose, games, onLaunchGame, notify, onOnlineCount, providerById = {}, hubRequest = 0 }) {
   const [steam, setSteam] = useState({ status: 'disconnected', friends: [] });
   const [others, setOthers] = useState({});
@@ -543,16 +552,17 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
             </div>
             <footer className="friends-foot">
               {tab === 'steam' && <>
+                <Freshness at={steam.updatedAt} label={steam.live ? t("Live über Steam") : t("Alle 5 s über die Steam-Web-API")} />
                 <button className="link" onClick={() => api.friends.action(steam.friends[0]?.steamid || '00000000000000000', 'friendsWindow')}>{t("Steam-Freundesfenster")}</button>
                 <button className="link" onClick={() => api.friends.logout().then(() => api.friends.get().then(setSteam))}>{t("Abmelden")}</button>
               </>}
               {(tab === 'epic' || tab === 'gog') && <>
-                <span className="muted small">{tab === 'epic' ? t("Status live über Epic") : t("Status alle 30 s von GOG")}</span>
+                <Freshness at={others[tab]?.updatedAt} label={tab === 'epic' ? t("Live über Epic") : t("Alle 5 s von GOG")} />
                 <button className="link" onClick={() => api.friends2.logout(tab)}>{t("Abmelden")}</button>
               </>}
-              {tab === 'riot' && <span className="muted small">{t("Direkt vom Riot Client auf deinem PC")}</span>}
+              {tab === 'riot' && <Freshness at={others.riot?.updatedAt} label={t("Live vom Riot Client auf deinem PC")} />}
               {tab === 'all' && <span className="muted small">{t("Rechtsklick auf einen Freund → „Zu Person hinzufügen“")}</span>}
-              {tab === 'hub' && <span className="muted small">{t("Status alle 30 s · Online = Ludora ist offen")}</span>}
+              {tab === 'hub' && <Freshness at={hub.updatedAt} label={t("Online = Ludora ist offen")} />}
             </footer>
           </>
         )}

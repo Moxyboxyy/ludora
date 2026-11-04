@@ -59,3 +59,22 @@ test('Personen: ungültige Einträge raus, ein Konto nur einmal', () => {
   assert.deepStrictEqual(out[1].members, [{ launcher: 'gog', id: '5' }]);
   assert.match(out[0].id, /^[a-f0-9]{16}$/);
 });
+
+test('Epic: Presences mit Kind-Elementen sauber trennen, Attribute nur vom presence-Element', () => {
+  const epic = require('../electron/lib/friends/epic');
+  const msg = '<presence from="a1@prod.ol.epicgames.com/V2:Fortnite:WIN::X" to="me@x"><show>away</show><delay xmlns="urn:xmpp:delay" stamp="2026"/><status>{"Status":"Lobby"}</status></presence>'
+    + '<presence type="unavailable" from="b2@prod.ol.epicgames.com/V2:launcher:WIN::Y"/>';
+  const parts = epic._splitPresences(msg);
+  assert.strictEqual(parts.length, 2);
+  assert.ok(parts[0].includes('<status>'), 'Status hinter <delay/> bleibt erhalten');
+  assert.ok(parts[1].includes('unavailable'));
+});
+
+test('GOG: Status-Einträge mit "offline" zählen nicht als online', () => {
+  const gog = require('../electron/lib/friends/gog');
+  const list = gog._merge(
+    [{ user_id: 1, username: 'A' }, { user_id: 2, username: 'B' }, { user_id: 3, username: 'C' }],
+    [{ user_id: '1', presence: 'online' }, { user_id: '2', presence: 'offline' }, { user_id: 3 }]
+  );
+  assert.deepStrictEqual(list.map((f) => f.state), ['online', 'offline', 'online']);
+});

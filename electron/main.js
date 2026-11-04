@@ -962,7 +962,7 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('friends2:logout', async (_e, id) => { await otherFriends[id]?.logout?.(); return { ok: true }; });
   ipcMain.handle('friends2:refresh', (_e, id) => { otherFriends[id]?.refresh?.(); return { ok: true }; });
-  ipcMain.handle('friends2:fast', (_e, on) => { for (const m of Object.values(otherFriends)) m.setFast?.(on); });
+  ipcMain.handle('friends2:fast', (_e, on) => { for (const m of Object.values(otherFriends)) m.setFast?.(on); hub.setFast(on); });
   // Riot Client unsichtbar starten (die Riot-Freundesliste braucht den laufenden Client)
   ipcMain.handle('friends2:startRiot', async () => {
     const p = providers.find((x) => x.id === 'riot');
@@ -1306,7 +1306,19 @@ app.whenReady().then(() => {
   });
 });
 
-app.on('before-quit', () => { isQuitting = true; hide.stopAll(); tray.destroy(); });
+let offlineSent = false;
+app.on('before-quit', (e) => {
+  isQuitting = true;
+  hide.stopAll();
+  tray.destroy();
+  // Ludora-Freunden sofort "offline" melden (höchstens 1,5 s warten)
+  const hubAcc = require('./lib/hubAccount');
+  if (!offlineSent && hubAcc.isSignedIn()) {
+    e.preventDefault();
+    offlineSent = true;
+    Promise.race([hubAcc.goOffline(), new Promise((r) => setTimeout(r, 1500))]).finally(() => app.quit());
+  }
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

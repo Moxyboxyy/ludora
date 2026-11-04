@@ -204,7 +204,7 @@ async function loadFriends() {
     username: r.username,
     displayName: r.display_name || r.username,
     relation: r.relation,
-    online: !!(r.last_seen && now - new Date(r.last_seen).getTime() < 150000),
+    online: !!(r.last_seen && now - new Date(r.last_seen).getTime() < 75000), // Herzschlag alle 30 s
     lastSeen: r.last_seen ? new Date(r.last_seen).getTime() : null,
     accounts: Array.isArray(r.accounts) ? r.accounts : []
   }));
@@ -227,12 +227,34 @@ function startLoops() {
   stopLoops();
   const beat = () => request('/rest/v1/rpc/heartbeat', { method: 'POST', body: {} }).catch(() => {});
   beat();
-  beatTimer = setInterval(beat, 60000);
+  beatTimer = setInterval(beat, 30000);
   beatTimer.unref?.();
   refreshFriends();
-  friendsTimer = setInterval(refreshFriends, 30000);
+  friendsTimer = setInterval(refreshFriends, fastFriends ? 5000 : 15000);
   friendsTimer.unref?.();
 }
+let fastFriends = false;
+/** Freundesfenster offen -> alle 5 s abgleichen, sonst alle 15 s */
+function setFast(on) {
+  if (fastFriends === !!on) return;
+  fastFriends = !!on;
+  if (!session || !friendsTimer) return;
+  clearInterval(friendsTimer);
+  if (on) refreshFriends();
+  friendsTimer = setInterval(refreshFriends, fastFriends ? 5000 : 15000);
+  friendsTimer.unref?.();
+}
+
+/** Beim Beenden: sofort als offline melden (sonst sähen Freunde dich noch ~1 Minute online) */
+async function goOffline() {
+  if (!session?.user_id) return;
+  try {
+    await request(`/rest/v1/profiles?id=eq.${encodeURIComponent(session.user_id)}`, {
+      method: 'PATCH', body: { last_seen: new Date(Date.now() - 10 * 60000).toISOString() }, headers: { prefer: 'return=minimal' }
+    });
+  } catch { /* egal */ }
+}
+
 function stopLoops() {
   clearInterval(beatTimer);
   clearInterval(friendsTimer);
@@ -278,7 +300,7 @@ async function init() {
 }
 
 module.exports = {
-  init, register, login, logout, deleteAccount, link, unlink, lookup,
+  init, register, login, logout, deleteAccount, link, unlink, lookup, setFast, goOffline,
   friendRequest, friendAccept, friendRemove, refreshFriends,
   setLinkError(launcher, msg) { store.set({ linkErrors: { ...(store.get().linkErrors || {}), [launcher]: msg || undefined } }); },
   getState: store.get, onChange: store.on, isSignedIn: () => !!session, configured,

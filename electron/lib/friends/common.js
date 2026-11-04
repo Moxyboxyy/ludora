@@ -15,7 +15,7 @@ function createStore(initial) {
   return {
     get: () => state,
     set(patch) {
-      state = { ...state, ...patch };
+      state = { ...state, ...patch, ...(patch.friends ? { updatedAt: Date.now() } : {}) };
       for (const l of listeners) { try { l(state); } catch { /* egal */ } }
     },
     on(fn) { listeners.add(fn); return () => listeners.delete(fn); }

@@ -634,3 +634,4 @@ svg.star.filled { fill: currentColor; }
 .link.danger { color: var(--danger); align-self: flex-start; margin-top: 4px; }
 .lang-switch { align-self: flex-start; }
 .modal > * { flex-shrink: 0; } /* lange Einstellungen: Abschnitte nicht zusammenquetschen, Fenster scrollt */
+.freshness.stale { color: var(--warn); }

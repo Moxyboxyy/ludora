@@ -89,7 +89,7 @@ async function poll() {
   } catch (err) {
     store.set({ status: 'error', error: err.message });
   } finally {
-    timer = setTimeout(poll, fast ? 5000 : 20000);
+    timer = setTimeout(poll, fast ? 3000 : 10000);
   }
 }
 
