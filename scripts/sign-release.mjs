@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const REPO = 'MaxiMagDich93/ludora';
+const REPO = 'Moxyboxyy/ludora';
 const [tag, keyFile, flag, digestFile] = process.argv.slice(2);
 if (!/^v\d+\.\d+\.\d+/.test(tag || '') || !keyFile) {
   console.error('Aufruf: node scripts/sign-release.mjs v0.7.0 pfad/zu/private-key.pem [--digests datei.json]');

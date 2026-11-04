@@ -44,7 +44,7 @@ encrypted – sign in to Ludora once on a new PC and you're signed in to Steam, 
 
 ## Installation
 
-Download the file for your system from the [**latest release**](https://github.com/MaxiMagDich93/ludora/releases/latest).
+Download the file for your system from the [**latest release**](https://github.com/Moxyboxyy/ludora/releases/latest).
 
 ### Windows 10 / 11
 
@@ -181,7 +181,7 @@ Ludora does not modify game clients and gives no advantage in games.
 Requirements: [Node.js](https://nodejs.org) (LTS).
 
 ```bash
-git clone https://github.com/MaxiMagDich93/ludora.git
+git clone https://github.com/Moxyboxyy/ludora.git
 cd ludora
 npm install
 npm run dev

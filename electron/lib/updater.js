@@ -18,7 +18,7 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const REPO = 'MaxiMagDich93/ludora';
+const REPO = 'Moxyboxyy/ludora';
 const PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAbG63MKjZGta8GbK8BHMBjubqWbEa9O1ommvKAL5gwiA=
 -----END PUBLIC KEY-----`;

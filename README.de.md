@@ -45,7 +45,7 @@ auf deine anderen Geräte mit – auf einem neuen PC einmal bei Ludora anmelden,
 
 ## Installation
 
-Lade die Datei für dein System aus dem [**neuesten Release**](https://github.com/MaxiMagDich93/ludora/releases/latest) herunter.
+Lade die Datei für dein System aus dem [**neuesten Release**](https://github.com/Moxyboxyy/ludora/releases/latest) herunter.
 
 ### Windows 10 / 11
 
@@ -186,7 +186,7 @@ Ludora verändert keine Spiel-Clients und verschafft keine Vorteile in Spielen.
 Voraussetzung: [Node.js](https://nodejs.org) (LTS).
 
 ```bash
-git clone https://github.com/MaxiMagDich93/ludora.git
+git clone https://github.com/Moxyboxyy/ludora.git
 cd ludora
 npm install
 npm run dev

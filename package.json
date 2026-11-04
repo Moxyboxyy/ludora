@@ -1,14 +1,14 @@
 {
   "name": "ludora",
   "productName": "Ludora",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Ludora - the Client for all Game Clients",
   "main": "electron/main.js",
   "author": {
     "name": "Moxyboxyy",
     "email": "MaxiMagDich@hotmail.com"
   },
-  "homepage": "https://github.com/MaxiMagDich93/ludora",
+  "homepage": "https://github.com/Moxyboxyy/ludora",
   "license": "MIT",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
@@ -141,6 +141,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/MaxiMagDich93/ludora.git"
+    "url": "https://github.com/Moxyboxyy/ludora.git"
   }
 }
