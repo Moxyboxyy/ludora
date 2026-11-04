@@ -1,0 +1,18 @@
+# Abhängigkeiten und Build-Ergebnisse
+node_modules/
+dist/
+release/
+
+# Eigene Server-Zugangsdaten (Vorlage: electron/hub-config.example.json)
+electron/hub-config.json
+
+# Lokale Berichte und Zwischenstände
+cover-report.json
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Übertragungs-Archiv
+ludora-src.zip

@@ -1,0 +1,6 @@
+{
+  "_hinweis": "Kopieren nach hub-config.json und ausfüllen. url = Project URL deines Supabase-Projekts, anonKey = öffentlicher Schlüssel (anon/publishable – NIE den secret/service_role-Schlüssel). linkFunction = Name der Prüf-Funktion (Edge Functions -> URL .../functions/v1/<name>).",
+  "url": "",
+  "anonKey": "",
+  "linkFunction": "link"
+}

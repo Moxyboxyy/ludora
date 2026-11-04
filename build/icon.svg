@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e2330"/>
+      <stop offset="1" stop-color="#0d0f14"/>
+    </linearGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8fb0ff"/>
+      <stop offset="1" stop-color="#b08cff"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6d8cf0"/>
+      <stop offset="1" stop-color="#8e6cf0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#9a8cff" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#9a8cff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.14"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- macOS-Raster: 824er Fläche mit Rand -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="184.5" fill="none" stroke="url(#rim)" stroke-width="3"/>
+  <circle cx="512" cy="512" r="330" fill="url(#glow)"/>
+  <!-- vier Kacheln, zur Raute gedreht -->
+  <g transform="rotate(45 512 512)">
+    <rect x="331" y="331" width="170" height="170" rx="40" fill="url(#g)"/>
+    <rect x="523" y="331" width="170" height="170" rx="40" fill="url(#g2)" opacity="0.92"/>
+    <rect x="331" y="523" width="170" height="170" rx="40" fill="url(#g2)" opacity="0.92"/>
+    <rect x="523" y="523" width="170" height="170" rx="40" fill="url(#g)"/>
+  </g>
+  <!-- Hub in der Mitte -->
+  <circle cx="512" cy="512" r="52" fill="#0f1115"/>
+  <circle cx="512" cy="512" r="29" fill="#ffffff"/>
+</svg>
