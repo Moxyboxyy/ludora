@@ -33,11 +33,23 @@ export default function ChatWindow({ steamid }) {
   const typingTimer = useRef(null);
   const lastTypingSent = useRef(0);
 
+  // Steam: SteamID64; Riot/Epic: "riot:<puuid>" / "epic:<accountId>"
+  const [launcher, otherId] = /^(riot|epic):/.test(steamid) ? [steamid.split(':')[0], steamid.slice(steamid.indexOf(':') + 1)] : ['steam', steamid];
+  const isSteam = launcher === 'steam';
+
   // Freund-Infos (Name, Status, Spiel) live mitführen
   useEffect(() => {
-    const pick = (st) => setFriend(st.friends.find((f) => f.steamid === steamid) || null);
-    api.friends.get().then(pick);
-    return api.friends.onUpdate(pick);
+    if (isSteam) {
+      const pick = (st) => setFriend(st.friends.find((f) => f.steamid === steamid) || null);
+      api.friends.get().then(pick);
+      return api.friends.onUpdate(pick);
+    }
+    const pick = (st) => {
+      const f = (st?.friends || []).find((x) => x.id === otherId);
+      setFriend(f ? { ...f, name: f.tag ? `${f.name}#${f.tag}` : f.name, appid: f.gameName ? f.gameName : null } : null);
+    };
+    api.friends2.list().then((all) => pick(all?.[launcher]));
+    return api.friends2.onUpdate(({ id, state }) => { if (id === launcher) pick(state); });
   }, [steamid]);
 
   useEffect(() => {
@@ -60,7 +72,7 @@ export default function ChatWindow({ steamid }) {
     };
     load();
     api.chat.read(steamid);
-    const timer = setInterval(load, 10000);
+    const timer = setInterval(load, isSteam ? 10000 : 15000);
     return () => { alive = false; clearInterval(timer); };
   }, [steamid]);
 
@@ -142,19 +154,29 @@ export default function ChatWindow({ steamid }) {
           <div className="friend-status">{status}</div>
         </div>
         <div className="chat-head-actions">
-          {friend?.joinable && (
+          {!isSteam && (
+            <button className="ghost" title={t("In {0} öffnen", [launcher === 'riot' ? 'Riot Client' : 'Epic Games'])} onClick={() => api.friends2.open(launcher)}>
+              <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" /></svg>
+            </button>
+          )}
+          {isSteam && friend?.joinable && (
             <button className="play small" onClick={() => api.friends.action(steamid, 'join')}>{t("Beitreten")}</button>
           )}
-          <button className="ghost" title={t("Profil anzeigen")} onClick={() => api.friends.action(steamid, 'profile')}>
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
-          </button>
-          <button className="ghost" title={t("Im Steam-Chat öffnen")} onClick={() => api.friends.action(steamid, 'chat')}>
-            <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" /></svg>
-          </button>
+          {isSteam && (
+            <button className="ghost" title={t("Profil anzeigen")} onClick={() => api.friends.action(steamid, 'profile')}>
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+            </button>
+          )}
+          {isSteam && (
+            <button className="ghost" title={t("Im Steam-Chat öffnen")} onClick={() => api.friends.action(steamid, 'chat')}>
+              <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" /></svg>
+            </button>
+          )}
         </div>
       </header>
       <div className="chat-list" ref={listRef}>
         {!messages.length && !error && <div className="drawer-empty">{t("Noch keine Nachrichten – schreib einfach los.")}</div>}
+        {launcher === 'epic' && <div className="chat-day">{t("Epic liefert keinen alten Verlauf – Ludora speichert Nachrichten ab jetzt.")}</div>}
         {grouped.map((m, i) => (m.divider
           ? <div key={`d${i}`} className="chat-day">{m.divider}</div>
           : (

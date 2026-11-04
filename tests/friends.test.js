@@ -96,3 +96,20 @@ test('Riot: Handy-App zählt als offline, beste Presence pro Freund, Client ist 
     ['offline', null, null]
   ]);
 });
+
+test('Riot-Chat: Nachrichten ins einheitliche Format, eigene erkennen', () => {
+  const { _toMessages } = require('../electron/lib/friends/riot');
+  const list = _toMessages([
+    { body: 'gg', puuid: 'me-1', pid: 'me-1@eu1.pvp.net', time: '1700000002000', type: 'chat', id: '2' },
+    { body: 'hi', puuid: 'fr-2', pid: 'fr-2@eu1.pvp.net', time: '1700000001000', type: 'chat', id: '1' },
+    { body: 'gruppe', puuid: 'x', time: '1700000003000', type: 'groupchat' }
+  ], 'me-1');
+  assert.deepStrictEqual(list.map((m) => [m.text, m.fromMe]), [['hi', false], ['gg', true]]);
+});
+
+test('Epic-Chat: eingehende XMPP-Nachricht lesen', () => {
+  const epic = require('../electron/lib/friends/epic');
+  const m = epic._parseMessage('<message from="0123456789abcdef0123456789abcdef@prod.ol.epicgames.com/V2:launcher" to="me@x" type="chat"><body>Hallo &amp; tsch&#252;ss</body></message>');
+  assert.deepStrictEqual(m, { from: '0123456789abcdef0123456789abcdef', text: 'Hallo & tschüss' });
+  assert.strictEqual(epic._parseMessage('<message type="headline" from="a@b"><body>x</body></message>'), null);
+});

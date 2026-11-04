@@ -533,7 +533,26 @@ function runUninstallCommand(cmd) {
 
 // ---------- Chatfenster (eins pro Freund) ----------
 
-const chatWindows = new Map(); // steamid -> BrowserWindow
+const chatWindows = new Map(); // Chat-ID -> BrowserWindow ("7656…" = Steam, "riot:<puuid>", "epic:<accountId>")
+
+// Chat-IDs: Steam = SteamID64, andere Launcher = "<launcher>:<id>"
+const CHAT_ID = /^(\d{17}|(riot|epic):[A-Za-z0-9-]{8,80})$/;
+const chatSources = {}; // launcher -> Modul mit .chat (wird beim Start gefüllt)
+function chatTarget(id) {
+  const m = String(id).match(/^(riot|epic):(.+)$/);
+  return m ? { launcher: m[1], id: m[2], mod: chatSources[m[1]] } : { launcher: 'steam', id: String(id), mod: null };
+}
+function chatName(id) {
+  const c = chatTarget(id);
+  if (c.launcher === 'steam') return steamFriends.findFriend(c.id)?.name || null;
+  const f = (c.mod?.getState().friends || []).find((x) => x.id === c.id);
+  return f ? `${f.name}${f.tag ? '#' + f.tag : ''}` : null;
+}
+function chatWatch(id, on) {
+  const c = chatTarget(id);
+  if (c.launcher === 'steam') steamFriends.watch(c.id, on);
+  else c.mod?.chat?.watch(c.id, on);
+}
 
 function openChatWindow(steamid) {
   const existing = chatWindows.get(steamid);
@@ -542,13 +561,13 @@ function openChatWindow(steamid) {
     existing.focus();
     return existing;
   }
-  const f = steamFriends.findFriend(steamid);
+  const name = chatName(steamid);
   const w = new BrowserWindow({
     width: 420,
     height: 640,
     minWidth: 320,
     minHeight: 400,
-    title: f ? `${f.name} – Chat` : 'Chat',
+    title: name ? `${name} – Chat` : 'Chat',
     backgroundColor: '#0f1115',
     autoHideMenuBar: true,
     webPreferences: {
@@ -562,11 +581,12 @@ function openChatWindow(steamid) {
     if (/^https?:/.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
-  if (process.env.VITE_DEV_SERVER_URL) w.loadURL(`${process.env.VITE_DEV_SERVER_URL}#chat=${steamid}`);
-  else w.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), { hash: `chat=${steamid}` });
+  const hash = `chat=${encodeURIComponent(steamid)}`;
+  if (process.env.VITE_DEV_SERVER_URL) w.loadURL(`${process.env.VITE_DEV_SERVER_URL}#${hash}`);
+  else w.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), { hash });
   chatWindows.set(steamid, w);
-  steamFriends.watch(steamid, true); // solange offen: alle 4 s nach neuen Nachrichten schauen
-  w.on('closed', () => { chatWindows.delete(steamid); steamFriends.watch(steamid, false); });
+  chatWatch(steamid, true); // solange offen: häufiger nach neuen Nachrichten schauen
+  w.on('closed', () => { chatWindows.delete(steamid); chatWatch(steamid, false); });
   return w;
 }
 
@@ -910,32 +930,43 @@ app.whenReady().then(() => {
 
   // ---------- Steam-Freunde ----------
   steamFriends.onChange((st) => broadcast('friends:update', st));
-  steamFriends.onChat((ev) => {
+  // Neue Nachricht (Steam, Riot, Epic) -> an alle Fenster + Benachrichtigung, wenn der Chat nicht vorne ist
+  const onChatEvent = (ev) => {
     broadcast('chat:event', ev);
-    // Windows-Benachrichtigung, wenn der Chat mit diesem Freund nicht offen/aktiv ist
     if (ev.type === 'message' && !ev.fromMe && Notification.isSupported()) {
       const w = chatWindows.get(ev.steamid);
       if (!w || w.isDestroyed() || !w.isFocused()) {
-        const f = steamFriends.findFriend(ev.steamid);
-        const n = new Notification({ title: f?.name || t("Neue Nachricht"), body: ev.text.slice(0, 200), silent: false });
+        const n = new Notification({ title: chatName(ev.steamid) || t("Neue Nachricht"), body: String(ev.text).slice(0, 200), silent: false });
         n.on('click', () => openChatWindow(ev.steamid));
         n.show();
       }
     }
-  });
-  ipcMain.handle('chat:open', (_e, steamid) => {
-    if (!/^\d{17}$/.test(String(steamid))) return { ok: false };
-    openChatWindow(String(steamid));
+  };
+  steamFriends.onChat(onChatEvent);
+  ipcMain.handle('chat:open', (_e, id) => {
+    if (!CHAT_ID.test(String(id))) return { ok: false };
+    openChatWindow(String(id));
     return { ok: true };
   });
-  ipcMain.handle('chat:history', async (_e, steamid) => {
-    try { return { ok: true, messages: await steamFriends.history(String(steamid)) }; } catch (err) { return { ok: false, error: err.message, messages: [] }; }
+  ipcMain.handle('chat:history', async (_e, id) => {
+    if (!CHAT_ID.test(String(id))) return { ok: false, messages: [] };
+    const c = chatTarget(id);
+    try {
+      const messages = c.launcher === 'steam' ? await steamFriends.history(c.id) : await c.mod.chat.history(c.id);
+      return { ok: true, messages };
+    } catch (err) { return { ok: false, error: err.message, messages: [] }; }
   });
-  ipcMain.handle('chat:send', async (_e, steamid, text) => {
-    try { await steamFriends.send(String(steamid), text); return { ok: true }; } catch (err) { return { ok: false, error: err.message }; }
+  ipcMain.handle('chat:send', async (_e, id, text) => {
+    if (!CHAT_ID.test(String(id)) || !String(text || '').trim()) return { ok: false };
+    const c = chatTarget(id);
+    try {
+      if (c.launcher === 'steam') await steamFriends.send(c.id, text);
+      else await c.mod.chat.send(c.id, text);
+      return { ok: true };
+    } catch (err) { return { ok: false, error: err.message }; }
   });
-  ipcMain.handle('chat:typing', (_e, steamid) => steamFriends.typing(String(steamid)));
-  ipcMain.handle('chat:read', (_e, steamid) => steamFriends.markRead(String(steamid)));
+  ipcMain.handle('chat:typing', (_e, id) => (chatTarget(id).launcher === 'steam' ? steamFriends.typing(String(id)) : null));
+  ipcMain.handle('chat:read', (_e, id) => (chatTarget(id).launcher === 'steam' ? steamFriends.markRead(String(id)) : null));
   steamFriends.init();
   ipcMain.handle('friends:get', () => steamFriends.getState());
   ipcMain.handle('friends:qr', async () => {
@@ -950,6 +981,13 @@ app.whenReady().then(() => {
     gog: require('./lib/friends/gog')
   };
   const people = require('./lib/friends/people');
+  // Chat für Riot und Epic
+  require('./lib/friends/chatLog').init(app.getPath('userData'));
+  for (const id of ['riot', 'epic']) {
+    chatSources[id] = otherFriends[id];
+    otherFriends[id].chat.onChat(onChatEvent);
+  }
+  otherFriends.riot.chat.start();
   for (const [id, m] of Object.entries(otherFriends)) {
     m.onChange((st) => broadcast('friends2:update', { id, state: st }));
     try { m.init(); } catch (err) { console.error('[friends]', id, err); }

@@ -29,6 +29,7 @@ function savePref(key, v) {
 }
 
 /** Status eines Kontos als Rang (für Sortierung und "bester Status" einer Person) */
+const CHAT_LAUNCHERS = new Set(['riot', 'epic']);
 const rank = (a) => (a.state === 'offline' ? 0 : a.gameName ? 4 : a.state === 'online' ? 3 : a.state === 'busy' ? 2.5 : 2);
 const cls = (a) => (a.state !== 'offline' && a.gameName ? 'ingame' : a.state);
 const norm = (s) => String(s || '').toLowerCase().replace(/#.*$/, '').replace(/[^a-z0-9äöüß]/g, '');
@@ -237,6 +238,11 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
     if (!res.ok) notify(res.error || t("Nicht möglich"), 'error');
     else if (a === 'join') notify(t("Steam tritt dem Spiel von {0} bei …", [f.name]));
   }
+  // Chat in Ludora: Riot (lokal über den Riot Client) und Epic (live); GOG erlaubt Chat nur in GOG Galaxy
+  function openChat(a) {
+    setMenu(null);
+    api.chat.open(`${a.launcher}:${a.id}`).then((r) => { if (!r?.ok) notify(t("Nicht möglich"), 'error'); });
+  }
   async function openLauncher(a) {
     setMenu(null);
     const res = await api.friends2.open(a.launcher);
@@ -263,7 +269,7 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
     return (
       (<div className={`friend ${cls(a)} ${nested ? 'nested' : ''}`}
         onContextMenu={(e) => openMenu(e, a, p)}
-        onDoubleClick={() => (a.launcher === 'steam' ? steamAction(a.raw, 'chat') : openLauncher(a))}>
+        onDoubleClick={() => (a.launcher === 'steam' ? steamAction(a.raw, 'chat') : CHAT_LAUNCHERS.has(a.launcher) ? openChat(a) : openLauncher(a))}>
         {nested ? <span className="acc-logo" title={LAUNCHER_NAME[a.launcher]}><LauncherLogo provider={providerById[a.launcher]} /></span> : <Avatar a={a} />}
         <div className="friend-info">
           <div className="friend-name">
@@ -282,7 +288,9 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
               <button className="secondary small" onClick={() => steamAction(a.raw, 'chat')}>{t("Chat")}</button>
             </>
           ) : (
-            <button className="secondary small" onClick={() => openLauncher(a)} title={`In ${LAUNCHER_NAME[a.launcher]} schreiben`}>{t("Öffnen")}</button>
+            CHAT_LAUNCHERS.has(a.launcher)
+              ? <button className="secondary small" onClick={() => openChat(a)}>{t("Chat")}</button>
+              : <button className="secondary small" onClick={() => openLauncher(a)} title={t("In {0} schreiben", [LAUNCHER_NAME[a.launcher]])}>{t("Öffnen")}</button>
           )}
         </div>
       </div>)
@@ -591,6 +599,7 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
                   </>
                 ) : (
                   <>
+                    {CHAT_LAUNCHERS.has(menu.a.launcher) && <button onClick={() => openChat(menu.a)}>{t("Chat öffnen")}</button>}
                     <button onClick={() => openLauncher(menu.a)}>{t("In {0} schreiben", [LAUNCHER_NAME[menu.a.launcher]])}</button>
                     <button onClick={() => copyId(menu.a)}>{menu.a.launcher === 'riot' ? t("Riot-ID kopieren") : t("Namen kopieren")}</button>
                   </>

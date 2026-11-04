@@ -29,6 +29,9 @@ let ws = null;
 let pollTimer = null;
 let pingTimer = null;
 let gen = 0;
+let sendRaw = null;            // XMPP-Senden, solange verbunden
+const chatListeners = new Set();
+const chatLog = require('./chatLog');
 
 // ---------- Anmeldung ----------
 
@@ -169,6 +172,26 @@ function stopXmpp() {
   ws = null;
 }
 
+/** Eingehende Chatnachricht (XMPP <message type="chat">) -> { from, text } (für Tests getrennt) */
+function parseMessage(xml) {
+  const head = xml.match(/^<message\b[^>]*>/)?.[0] || '';
+  if (!/type=["']chat["']/.test(head)) return null;
+  const from = head.match(/from=["']([^"'@]+)@/)?.[1];
+  const body = xml.match(/<body>([\s\S]*?)<\/body>/)?.[1];
+  if (!from || body === undefined) return null;
+  return { from, text: unescapeXml(body) };
+}
+
+function emitChat(ev) { for (const l of chatListeners) { try { l(ev); } catch { /* egal */ } } }
+
+function receive(xml) {
+  const m = parseMessage(xml);
+  if (!m || m.from === auth?.account_id) return;
+  const ev = { type: 'message', steamid: `epic:${m.from}`, fromMe: false, text: m.text, ts: Date.now() };
+  chatLog.add(`epic:${m.from}`, ev);
+  emitChat(ev);
+}
+
 /** <presence …/> und <presence …>…</presence> aus einer Nachricht lösen (Kind-Elemente wie <delay/> beachten) */
 function splitPresences(msg) {
   const out = [];
@@ -239,6 +262,7 @@ function startXmpp(my) {
       // Eigener Status "Abwesend" – nötig, damit Epic die Status der Freunde schickt
       const status = escapeXml(JSON.stringify({ Status: '', bIsPlaying: false, bIsJoinable: false, bHasVoiceSupport: false, SessionId: '', Properties: {} }));
       send(`<presence><show>away</show><status>${status}</status></presence>`);
+      sendRaw = send;
       pingTimer = setInterval(() => { send(`<iq type="get" id="ping${Date.now()}"><ping xmlns="urn:xmpp:ping"/></iq>`); publish(); }, 45000);
     } else if (step === 'ready') {
       // Ping vom Server beantworten – sonst trennt Epic nach ein paar Minuten und Status bleiben stehen
@@ -247,6 +271,8 @@ function startXmpp(my) {
         const from = ping.match(/from=["']([^"']+)["']/)?.[1];
         send(`<iq type="result"${id ? ` id="${escapeXml(id)}"` : ''}${from ? ` to="${escapeXml(from)}"` : ''}/>`);
       }
+      // Chatnachrichten von Freunden
+      for (const m of msg.match(/<message\b[\s\S]*?<\/message>/g) || []) receive(m);
       // Eine Nachricht kann mehrere <presence> enthalten
       let changed = false;
       for (const m of splitPresences(msg)) changed = handlePresence(m) || changed;
@@ -256,6 +282,7 @@ function startXmpp(my) {
   const reconnect = () => {
     if (my !== gen || ws !== sock) return;
     ws = null;
+    sendRaw = null;
     clearInterval(pingTimer);
     presence.clear(); // nach dem Neuverbinden schickt Epic die aktuellen Status neu
     schedulePublish();
@@ -303,7 +330,25 @@ function init() {
   }
 }
 
+// ---------- Chat (live über XMPP; Verlauf speichert Ludora selbst, Epic bietet keinen abrufbaren) ----------
+const chat = {
+  async history(id) { return chatLog.list(`epic:${id}`); },
+  async send(id, text) {
+    if (!sendRaw) throw new Error(t("Epic-Chat ist gerade nicht verbunden – kurz warten und erneut senden."));
+    if (!/^[0-9a-f]{32}$/i.test(String(id))) throw new Error(t("Epic-Freund nicht gefunden."));
+    const body = String(text).slice(0, 2000);
+    sendRaw(`<message to="${id}@${XMPP_DOMAIN}" type="chat" id="ludora${Date.now()}"><body>${escapeXml(body)}</body></message>`);
+    const ev = { type: 'message', steamid: `epic:${id}`, fromMe: true, text: body, ts: Date.now() };
+    chatLog.add(`epic:${id}`, ev);
+    emitChat(ev);
+  },
+  watch() { /* Nachrichten kommen ohnehin live */ },
+  onChat(fn) { chatListeners.add(fn); return () => chatListeners.delete(fn); }
+};
+
 module.exports = {
+  chat,
+  _parseMessage: parseMessage,
   _splitPresences: splitPresences,
   id: 'epic',
   async getLinkProof() { if (!auth) return null; const a = await ensureToken(); return { token: a.access_token, accountId: a.account_id }; },
