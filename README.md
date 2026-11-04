@@ -54,9 +54,9 @@ Download the file for your system from the [**latest release**](https://github.c
 
 ### macOS (12 Monterey or newer)
 
-1. Download **`Ludora-<version>-mac-AppleSilicon.zip`** for Macs with an M1/M2/M3/M4 chip, or
-   **`Ludora-<version>-mac-Intel.zip`** for Intel Macs ( → *About This Mac* shows which one you have).
-2. Double-click the zip and drag **Ludora.app** into **Applications**.
+1. Download **`Ludora-<version>-arm64.dmg`** for Macs with an M1/M2/M3/M4 chip, or
+   **`Ludora-<version>-x64.dmg`** for Intel Macs ( → *About This Mac* shows which one you have).
+2. Open the dmg and drag **Ludora** into **Applications**.
 3. The app isn't notarized by Apple. On the first start **right-click Ludora → Open → Open**
    (or *System Settings → Privacy & Security → Open Anyway*).
 4. macOS asks once whether Ludora may control “System Events” – allow it so Ludora can hide launcher windows.

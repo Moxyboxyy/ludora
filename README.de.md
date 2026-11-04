@@ -56,9 +56,9 @@ Lade die Datei für dein System aus dem [**neuesten Release**](https://github.co
 
 ### macOS (ab 12 Monterey)
 
-1. **`Ludora-<version>-mac-AppleSilicon.zip`** für Macs mit M1/M2/M3/M4-Chip oder
-   **`Ludora-<version>-mac-Intel.zip`** für Intel-Macs herunterladen ( → *Über diesen Mac* zeigt, welcher es ist).
-2. Zip doppelklicken und **Ludora.app** in **Programme** ziehen.
+1. **`Ludora-<version>-arm64.dmg`** für Macs mit M1/M2/M3/M4-Chip oder
+   **`Ludora-<version>-x64.dmg`** für Intel-Macs herunterladen ( → *Über diesen Mac* zeigt, welcher es ist).
+2. Die dmg öffnen und **Ludora** in **Programme** ziehen.
 3. Die App ist nicht von Apple beglaubigt. Beim ersten Start **Rechtsklick auf Ludora → Öffnen → Öffnen**
    (oder *Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen*).
 4. macOS fragt einmal, ob Ludora „System Events“ steuern darf – erlauben, damit Ludora Launcher-Fenster ausblenden kann.

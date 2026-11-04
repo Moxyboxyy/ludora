@@ -1,0 +1,78 @@
+# Baut die Installer für Windows, macOS und Linux auf GitHub und veröffentlicht sie als Release.
+# Auslöser: ein Tag wie "v0.4.0" (git tag v0.4.0 && git push origin v0.4.0) oder manuell unter "Actions".
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Öffentliche Adresse und öffentlicher (publishable) Schlüssel des Ludora-Servers.
+# Beide stecken ohnehin in jedem Installer und dürfen öffentlich sein – geschützt wird über die
+# Regeln in der Datenbank. Eigener Server? Repository-Secrets HUB_URL / HUB_KEY setzen, die haben Vorrang.
+env:
+  HUB_URL: ${{ secrets.HUB_URL || 'https://cnnbvlxshzzrwzewepmg.supabase.co' }}
+  HUB_KEY: ${{ secrets.HUB_KEY || 'sb_publishable_eR2iqOG-T5NiuOXWOCSs0A_v9SVC6-c' }}
+  HUB_FUNCTION: ${{ secrets.HUB_FUNCTION || 'hello-world' }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win
+          - os: macos-latest
+            target: --mac
+          - os: ubuntu-latest
+            target: --linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+        if: runner.os == 'Linux'
+      - name: Server-Konfiguration schreiben
+        shell: bash
+        run: |
+          printf '{ "url": "%s", "anonKey": "%s", "linkFunction": "%s" }\n' "$HUB_URL" "$HUB_KEY" "$HUB_FUNCTION" > electron/hub-config.json
+      - run: npx vite build
+      - name: Installer bauen
+        run: npx electron-builder ${{ matrix.target }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.zip
+            release/*.AppImage
+            release/*.deb
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-all
+          merge-multiple: true
+      - run: ls -la dist-all
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.run_number) }}
+          name: Ludora ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          body_path: .github/release-notes.md
+          files: dist-all/*
