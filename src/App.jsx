@@ -216,6 +216,7 @@ export default function App() {
     const p = providerById[providerId];
     const res = await api.openLauncher(providerId, what);
     if (!res.ok) notify(res.error, 'error');
+    else if (what === 'download') notify(t("Download von {0} wird im Browser geöffnet …", [p?.name]));
     else notify(what === 'store' ? t("{0}-Shop wird geöffnet …", [p?.name]) : t("{0} wird geöffnet …", [p?.name]));
   }
 

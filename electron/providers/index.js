@@ -23,6 +23,46 @@ const allProviders = [
 
 const providers = allProviders.filter((p) => (p.platforms || ['win32']).includes(process.platform));
 
+// Download für nicht installierte Launcher (offizielle Quellen): direkter Installer, wo es einen festen
+// Link gibt, sonst die offizielle Download-Seite. Feste Liste – die App öffnet nie eine Adresse von außen.
+const DOWNLOADS = {
+  win32: {
+    steam: 'https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe',
+    epic: 'https://store.epicgames.com/download',
+    gog: 'https://www.gog.com/galaxy',
+    ea: 'https://www.ea.com/ea-app',
+    ubisoft: 'https://ubisoftconnect.com/',
+    battlenet: 'https://download.battle.net/',
+    amazon: 'https://gaming.amazon.com/amazon-games-app',
+    riot: 'https://www.riotgames.com/',
+    rockstar: 'https://www.rockstargames.com/downloads'
+  },
+  darwin: {
+    steam: 'https://cdn.akamai.steamstatic.com/client/installer/steam.dmg',
+    epic: 'https://store.epicgames.com/download',
+    gog: 'https://www.gog.com/galaxy',
+    battlenet: 'https://download.battle.net/',
+    riot: 'https://www.riotgames.com/'
+  },
+  linux: {
+    steam: 'https://store.steampowered.com/about/',
+    epic: 'https://heroicgameslauncher.com/downloads',
+    gog: 'https://heroicgameslauncher.com/downloads',
+    amazon: 'https://heroicgameslauncher.com/downloads',
+    battlenet: 'https://lutris.net/downloads',
+    ea: 'https://lutris.net/downloads',
+    ubisoft: 'https://lutris.net/downloads',
+    rockstar: 'https://lutris.net/downloads',
+    lutris: 'https://lutris.net/downloads'
+  }
+};
+const downloadUrl = (id) => DOWNLOADS[process.platform]?.[id] || null;
+
+/** Ist das Programm des Launchers installiert? (Sein Start zeigt auf eine Programmdatei, nicht nur auf eine Webseite) */
+async function clientInstalled(p) {
+  try { const l = await p.client?.(); return !!l && l.type !== 'url' && l.type !== 'uri'; } catch { return false; }
+}
+
 /** Ist ein Launcher eingeschaltet? (Standard: ja) */
 function isEnabled(id, enabledMap) {
   return !enabledMap || enabledMap[id] !== false;
@@ -44,21 +84,24 @@ async function scanAll(enabledMap) {
       if (!isEnabled(p.id, enabledMap)) return { provider: p, games: [], error: null, ms: 0, disabled: true };
       try {
         const games = await p.detect();
-        return { provider: p, games, error: games.warning || null, ms: Date.now() - t };
+        // Nur bei leeren Launchern nachsehen, ob das Programm fehlt (für den Download-Knopf)
+        const client = games.length ? true : await clientInstalled(p);
+        return { provider: p, games, client, error: games.warning || null, ms: Date.now() - t };
       } catch (err) {
         console.error(`[${p.id}]`, err);
-        return { provider: p, games: [], error: String(err.message || err), ms: Date.now() - t };
+        return { provider: p, games: [], client: await clientInstalled(p), error: String(err.message || err), ms: Date.now() - t };
       }
     })
   );
 
   const games = [];
   const providerInfo = [];
-  for (const { provider: p, games: list, error, ms, disabled } of results) {
+  for (const { provider: p, games: list, client, error, ms, disabled } of results) {
     const installed = list.filter((g) => g.status !== 'notInstalled').length;
     providerInfo.push({
       id: p.id, name: t(p.name), color: p.color, accent: p.accent,
       hasClient: !!p.client, hasStore: !!p.store,
+      clientInstalled: client !== false, download: client === false ? downloadUrl(p.id) : null,
       count: list.length, installed, error, ms, enabled: !disabled
     });
     for (const g of list) {
@@ -85,4 +128,4 @@ async function scanAll(enabledMap) {
   return { games, providers: providerInfo, scannedAt: new Date().toISOString(), totalMs: Date.now() - started };
 }
 
-module.exports = { providers, allProviders, scanAll };
+module.exports = { providers, allProviders, scanAll, downloadUrl, DOWNLOADS };

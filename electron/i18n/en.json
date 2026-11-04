@@ -479,5 +479,9 @@
   "Epic nicht erreichbar – neuer Versuch läuft …": "Epic unreachable – retrying …",
   "Passwort zu kurz (mindestens {0} Zeichen).": "Password too short (at least {0} characters).",
   "Passwort (mind. {0} Zeichen)": "Password (at least {0} characters)",
-  "Passwort": "Password"
+  "Passwort": "Password",
+  "Für {0} gibt es hier keinen Download.": "No download available for {0} here.",
+  "Download von {0} wird im Browser geöffnet …": "Opening the {0} download in your browser …",
+  "{0} ist nicht installiert": "{0} is not installed",
+  "{0} herunterladen": "Download {0}"
 }

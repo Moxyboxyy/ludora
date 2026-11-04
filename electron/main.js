@@ -941,6 +941,13 @@ app.whenReady().then(() => {
   ipcMain.handle('launcher:open', async (_e, providerId, what) => {
     const p = providers.find((x) => x.id === providerId);
     if (!p) return { ok: false, error: t("Unbekannter Launcher") };
+    if (what === 'download') {
+      // Launcher herunterladen: nur Adressen aus der festen Liste (providers/index.js)
+      const url = require('./providers').downloadUrl(p.id);
+      if (!url) return { ok: false, error: t("Für {0} gibt es hier keinen Download.", [p.name]) };
+      await shell.openExternal(url);
+      return { ok: true };
+    }
     try {
       hide.stop(p.id); // falls gerade noch versteckt wird
       const launch = what === 'store' ? p.store : await p.client?.();

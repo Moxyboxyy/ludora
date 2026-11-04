@@ -100,10 +100,18 @@ export default function Sidebar({
           <Section id="empty" title={t("Nicht installiert")} count={empty.length} open={openEmpty}
             onToggle={toggle(setOpenEmpty, 'sec.empty', openEmpty)} collapsed={collapsed}>
             {empty.map((p) => (
-              <div key={p.id} className="nav-item muted" title={collapsed ? t("{0} – nicht installiert", [p.name]) : p.error || t("Launcher nicht installiert oder keine Spiele gefunden")}>
-                <span className="nav-icon"><LauncherLogo provider={p} dim /></span>
-                <span className="label">{p.name}</span>
-                {p.error && <span className="warn">!</span>}
+              <div key={p.id} className="nav-row">
+                <div className="nav-item muted" title={collapsed ? t("{0} – nicht installiert", [p.name]) : p.error || (p.download ? t("{0} ist nicht installiert", [p.name]) : t("Launcher nicht installiert oder keine Spiele gefunden"))}>
+                  <span className="nav-icon"><LauncherLogo provider={p} dim /></span>
+                  <span className="label">{p.name}</span>
+                  {p.error && <span className="warn">!</span>}
+                </div>
+                {p.download && !collapsed && (
+                  <button className="nav-open nav-download" onClick={() => onOpenLauncher(p.id, 'download')} title={t("{0} herunterladen", [p.name])}
+                    aria-label={t("{0} herunterladen", [p.name])}>
+                    <DownloadIcon />
+                  </button>
+                )}
               </div>
             ))}
           </Section>

@@ -68,6 +68,9 @@ svg.fill { fill: currentColor; stroke: none; }
 .nav-row:hover .nav-open, .nav-open:focus-visible { opacity: 1; }
 .nav-row:hover .badge { visibility: hidden; }
 .nav-open:hover { background: #2a3142; color: var(--text); }
+/* Download für nicht installierte Launcher: immer sichtbar, in Akzentfarbe */
+.nav-open.nav-download { opacity: 1; color: var(--accent); }
+.nav-open.nav-download:hover { color: var(--text); }
 .launcher-actions { display: flex; gap: 8px; margin-left: 8px; }
 .secondary.small { display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 13px; }
 .secondary.small svg { width: 15px; height: 15px; }
