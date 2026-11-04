@@ -1,0 +1,17 @@
+{
+  "tag": "v0.7.3",
+  "files": {
+    "Ludora-0.7.3-amd64.deb": {
+      "sha256": "1a8ff60040b9f225bb1d2b6e49d00db35072138dad3556572421bb1cdfef2931",
+      "sig": "2fBDuxjEoPFGqqlyA+WReayIQUcs3pNAqjrZk8w6/87OX81asWFh/Hn/9A28pXADFOkEDYEQ7zF56zivpYE7DA=="
+    },
+    "Ludora-0.7.3-x86_64.AppImage": {
+      "sha256": "635113a51afbd7da3979d023b3295a4b5db1ca656b2553e816034c35d7dae1dd",
+      "sig": "KGN/UuFP+ENdftE+WR84YkgsQm+xuMqKksWHfD0sbcZ3XJYZDIHAsPAM5svPfjv9fD4SGMeZLr1sdSmg8notCg=="
+    },
+    "Ludora-Setup-0.7.3.exe": {
+      "sha256": "31d8881b3ad70ab5fc3cca540d4907df6a84469112e79d15832b62d11aa770c9",
+      "sig": "TNl+PlW2kw6yRTsgeBykvmV3Srg0nFyD0qpAFNCBk9/ZN8VOx3Isxnw+/JzcLNLCLObRBG5OB5sStRNvTxYVBg=="
+    }
+  }
+}
