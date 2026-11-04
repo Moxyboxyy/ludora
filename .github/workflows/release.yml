@@ -19,7 +19,7 @@ permissions:
 env:
   HUB_URL: ${{ secrets.HUB_URL || 'https://cnnbvlxshzzrwzewepmg.supabase.co' }}
   HUB_KEY: ${{ secrets.HUB_KEY || 'sb_publishable_eR2iqOG-T5NiuOXWOCSs0A_v9SVC6-c' }}
-  HUB_FUNCTION: ${{ secrets.HUB_FUNCTION || 'hello-world' }}
+  HUB_FUNCTION: ${{ secrets.HUB_FUNCTION || 'super-worker' }}
 
 jobs:
   build:

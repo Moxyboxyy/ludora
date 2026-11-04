@@ -164,7 +164,7 @@ async function link(launcher, token, claim) {
   if (!session) return { ok: false, error: t("Nicht bei Ludora angemeldet") };
   // Name der Prüf-Funktion: laut hub-config.json; gibt es die auf dem Server nicht (umbenannt/neu angelegt),
   // werden die üblichen Namen probiert und der funktionierende gemerkt.
-  const names = [...new Set([workingFn, config().linkFunction, 'link', 'hello-world'].filter(Boolean))];
+  const names = [...new Set([workingFn, config().linkFunction, 'link', 'super-worker', 'hello-world'].filter(Boolean))];
   let lastErr = null;
   for (const name of names) {
     try {
