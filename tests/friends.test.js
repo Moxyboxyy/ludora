@@ -78,3 +78,21 @@ test('GOG: Status-Einträge mit "offline" zählen nicht als online', () => {
   );
   assert.deepStrictEqual(list.map((f) => f.state), ['online', 'offline', 'online']);
 });
+
+test('Riot: Handy-App zählt als offline, beste Presence pro Freund, Client ist kein Spiel', () => {
+  const { _merge } = require('../electron/lib/friends/riot');
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64');
+  const list = _merge(
+    [{ puuid: 'a', game_name: 'her eevee', game_tag: 'slay' }, { puuid: 'b', game_name: 'Liesel', game_tag: '187' }, { puuid: 'c', game_name: 'Off', game_tag: '1' }],
+    [
+      { puuid: 'a', state: 'chat', product: 'riot_client' },
+      { puuid: 'a', state: 'dnd', product: 'valorant', private: b64({ matchPresenceData: { sessionLoopState: 'INGAME', queueId: 'competitive' }, partyPresenceData: { partyOwnerMatchScoreAllyTeam: 0, partyOwnerMatchScoreEnemyTeam: 0 } }) },
+      { puuid: 'b', state: 'mobile', product: 'league_of_legends' }
+    ]
+  );
+  assert.deepStrictEqual(list.map((f) => [f.state, f.gameName, f.richText]), [
+    ['busy', 'VALORANT', 'Competitive 0 - 0'],
+    ['offline', null, null],
+    ['offline', null, null]
+  ]);
+});

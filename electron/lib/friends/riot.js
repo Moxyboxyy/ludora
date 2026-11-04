@@ -20,7 +20,10 @@ const PRODUCTS = {
   lion: '2XKO',
   teamfighttactics: 'Teamfight Tactics'
 };
-const STATES = { chat: 'online', away: 'away', dnd: 'busy', mobile: 'away', offline: 'offline' };
+// "mobile" = nur in der Riot-/League-Handy-App: zeigt auch der Riot Client als offline
+const STATES = { chat: 'online', away: 'away', dnd: 'busy', mobile: 'offline', offline: 'offline', unavailable: 'offline' };
+// Kein echtes Spiel – nur der Client selbst
+const NOT_A_GAME = new Set(['', 'keystone', 'riot_client', 'riotclient', 'rso']);
 
 // Spielphase verständlich machen
 const LOL_STATUS = {
@@ -38,21 +41,59 @@ function decodePrivate(p) {
   return null;
 }
 
+const VAL_QUEUE = {
+  competitive: 'Competitive', unrated: 'Unrated', swiftplay: 'Swiftplay', spikerush: 'Spike Rush', deathmatch: 'Deathmatch',
+  ggteam: 'Escalation', onefa: 'Replication', hurm: 'Team Deathmatch', premier: 'Premier', newmap: 'New Map'
+};
+
+/** Text zur Spielphase (VALORANT: Modus + Spielstand, LoL/TFT: Phase) */
+function richTextFor(product, priv) {
+  if (!priv) return null;
+  if (product === 'valorant') {
+    // neues Format: matchPresenceData / partyPresenceData, altes: alles flach
+    const m = priv.matchPresenceData || priv;
+    const party = priv.partyPresenceData || priv;
+    const loop = m.sessionLoopState || priv.sessionLoopState;
+    const q = String(m.queueId || priv.queueId || party.queueId || '').toLowerCase();
+    const mode = VAL_QUEUE[q] || (q ? q[0].toUpperCase() + q.slice(1) : '');
+    if (loop === 'INGAME') {
+      const ally = party.partyOwnerMatchScoreAllyTeam ?? priv.partyOwnerMatchScoreAllyTeam;
+      const enemy = party.partyOwnerMatchScoreEnemyTeam ?? priv.partyOwnerMatchScoreEnemyTeam;
+      const score = Number.isFinite(Number(ally)) && Number.isFinite(Number(enemy)) ? `${ally} - ${enemy}` : '';
+      return [mode || t("Im Spiel"), score].filter(Boolean).join(' ');
+    }
+    const base = VAL_STATUS[loop] ? t(VAL_STATUS[loop]) : null;
+    return [base, mode].filter(Boolean).join(' · ') || null;
+  }
+  if (product === 'league_of_legends' || product === 'teamfighttactics') {
+    return LOL_STATUS[priv.gameStatus] ? t(LOL_STATUS[priv.gameStatus]) : (priv.gameStatus ? String(priv.gameStatus) : null);
+  }
+  return null;
+}
+
+/** Wie "gut" ist eine Presence? Echtes Spiel vor Client, online vor abwesend */
+function score(p) {
+  const st = STATES[p.state] || 'online';
+  if (st === 'offline') return 0;
+  const game = !NOT_A_GAME.has(String(p.product || '').toLowerCase());
+  return (game ? 10 : 0) + (st === 'online' ? 3 : st === 'busy' ? 2 : 1);
+}
+
 /** Freunde + Presences -> einheitliches Format (für Tests getrennt) */
 function merge(friends, presences) {
+  // Pro Freund kann es mehrere Presences geben (Riot Client + Spiel + Handy) -> die beste nehmen
   const pres = new Map();
-  for (const p of presences || []) if (p?.puuid) pres.set(p.puuid, p);
+  for (const p of presences || []) {
+    if (!p?.puuid) continue;
+    const cur = pres.get(p.puuid);
+    if (!cur || score(p) > score(cur)) pres.set(p.puuid, p);
+  }
   return (friends || []).map((f) => {
     const p = pres.get(f.puuid);
-    const priv = decodePrivate(p?.private);
-    const product = p?.product && p.product !== 'keystone' ? p.product : null;
-    let richText = null;
-    if (priv) {
-      if (product === 'valorant') richText = VAL_STATUS[priv.sessionLoopState] ? t(VAL_STATUS[priv.sessionLoopState]) : null;
-      else if (product === 'league_of_legends' || product === 'teamfighttactics') {
-        richText = LOL_STATUS[priv.gameStatus] ? t(LOL_STATUS[priv.gameStatus]) : (priv.gameStatus ? String(priv.gameStatus) : null);
-      }
-    }
+    const state = p ? (STATES[p.state] || 'online') : 'offline';
+    const online = state !== 'offline';
+    const prodRaw = String(p?.product || '').toLowerCase();
+    const product = online && !NOT_A_GAME.has(prodRaw) ? prodRaw : null;
     const name = f.game_name || f.name || p?.game_name || 'Unbekannt';
     const tag = f.game_tag || p?.game_tag || '';
     return {
@@ -60,9 +101,9 @@ function merge(friends, presences) {
       name,
       tag,
       avatar: null,
-      state: p ? (STATES[p.state] || 'online') : 'offline',
+      state,
       gameName: product ? (PRODUCTS[product] || product) : null,
-      richText,
+      richText: product ? richTextFor(product, decodePrivate(p?.private)) : null,
       lastOnline: null
     };
   });
