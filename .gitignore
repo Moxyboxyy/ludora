@@ -20,3 +20,4 @@ ludora-src.zip
 # Signatur-Schlüssel nie hochladen
 *.pem
 private-key*
+node_modules
