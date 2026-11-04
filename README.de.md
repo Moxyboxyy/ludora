@@ -41,7 +41,7 @@ Hintergrund bleiben.
 
 Ludora sieht deine Launcher-Passwörter nie: Die Anmeldung läuft immer über die echte Seite des Anbieters, und
 Anmelde-Tokens werden verschlüsselt auf deinem PC gespeichert. Mit Ludora-Konto kommen sie Ende-zu-Ende-verschlüsselt
-auf deine anderen Geräte mit – auf einem neuen PC einmal bei Ludora anmelden, und du bist auch bei Steam, Epic und GOG drin.
+auf deine anderen Geräte mit – auf einem neuen PC einmal bei Ludora anmelden, und du bist auch bei Epic und GOG drin (Steam bleibt pro Gerät angemeldet).
 
 ## Installation
 

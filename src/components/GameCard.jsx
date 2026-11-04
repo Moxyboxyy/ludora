@@ -6,10 +6,11 @@ import { t } from '../i18n.js';
 function GameCard({ game, provider, launching, onPlay, onFolder, onRemove, onSetCover, onUpdate, running, onFocus, onUninstall, favorite, onToggleFavorite, streamFrom, onStream, osName }) {
   const notInstalled = game.status === 'notInstalled';
   const disabled = game.status === 'missing';
+  // Von einem anderen Gerät streambar -> wie installiert anzeigen (nicht ausgegraut)
   const playtime = formatPlaytime(game.playtimeMin);
   return (
     (<article
-      className={`card ${running ? 'running' : ''} ${launching ? 'launching' : ''} ${notInstalled ? 'not-installed' : ''}`}
+      className={`card ${running ? 'running' : ''} ${launching ? 'launching' : ''} ${notInstalled && !streamFrom ? 'not-installed' : ''}`}
       onDoubleClick={!disabled ? (running ? onFocus : onPlay) : undefined}
     >
       <div className="cover">

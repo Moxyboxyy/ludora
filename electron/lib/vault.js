@@ -1,18 +1,21 @@
 // Logins über das Ludora-Konto auf andere Geräte mitnehmen – Ende-zu-Ende-verschlüsselt.
 //
-// Ludora verschlüsselt die Launcher-Anmeldungen (Steam, Epic, GOG) auf deinem Gerät mit einem Schlüssel,
+// Ludora verschlüsselt die Launcher-Anmeldungen (Epic, GOG) auf deinem Gerät mit einem Schlüssel,
 // der aus deinem Ludora-Passwort abgeleitet wird (scrypt). Auf den Ludora-Server kommt nur der
 // verschlüsselte Block – ohne dein Passwort kann ihn niemand lesen, auch nicht der Server-Betreiber.
 // Meldest du dich auf einem anderen Gerät mit deinem Ludora-Konto an, holt Ludora den Block,
-// entschlüsselt ihn mit deinem Passwort und ist bei Steam, Epic und GOG gleich mit angemeldet.
+// entschlüsselt ihn mit deinem Passwort und ist bei Epic und GOG gleich mit angemeldet.
 //
 // Der abgeleitete Schlüssel bleibt (wieder vom Betriebssystem verschlüsselt) auf dem Gerät, damit
 // erneuerte Tokens auch später ohne Passworteingabe abgeglichen werden können.
 const crypto = require('crypto');
 const secrets = require('./secrets');
 
-// Diese Anmeldungen werden mitgenommen (Riot ist rein lokal, das Ludora-Konto selbst sowieso)
-const SYNCED = ['steamWebToken', 'friendsEpic', 'friendsGog'];
+// Diese Anmeldungen werden mitgenommen (Riot ist rein lokal, das Ludora-Konto selbst sowieso).
+// Steam bleibt ebenfalls lokal: Steam tauscht das Anmelde-Token bei jeder Erneuerung aus. Teilen sich
+// mehrere Geräte eins, macht die Erneuerung auf einem Gerät das Token der anderen ungültig – und deren
+// Abmeldung wurde dann wieder auf alle Geräte übertragen (ständiges Neu-Anmelden).
+const SYNCED = ['friendsEpic', 'friendsGog'];
 const KEY_SECRET = 'vaultKey';
 
 let request = null;   // (pathname, opts) -> Promise (aus hubAccount, mit Anmeldung)

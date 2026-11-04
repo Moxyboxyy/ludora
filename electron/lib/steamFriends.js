@@ -90,8 +90,20 @@ async function startQr() {
   return state;
 }
 
+/** Hat eine andere Ludora-Instanz (installiert + Entwicklung) das Token inzwischen erneuert? Dann das neue nehmen. */
+function adoptStoredToken() {
+  const stored = loadToken();
+  if (!stored || stored === refreshToken) return false;
+  refreshToken = stored;
+  session = null;
+  accessToken = null;
+  accessExp = 0;
+  return true;
+}
+
 async function ensureAccess() {
   if (accessToken && accessExp - 300 > Date.now() / 1000) return accessToken;
+  adoptStoredToken();
   const { LoginSession, EAuthTokenPlatformType } = require('steam-session');
   if (!session) session = new LoginSession(EAuthTokenPlatformType.WebBrowser);
   session.refreshToken = refreshToken;
@@ -125,9 +137,14 @@ async function connect(token, firstAccess) {
     ensureChat().catch(() => { /* klappt beim ersten Senden erneut; Liste läuft auch ohne */ });
   } catch (err) {
     if (my !== gen) return;
-    if (/AccessDenied|Expired|Revoked|InvalidSignature|InvalidPassword|401/i.test(String(err.message))) saveToken(null);
-    else if (isTransient(err)) {
-      // Kein Internet / Steam kurz weg: angemeldet bleiben und es gleich nochmal versuchen
+    // Inzwischen ein neueres Token gespeichert (andere Ludora-Instanz hat erneuert)? Damit weiter.
+    const stored = loadToken();
+    if (stored && stored !== token) { retries = 0; connect(stored); return; }
+    const rejected = /AccessDenied|Expired|Revoked|InvalidSignature|InvalidPassword/i.test(String(err.message));
+    // Das Token wird hier NIE gelöscht – nur beim Abmelden oder wenn ein neues per QR-Code kommt.
+    // Sonst reicht ein einziger Aussetzer bei Steam, und man muss sich neu anmelden.
+    if (!rejected && (isTransient(err) || retries < 6)) {
+      // Kein Internet / Steam kurz weg / unklarer Fehler: angemeldet bleiben und es gleich nochmal versuchen
       emit({ status: 'connecting', error: t("Steam nicht erreichbar – neuer Versuch läuft …") });
       clearTimeout(retryTimer);
       retryTimer = setTimeout(() => { if (my === gen) connect(token); }, Math.min(5 * 60e3, 10e3 * 2 ** (retries++)));

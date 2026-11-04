@@ -12,9 +12,10 @@ function formatSize(bytes) {
 function GameRow({ game, provider, launching, onPlay, onFolder, onRemove, onSetCover, onUpdate, running, onFocus, onUninstall, favorite, onToggleFavorite, streamFrom, onStream, osName }) {
   const notInstalled = game.status === 'notInstalled';
   const disabled = game.status === 'missing';
+  // Von einem anderen Gerät streambar -> wie installiert anzeigen (nicht ausgegraut)
   return (
     (<div
-      className={`row ${launching ? 'launching' : ''} ${notInstalled ? 'not-installed' : ''}`}
+      className={`row ${launching ? 'launching' : ''} ${notInstalled && !streamFrom ? 'not-installed' : ''}`}
       onDoubleClick={!disabled ? (running ? onFocus : onPlay) : undefined}
     >
       <div className="thumb"><Cover game={{ ...game, covers: [...(game.wides || []), ...(game.covers || [])] }} provider={provider} wide /></div>

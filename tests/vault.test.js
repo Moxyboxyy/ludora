@@ -73,10 +73,11 @@ test('vault: Anmeldung auf zweitem Gerät übernehmen, neuere gewinnt, Server si
   const off = vault.onRestore((n) => restoredNames.push(n));
   await vault.unlock('geheim123', 'alex');
   vault.attach(server.req, 'u1');
-  assert.deepStrictEqual((await vault.sync()).sort(), ['friendsEpic', 'steamWebToken']);
+  assert.deepStrictEqual(await vault.sync(), ['friendsEpic']);
   assert.deepStrictEqual(secrets.get('friendsEpic'), { refresh_token: 'epic-A', account_id: 'e1' });
-  assert.strictEqual(secrets.get('steamWebToken'), 'steam-A');
-  assert.deepStrictEqual(restoredNames.sort(), ['friendsEpic', 'steamWebToken']);
+  // Steam bleibt lokal (Steam tauscht das Token bei jeder Erneuerung aus)
+  assert.strictEqual(secrets.get('steamWebToken'), null);
+  assert.deepStrictEqual(restoredNames, ['friendsEpic']);
 
   // B erneuert das Epic-Token -> A bekommt beim nächsten Abgleich das neue
   secrets.set('friendsEpic', { refresh_token: 'epic-B', account_id: 'e1' }, { at: 200, silent: true });
@@ -88,9 +89,9 @@ test('vault: Anmeldung auf zweitem Gerät übernehmen, neuere gewinnt, Server si
   assert.strictEqual(secrets.get('friendsEpic').refresh_token, 'epic-B');
 
   // Älterer Stand vom Server überschreibt nichts Neueres
-  secrets.set('steamWebToken', 'steam-neu', { at: 500, silent: true });
+  secrets.set('friendsEpic', { refresh_token: 'epic-neu', account_id: 'e1' }, { at: 500, silent: true });
   assert.deepStrictEqual(await vault.sync(), []);
-  assert.strictEqual(secrets.get('steamWebToken'), 'steam-neu');
+  assert.strictEqual(secrets.get('friendsEpic').refresh_token, 'epic-neu');
   off();
   vault.detach();
 });

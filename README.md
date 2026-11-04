@@ -40,7 +40,7 @@ search every store for games and deals – while the individual launchers stay q
 
 Ludora never sees your launcher passwords: signing in always happens on the provider's real page, and sign-in
 tokens are stored encrypted on your PC. With a Ludora account they come along to your other devices end-to-end
-encrypted – sign in to Ludora once on a new PC and you're signed in to Steam, Epic and GOG as well.
+encrypted – sign in to Ludora once on a new PC and you're signed in to Epic and GOG as well (Steam stays signed in per device).
 
 ## Installation
 
