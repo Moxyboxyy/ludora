@@ -1,9 +1,12 @@
 # Baut die Installer für Windows, macOS und Linux auf GitHub und veröffentlicht sie als Release.
-# Auslöser: ein Tag wie "v0.4.0" (git tag v0.4.0 && git push origin v0.4.0) oder manuell unter "Actions".
+# Auslöser: neue Version in package.json auf main (z. B. "version": "0.4.1"), ein Tag "v*"
+# oder manuell unter "Actions → Release → Run workflow". Das Release heißt dann v<version>.
 name: Release
 
 on:
   push:
+    branches: [main]
+    paths: ['package.json']
     tags: ['v*']
   workflow_dispatch:
 
@@ -65,6 +68,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Version lesen
+        id: version
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v4
         with:
           path: dist-all
@@ -72,7 +78,9 @@ jobs:
       - run: ls -la dist-all
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.run_number) }}
-          name: Ludora ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Ludora ${{ github.ref_type == 'tag' && github.ref_name || steps.version.outputs.tag }}
+          make_latest: true
           body_path: .github/release-notes.md
           files: dist-all/*
