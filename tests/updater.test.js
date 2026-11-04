@@ -40,7 +40,7 @@ test('Updates nur mit gültiger Signatur', () => {
 
 test('Launcher-Downloads: nur offizielle https-Adressen', () => {
   const { DOWNLOADS } = require('../electron/providers');
-  const official = /(^|\.)(steamstatic\.com|steampowered\.com|epicgames\.com|gog\.com|ea\.com|ubisoftconnect\.com|battle\.net|amazon\.com|riotgames\.com|rockstargames\.com|heroicgameslauncher\.com|lutris\.net)$/;
+  const official = /(^|\.)(steamstatic\.com|steampowered\.com|epicgames\.com|gog\.com|gog-statics\.com|ea\.com|origin-a\.akamaihd\.net|amazongames\.com|ubisoftconnect\.com|battle\.net|amazon\.com|riotgames\.com|rockstargames\.com|heroicgameslauncher\.com|lutris\.net)$/;
   for (const list of Object.values(DOWNLOADS)) {
     for (const url of Object.values(list)) {
       const u = new URL(url);

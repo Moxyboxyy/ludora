@@ -29,19 +29,19 @@ const DOWNLOADS = {
   win32: {
     steam: 'https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe',
     epic: 'https://store.epicgames.com/download',
-    gog: 'https://www.gog.com/galaxy',
-    ea: 'https://www.ea.com/ea-app',
+    gog: 'https://webinstallers.gog-statics.com/download/GOG_Galaxy_2.0.exe',
+    ea: 'https://origin-a.akamaihd.net/EA-Desktop-Client-Download/installer-releases/EAappInstaller.exe',
     ubisoft: 'https://ubisoftconnect.com/',
-    battlenet: 'https://download.battle.net/',
-    amazon: 'https://gaming.amazon.com/amazon-games-app',
+    battlenet: 'https://www.battle.net/download/getInstallerForGame?os=win&gameProgram=BATTLENET_APP&version=Live',
+    amazon: 'https://download.amazongames.com/AmazonGamesSetup.exe',
     riot: 'https://www.riotgames.com/',
     rockstar: 'https://www.rockstargames.com/downloads'
   },
   darwin: {
-    steam: 'https://cdn.akamai.steamstatic.com/client/installer/steam.dmg',
+    steam: 'https://store.steampowered.com/about/',
     epic: 'https://store.epicgames.com/download',
     gog: 'https://www.gog.com/galaxy',
-    battlenet: 'https://download.battle.net/',
+    battlenet: 'https://www.battle.net/download/getInstallerForGame?os=mac&gameProgram=BATTLENET_APP&version=Live',
     riot: 'https://www.riotgames.com/'
   },
   linux: {
