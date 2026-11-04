@@ -96,6 +96,20 @@ contextBridge.exposeInMainWorld('gamehub', {
   accountLogout: (id) => ipcRenderer.invoke('account:logout', id),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
+  // Läuft auf diesem System? (nach dem Scan nachgereicht)
+  onCompat: (cb) => {
+    const handler = (_e, data) => cb(data);
+    ipcRenderer.on('library:compat', handler);
+    return () => ipcRenderer.removeListener('library:compat', handler);
+  },
+  // Spiele, die auf einem anderen Gerät installiert sind (Steam Remote Play)
+  getStreams: () => ipcRenderer.invoke('library:streams'),
+  onStreams: (cb) => {
+    const handler = (_e, data) => cb(data);
+    ipcRenderer.on('library:streams', handler);
+    return () => ipcRenderer.removeListener('library:streams', handler);
+  },
+  stream: (gameId) => ipcRenderer.invoke('game:stream', gameId),
   // Cover, die nach dem Scan im Hintergrund gefunden werden
   onCover: (cb) => {
     const handler = (_e, data) => cb(data);

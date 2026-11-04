@@ -29,6 +29,7 @@ search every store for games and deals – while the individual launchers stay q
 |---|---|
 | **One library** | All installed games of all launchers – plus owned but not installed games where the launcher provides them – with covers, playtime and “last played”. Grid or list view, filters and sorting. |
 | **Play, update, uninstall** | One click starts the game through its own launcher, which starts hidden in the background. Updates and uninstalls also run through the launchers, silently where the launcher allows it. |
+| **Runs on your system** | By default the library only shows games that run on your operating system (Windows, macOS or Linux – on Linux including Proton). Owned Steam games installed on another of your devices that is signed in to Steam show a **Stream** button (Steam Remote Play). |
 | **Downloads** | Progress, speed and remaining time of every running download and update – live, from all launchers in one list. |
 | **Favorites** | Mark any game with a star – no matter which launcher – and find it under “Favorites”. |
 | **Friends** | Steam, Riot, Epic and GOG friends in one list, including what they are playing. Chat with Steam friends directly in Ludora. |

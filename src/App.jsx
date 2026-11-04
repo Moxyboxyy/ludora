@@ -24,6 +24,9 @@ const SHOW_OPTIONS = [
   ['all', t("Alle")],
   ['notInstalled', t("Nicht installiert")]
 ];
+// Name des eigenen Betriebssystems (für den Filter "Läuft auf …")
+const OS_NAME = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[api.platform] || 'Windows';
+
 const SORT_OPTIONS = [
   ['name', t("Name")],
   ['playtime', t("Spielzeit")],
@@ -38,6 +41,9 @@ export default function App() {
   const [view, setView] = useState(() => loadPref('view', 'grid'));
   const [show, setShow] = useState(() => loadPref('show', 'all'));
   const [sort, setSort] = useState(() => loadPref('sort', 'name'));
+  // Nur Spiele zeigen, die auf diesem System laufen (oder von einem anderen Gerät gestreamt werden können)
+  const [osOnly, setOsOnly] = useState(() => loadPref('osOnly', '1') === '1');
+  const [streams, setStreams] = useState({}); // "steam:<appid>" -> ["DESKTOP-PC"]
   const [toast, setToast] = useState(null);
   const [launching, setLaunching] = useState(null);
   const [dialog, setDialog] = useState(null); // 'add' | 'settings' | 'downloads' | 'friends' | null
@@ -159,6 +165,16 @@ export default function App() {
     return { total: list.length, active: list.some((g) => g.update.state === 'downloading'), progress };
   }, [data.games]);
 
+  // Nachgereicht: läuft das Spiel auf diesem System?
+  useEffect(() => api.onCompat?.(({ id, platforms, runsHere }) => {
+    setData((d) => ({ ...d, games: d.games.map((g) => (g.id === id ? { ...g, platforms, runsHere } : g)) }));
+  }), []);
+  // Auf anderen Geräten installiert (Steam Remote Play)
+  useEffect(() => {
+    api.getStreams?.().then((x) => setStreams(x || {})).catch(() => {});
+    return api.onStreams?.((x) => setStreams(x || {}));
+  }, []);
+
   // Nachgeladene Cover einsetzen, sobald sie gefunden wurden
   useEffect(() => api.onCover(({ id, covers, wides }) => {
     setData((d) => ({
@@ -172,10 +188,17 @@ export default function App() {
     [data.providers]
   );
 
+  // Streambar = hier nicht installiert, aber auf einem anderen angemeldeten Gerät
+  const streamFrom = useCallback((g) => (g.status === 'notInstalled' ? streams[g.id]?.[0] || null : null), [streams]);
+  const runsHere = useCallback((g) => g.runsHere !== false || !!streamFrom(g), [streamFrom]);
+
   const matchesShow = useCallback((g) =>
-    show === 'all' ||
-    (show === 'notInstalled' ? g.status === 'notInstalled' : g.status !== 'notInstalled'),
-  [show]);
+    (!osOnly || runsHere(g)) &&
+    (show === 'all' ||
+    (show === 'notInstalled' ? g.status === 'notInstalled' : g.status !== 'notInstalled')),
+  [show, osOnly, runsHere]);
+  const hiddenOs = useMemo(() => data.games.filter((g) => !runsHere(g)).length, [data.games, runsHere]);
+  const toggleOsOnly = () => { setOsOnly(!osOnly); savePref('osOnly', osOnly ? '0' : '1'); };
 
   // Zähler in der Seitenleiste passend zum Installiert/Alle-Filter
   const counts = useMemo(() => {
@@ -210,6 +233,14 @@ export default function App() {
     if (!res.ok) notify(res.error || t("Start fehlgeschlagen"), 'error');
     else if (game.status === 'notInstalled') notify(t("{0} öffnet die Installation von {1} …", [via, game.name]));
     else notify(t("{0} wird über {1} gestartet …", [game.name, via]));
+  }
+
+  async function streamGame(game) {
+    setLaunching(game.id);
+    const res = await api.stream(game.id);
+    setTimeout(() => setLaunching(null), 2500);
+    if (!res.ok) notify(res.error || t("Streamen fehlgeschlagen"), 'error');
+    else notify(t("{0} wird von {1} gestreamt …", [game.name, streamFrom(game)]));
   }
 
   async function openLauncher(providerId, what) {
@@ -300,12 +331,15 @@ export default function App() {
   // Karten bekommen Handler, die immer die aktuelle Funktion aufrufen (über eine Ref).
   // So können GameCard/GameRow per memo Neuzeichnen überspringen, wenn sich am Spiel nichts geändert hat.
   const act = useRef({});
-  act.current = { play, openFolder, setCover, runUpdate, toggleFavorite, focusGame, uninstallGame, removeGame };
+  act.current = { play, streamGame, openFolder, setCover, runUpdate, toggleFavorite, focusGame, uninstallGame, removeGame };
   const cardProps = (g) => ({
     game: uninstalling === g.id ? { ...g, busy: t("Deinstalliert …") } : g,
     provider: providerById[g.provider],
     launching: launching === g.id,
     onPlay: () => act.current.play(g),
+    streamFrom: streamFrom(g),
+    onStream: () => act.current.streamGame(g),
+    osName: OS_NAME,
     onFolder: () => act.current.openFolder(g),
     onSetCover: () => act.current.setCover(g),
     onUpdate: () => act.current.runUpdate(g),
@@ -397,6 +431,14 @@ export default function App() {
                 ))}
               </div>
             )}
+            <button className={`os-filter ${osOnly ? 'on' : ''}`} onClick={toggleOsOnly}
+              title={osOnly
+                ? t("Nur Spiele, die auf {0} laufen oder von einem anderen Gerät gestreamt werden können ({1} ausgeblendet) – klicken für alle", [OS_NAME, hiddenOs])
+                : t("Alle Spiele – auch die, die nicht auf {0} laufen", [OS_NAME])}>
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg>
+              {t("Läuft auf {0}", [OS_NAME])}
+              {osOnly && hiddenOs > 0 && <span className="os-hidden">−{hiddenOs}</span>}
+            </button>
             <label className="sort">{t("Sortieren:")}<select value={sort} onChange={(e) => changeSort(e.target.value)}>
                 {SORT_OPTIONS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
               </select>

@@ -70,6 +70,13 @@ async function readCatalog() {
   }));
 }
 
+/** Plattformen aus dem Katalog ("Windows", "Win32", "Mac") – undefined, wenn Epic nichts angibt */
+function platformsOf(item) {
+  const list = (item?.releaseInfo || []).flatMap((r) => r.platform || []).map((x) => String(x).toLowerCase());
+  if (!list.length) return undefined;
+  return { windows: list.some((x) => x.startsWith('win')), mac: list.includes('mac'), linux: list.includes('linux') };
+}
+
 const launcherUri = (ns, item, app, action) =>
   `com.epicgames.launcher://apps/${ns}%3A${item}%3A${app}?action=${action}` + (action === 'launch' ? '&silent=true' : '');
 
@@ -295,6 +302,7 @@ async function detect() {
       epicItem: c.itemId,
       name: c.title,
       status: 'notInstalled',
+      platforms: platformsOf(c.item),
       ...c.images,
       launch: { type: 'uri', target: launcherUri(c.namespace, c.itemId, c.appName, 'install') }
     });
@@ -316,6 +324,7 @@ async function findEpicExe() {
 }
 
 module.exports = {
+  _platformsOf: platformsOf,
   _readDownloadStateJson: readDownloadStateJson,
   _wasInstalled: wasInstalled,
   id: 'epic',

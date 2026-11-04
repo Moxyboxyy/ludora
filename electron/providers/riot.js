@@ -31,9 +31,9 @@ async function installedFromMetadata() {
 }
 
 const PRODUCTS = [
-  { id: 'league_of_legends', name: 'League of Legends' },
-  { id: 'valorant', name: 'VALORANT' },
-  { id: 'bacon', name: 'Legends of Runeterra' }
+  { id: 'league_of_legends', name: 'League of Legends', platforms: { windows: true, mac: true, linux: false } },
+  { id: 'valorant', name: 'VALORANT', platforms: { windows: true, mac: false, linux: false } },
+  { id: 'bacon', name: 'Legends of Runeterra', platforms: { windows: true, mac: false, linux: false } }
 ];
 
 async function findClient(fromUninstall) {
@@ -156,6 +156,7 @@ async function detect() {
         nativeId: `${p.id}.live`,
         name: p.name,
         status: 'notInstalled',
+        platforms: p.platforms,
         covers: [],
         iconUrl: `ghimg://riot/${p.id}.live`,
         // Der Riot Client fragt dann, ob installiert werden soll

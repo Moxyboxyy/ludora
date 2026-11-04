@@ -208,6 +208,17 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 .pill.updating { background: rgba(255,200,87,.18); color: var(--warn); backdrop-filter: blur(6px); }
 .pill.missing { background: rgba(255,107,107,.18); color: var(--danger); backdrop-filter: blur(6px); }
 .pill.ok { background: rgba(107,227,161,.12); color: var(--ok); }
+/* Von einem anderen Gerät streambar / läuft nicht auf diesem System */
+.pill.stream { display: inline-flex; align-items: center; gap: 4px; background: rgba(110,168,255,.2); color: #9cc3ff; backdrop-filter: blur(6px); max-width: calc(100% - 16px); overflow: hidden; text-overflow: ellipsis; }
+.pill.stream svg { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; }
+.pill.not-here { background: rgba(255,255,255,.1); color: var(--muted); backdrop-filter: blur(6px); }
+.play.stream { background: linear-gradient(135deg, #4b8dff, #6ea8ff); }
+.play.stream svg { fill: none; }
+/* Filter "Läuft auf …" */
+.os-filter { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; font-size: 13px; color: var(--muted); border: 1px solid var(--border, #2a3142); }
+.os-filter svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.os-filter.on { color: var(--text); background: rgba(110,168,255,.12); border-color: rgba(110,168,255,.35); }
+.os-hidden { font-size: 11px; color: var(--muted); }
 
 /* ---------- Liste ---------- */
 .list { flex: 1; overflow-y: auto; padding: 14px 28px 40px; display: flex; flex-direction: column; gap: 4px; }

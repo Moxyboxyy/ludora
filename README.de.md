@@ -30,6 +30,7 @@ Hintergrund bleiben.
 |---|---|
 | **Eine Bibliothek** | Alle installierten Spiele aller Launcher – dazu gekaufte, aber nicht installierte Spiele, wo der Launcher sie liefert – mit Covern, Spielzeit und „zuletzt gespielt“. Raster- oder Listenansicht, Filter und Sortierung. |
 | **Spielen, Updaten, Deinstallieren** | Ein Klick startet das Spiel über seinen eigenen Launcher, der dabei versteckt im Hintergrund startet. Updates und Deinstallationen laufen ebenfalls über die Launcher – unsichtbar, wo der Launcher das zulässt. |
+| **Läuft auf deinem System** | Die Bibliothek zeigt standardmäßig nur Spiele, die auf deinem Betriebssystem laufen (Windows, macOS oder Linux – unter Linux inklusive Proton). Steam-Spiele, die auf einem anderen deiner Geräte installiert sind, das bei Steam angemeldet ist, bekommen einen **Streamen**-Knopf (Steam Remote Play). |
 | **Downloads** | Fortschritt, Geschwindigkeit und Restzeit jedes laufenden Downloads und Updates – live, aus allen Launchern in einer Liste. |
 | **Favoriten** | Markiere jedes Spiel mit einem Stern – egal aus welchem Launcher – und finde es unter „Favoriten“. |
 | **Freunde** | Steam-, Riot-, Epic- und GOG-Freunde in einer Liste, inklusive was sie gerade spielen. Mit Steam-Freunden direkt in Ludora chatten. |

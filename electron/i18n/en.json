@@ -483,5 +483,16 @@
   "Für {0} gibt es hier keinen Download.": "No download available for {0} here.",
   "Download von {0} wird im Browser geöffnet …": "Opening the {0} download in your browser …",
   "{0} ist nicht installiert": "{0} is not installed",
-  "{0} herunterladen": "Download {0}"
+  "{0} herunterladen": "Download {0}",
+  "Nur Spiele, die auf {0} laufen oder von einem anderen Gerät gestreamt werden können ({1} ausgeblendet) – klicken für alle": "Only games that run on {0} or can be streamed from another device ({1} hidden) – click to show all",
+  "Alle Spiele – auch die, die nicht auf {0} laufen": "All games – including those that don't run on {0}",
+  "Läuft auf {0}": "Runs on {0}",
+  "Streamen fehlgeschlagen": "Streaming failed",
+  "{0} wird von {1} gestreamt …": "Streaming {0} from {1} …",
+  "Nur Steam-Spiele lassen sich streamen.": "Only Steam games can be streamed.",
+  "Auf {0} installiert – per Steam Remote Play streamen": "Installed on {0} – stream via Steam Remote Play",
+  "Nicht für {0}": "Not for {0}",
+  "Von {0} streamen (Steam Remote Play)": "Stream from {0} (Steam Remote Play)",
+  "Verbindet …": "Connecting …",
+  "Streamen": "Stream"
 }

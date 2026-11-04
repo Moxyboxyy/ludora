@@ -361,6 +361,36 @@ function restore() {
   if (token && token !== refreshToken) { retries = 0; connect(token); }
 }
 
+// ---------- Auf anderen Geräten installiert (Remote Play) ----------
+//
+// Steam kennt alle deine gerade angemeldeten Steam-Clients (PC, Laptop, Steam Deck …) und weiß, was dort
+// installiert ist (dieselbe Schnittstelle nutzt Steams eigener "Remote-Download" auf der Webseite).
+// Ludora zeigt damit an, welche Spiele du von einem anderen Gerät zu diesem streamen kannst.
+
+/** Rechnername vergleichen (Groß/Klein, Domain-Anhang egal) */
+const sameMachine = (a, b) => String(a || '').toLowerCase().split('.')[0] === String(b || '').toLowerCase().split('.')[0];
+
+/**
+ * -> [{ machine, os, apps: [appid, …] }] für alle anderen angemeldeten Steam-Clients.
+ * Leer, wenn Ludora nicht bei Steam angemeldet ist.
+ */
+async function remoteInstalled(thisMachine = require('os').hostname()) {
+  if (state.status !== 'connected' || !refreshToken) return [];
+  const r = await call('IClientCommService', 'GetAllClientLogonInfo');
+  const out = [];
+  for (const s of r.sessions || []) {
+    if (!s.client_instanceid || sameMachine(s.machine_name, thisMachine)) continue;
+    try {
+      const list = await call('IClientCommService', 'GetClientAppList', {
+        client_instanceid: s.client_instanceid, fields: 'games', filters: 'installed', language: 'english'
+      });
+      const apps = (list.apps || []).filter((a) => a.installed !== false && a.appid).map((a) => String(a.appid));
+      out.push({ machine: s.machine_name || s.os_name || 'Steam', os: s.os_name || null, apps });
+    } catch (err) { console.warn('[steam] Geräteliste', s.machine_name, err.message); }
+  }
+  return out;
+}
+
 /** Steams eigener "Spiel beitreten"-Link – Steam kümmert sich um Lobby/Server */
 function joinUrl(f) {
   return f?.appid ? `steam://friends/joingame/${f.steamid}` : null;
@@ -629,7 +659,7 @@ async function getLinkProof() {
 
 module.exports = {
   getLinkProof,
-  init, restore, startQr, logout, onChange, onChat, getState, setFast, joinUrl, findFriend,
+  init, restore, startQr, remoteInstalled, logout, onChange, onChat, getState, setFast, joinUrl, findFriend,
   history, send, typing, markRead, watch,
-  _test: { avatarUrl, jwtPayload, toSteamId, toAccountId }
+  _test: { avatarUrl, jwtPayload, toSteamId, toAccountId, sameMachine }
 };

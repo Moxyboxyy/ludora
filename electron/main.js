@@ -94,6 +94,7 @@ const manual = require('./providers/manual');
 const settings = require('./lib/settings');
 const steam = require('./providers/steam');
 const covers = require('./lib/covers');
+const compat = require('./lib/compat');
 const accounts = require('./lib/accounts');
 const coverCheck = require('./lib/coverCheck');
 const steamFriends = require('./lib/steamFriends');
@@ -701,6 +702,7 @@ app.whenReady().then(() => {
   require('./lib/secrets').init({ dir: SHARED_DIR, settings });
   i18n.setLanguage(settings.get('language', 'en')); // Standard: Englisch
   covers.init(app.getPath('userData'));
+  compat.init(app.getPath('userData'));
   coverCheck.init(app.getPath('userData'));
   macIcon.init(app.getPath('userData'));
   shop.setCacheFile(path.join(app.getPath('userData'), 'shop-cache.json'));
@@ -888,9 +890,45 @@ app.whenReady().then(() => {
       if (process.env.VITE_DEV_SERVER_URL) reportPaths.push(path.join(process.cwd(), 'cover-report.json'));
       await coverCheck.run(lastScan.games, { urlOk: coverUrlOk, onUpdate: push, reportPaths });
     })().catch((err) => console.error('[covers]', err));
+    // Läuft das Spiel auf diesem System? Bekanntes sofort, Fehlendes im Hintergrund nachreichen
+    const compatMissing = compat.applyCached(lastScan.games);
+    if (compatMissing.length) {
+      compat.fetchMissing(compatMissing, (g) => {
+        saveLibraryCache();
+        if (run === coverRun && !sender.isDestroyed()) sender.send('library:compat', { id: g.id, platforms: g.platforms, runsHere: g.runsHere });
+      }).catch((err) => console.warn('[compat]', err.message));
+    }
+    refreshStreams();
     saveLibraryCache();
     tray.refreshMenu();
     return lastScan;
+  });
+
+  // ---------- Streamen (Steam Remote Play) ----------
+  // Welche Steam-Spiele sind auf einem anderen deiner Geräte installiert, das gerade bei Steam angemeldet ist?
+  let streams = {}; // "steam:<appid>" -> ["DESKTOP-PC", …]
+  let streamTimer = null;
+  async function refreshStreams() {
+    clearTimeout(streamTimer);
+    streamTimer = setTimeout(refreshStreams, 3 * 60 * 1000);
+    streamTimer.unref?.();
+    let next = {};
+    try {
+      for (const d of await steamFriends.remoteInstalled()) {
+        for (const appid of d.apps) (next[`steam:${appid}`] ||= []).push(d.machine);
+      }
+    } catch (err) { console.warn('[stream]', err.message); next = streams; }
+    if (JSON.stringify(next) !== JSON.stringify(streams)) { streams = next; broadcast('library:streams', streams); }
+  }
+  ipcMain.handle('library:streams', () => streams);
+  ipcMain.handle('game:stream', async (_e, id) => {
+    const game = findGame(id);
+    if (game?.provider !== 'steam' || !/^\d+$/.test(String(game.nativeId))) return { ok: false, error: t("Nur Steam-Spiele lassen sich streamen.") };
+    try {
+      // Ist das Spiel hier nicht installiert, startet Steam es per Remote Play vom anderen Gerät
+      await runLaunch({ type: 'uri', target: `steam://rungameid/${game.nativeId}` });
+      return { ok: true };
+    } catch (err) { return { ok: false, error: String(err.message || err) }; }
   });
 
   // Bild-Zwischenspeicher
@@ -974,6 +1012,10 @@ app.whenReady().then(() => {
 
   // ---------- Steam-Freunde ----------
   steamFriends.onChange((st) => broadcast('friends:update', st));
+  { // Nach der Steam-Anmeldung gleich nachsehen, was auf deinen anderen Geräten installiert ist
+    let was = null;
+    steamFriends.onChange((st) => { if (st.status === 'connected' && was !== 'connected') refreshStreams(); was = st.status; });
+  }
   // Neue Nachricht (Steam, Riot, Epic) -> an alle Fenster + Benachrichtigung, wenn der Chat nicht vorne ist
   const onChatEvent = (ev) => {
     broadcast('chat:event', ev);

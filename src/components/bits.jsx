@@ -118,9 +118,39 @@ export function formatPlaytime(min) {
   return t("{0} Std.", [h < 10 ? h.toFixed(1).replace('.', DEC) : Math.round(h).toLocaleString(LOCALE)]);
 }
 
+/** Streamen (Bildschirm mit Wellen) */
+export const StreamIcon = () => (
+  <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2" /><path d="M8 21h8" /><path d="m10 9 5 2-5 2z" fill="currentColor" stroke="none" /></svg>
+);
+
+/** Hinweis auf dem Cover: von einem anderen Gerät streambar, oder läuft nicht auf diesem System */
+export function HereBadge({ game, streamFrom, osName, inline = false }) {
+  if (game.status !== 'notInstalled') return null;
+  if (streamFrom) {
+    return (
+      <span className={`pill stream ${inline ? '' : 'floating'}`} title={t("Auf {0} installiert – per Steam Remote Play streamen", [streamFrom])}>
+        <StreamIcon />{streamFrom}
+      </span>
+    );
+  }
+  if (game.runsHere === false) {
+    return <span className={`pill not-here ${inline ? '' : 'floating'}`}>{t("Nicht für {0}", [osName])}</span>;
+  }
+  return null;
+}
+
 /** Haupt-Knopf: Spielen, Update oder Installieren */
-export function ActionButton({ game, launching, onPlay, onUpdate, running, onFocus, small = false }) {
+export function ActionButton({ game, launching, onPlay, onUpdate, running, onFocus, small = false, streamFrom, onStream }) {
   const install = game.status === 'notInstalled';
+  // Hier nicht installiert, aber auf einem anderen Gerät -> streamen statt installieren
+  if (install && streamFrom && onStream && !game.busy) {
+    return (
+      <button className={`play ${small ? 'small' : ''} stream`} onClick={onStream} disabled={launching}
+        title={t("Von {0} streamen (Steam Remote Play)", [streamFrom])}>
+        <StreamIcon />{launching ? t("Verbindet …") : t("Streamen")}
+      </button>
+    );
+  }
   if (game.busy) {
     return <button className={`play ${small ? 'small' : ''}`} disabled><span className="loader small" />{game.busy}</button>;
   }
