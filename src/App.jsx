@@ -23,7 +23,7 @@ const SHOW_OPTIONS = [
   ['installed', t("Installiert")],
   ['all', t("Alle")],
   ['notInstalled', t("Nicht installiert")],
-  ['stream', t("Streambar")] // auf einem anderen deiner Geräte installiert
+  ['stream', t("Stream")] // auf einem anderen deiner Geräte installiert
 ];
 // Name des eigenen Betriebssystems (für den Filter "Läuft auf …")
 const OS_NAME = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[api.platform] || 'Windows';
