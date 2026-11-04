@@ -906,27 +906,41 @@ app.whenReady().then(() => {
 
   // ---------- Streamen (Steam Remote Play) ----------
   // Welche Steam-Spiele sind auf einem anderen deiner Geräte installiert, das gerade bei Steam angemeldet ist?
-  let streams = {}; // "steam:<appid>" -> ["DESKTOP-PC", …]
+  let streams = {}; // "<launcher>:<id>" -> ["DESKTOP-PC", …]
+  // Woher Ludora weiß, was auf deinen anderen Geräten installiert ist, und wie gestreamt wird.
+  // Bisher bietet nur Steam beides (Remote Play); weitere Launcher lassen sich hier eintragen.
+  const STREAM_SOURCES = {
+    steam: {
+      devices: () => steamFriends.remoteInstalled(),
+      launch: (game) => (/^\d+$/.test(String(game.nativeId)) ? { type: 'uri', target: `steam://rungameid/${game.nativeId}` } : null)
+    }
+  };
   let streamTimer = null;
   async function refreshStreams() {
     clearTimeout(streamTimer);
     streamTimer = setTimeout(refreshStreams, 3 * 60 * 1000);
     streamTimer.unref?.();
-    let next = {};
-    try {
-      for (const d of await steamFriends.remoteInstalled()) {
-        for (const appid of d.apps) (next[`steam:${appid}`] ||= []).push(d.machine);
+    const next = {};
+    for (const [provider, src] of Object.entries(STREAM_SOURCES)) {
+      try {
+        for (const d of await src.devices()) {
+          for (const id of d.apps) (next[`${provider}:${id}`] ||= []).push(d.machine);
+        }
+      } catch (err) {
+        console.warn('[stream]', provider, err.message);
+        for (const [k, v] of Object.entries(streams)) if (k.startsWith(`${provider}:`)) next[k] = v; // alten Stand behalten
       }
-    } catch (err) { console.warn('[stream]', err.message); next = streams; }
+    }
     if (JSON.stringify(next) !== JSON.stringify(streams)) { streams = next; broadcast('library:streams', streams); }
   }
   ipcMain.handle('library:streams', () => streams);
   ipcMain.handle('game:stream', async (_e, id) => {
     const game = findGame(id);
-    if (game?.provider !== 'steam' || !/^\d+$/.test(String(game.nativeId))) return { ok: false, error: t("Nur Steam-Spiele lassen sich streamen.") };
+    const launch = game && STREAM_SOURCES[game.provider]?.launch(game);
+    if (!launch) return { ok: false, error: t("Dieses Spiel lässt sich nicht streamen.") };
     try {
-      // Ist das Spiel hier nicht installiert, startet Steam es per Remote Play vom anderen Gerät
-      await runLaunch({ type: 'uri', target: `steam://rungameid/${game.nativeId}` });
+      // Ist das Spiel hier nicht installiert, startet der Launcher es per Streaming vom anderen Gerät
+      await runLaunch(launch);
       return { ok: true };
     } catch (err) { return { ok: false, error: String(err.message || err) }; }
   });

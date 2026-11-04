@@ -22,7 +22,8 @@ function savePref(key, value) {
 const SHOW_OPTIONS = [
   ['installed', t("Installiert")],
   ['all', t("Alle")],
-  ['notInstalled', t("Nicht installiert")]
+  ['notInstalled', t("Nicht installiert")],
+  ['stream', t("Streambar")] // auf einem anderen deiner Geräte installiert
 ];
 // Name des eigenen Betriebssystems (für den Filter "Läuft auf …")
 const OS_NAME = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[api.platform] || 'Windows';
@@ -192,11 +193,12 @@ export default function App() {
   const streamFrom = useCallback((g) => (g.status === 'notInstalled' ? streams[g.id]?.[0] || null : null), [streams]);
   const runsHere = useCallback((g) => g.runsHere !== false || !!streamFrom(g), [streamFrom]);
 
-  const matchesShow = useCallback((g) =>
-    (!osOnly || runsHere(g)) &&
-    (show === 'all' ||
-    (show === 'notInstalled' ? g.status === 'notInstalled' : g.status !== 'notInstalled')),
-  [show, osOnly, runsHere]);
+  const matchesShow = useCallback((g) => {
+    if (show === 'stream') return !!streamFrom(g); // läuft ja auf dem anderen Gerät – Systemfilter egal
+    return (!osOnly || runsHere(g)) &&
+      (show === 'all' || (show === 'notInstalled' ? g.status === 'notInstalled' : g.status !== 'notInstalled'));
+  }, [show, osOnly, runsHere, streamFrom]);
+  const streamCount = useMemo(() => data.games.filter((g) => streamFrom(g)).length, [data.games, streamFrom]);
   const hiddenOs = useMemo(() => data.games.filter((g) => !runsHere(g)).length, [data.games, runsHere]);
   const toggleOsOnly = () => { setOsOnly(!osOnly); savePref('osOnly', osOnly ? '0' : '1'); };
 
@@ -427,7 +429,10 @@ export default function App() {
             ) : (
               <div className="segmented text">
                 {SHOW_OPTIONS.map(([id, label]) => (
-                  <button key={id} className={show === id ? 'on' : ''} onClick={() => changeShow(id)}>{label}</button>
+                  <button key={id} className={show === id ? 'on' : ''} onClick={() => changeShow(id)}
+                    title={id === 'stream' ? t("Spiele, die auf einem anderen deiner Geräte installiert sind und sich hierher streamen lassen") : undefined}>
+                    {label}{id === 'stream' && streamCount > 0 && <span className="seg-count">{streamCount}</span>}
+                  </button>
                 ))}
               </div>
             )}
@@ -457,6 +462,7 @@ export default function App() {
             <div className="empty">
               {query ? t("Nichts gefunden für „{0}“.", [query])
                 : filter === 'favorites' ? t("Noch keine Favoriten – klick bei einem Spiel auf das Herz.")
+                : show === 'stream' ? t("Gerade lässt sich nichts streamen. Dafür muss ein anderes deiner Geräte eingeschaltet und bei Steam angemeldet sein, und du musst in Ludora bei Steam angemeldet sein (Freunde → Steam).")
                 : t("Hier gibt es keine Spiele für diesen Filter.")}
             </div>
           ) : view === 'grid' ? (

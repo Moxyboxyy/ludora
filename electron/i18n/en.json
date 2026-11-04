@@ -489,10 +489,13 @@
   "Läuft auf {0}": "Runs on {0}",
   "Streamen fehlgeschlagen": "Streaming failed",
   "{0} wird von {1} gestreamt …": "Streaming {0} from {1} …",
-  "Nur Steam-Spiele lassen sich streamen.": "Only Steam games can be streamed.",
   "Auf {0} installiert – per Steam Remote Play streamen": "Installed on {0} – stream via Steam Remote Play",
   "Nicht für {0}": "Not for {0}",
   "Von {0} streamen (Steam Remote Play)": "Stream from {0} (Steam Remote Play)",
   "Verbindet …": "Connecting …",
-  "Streamen": "Stream"
+  "Streamen": "Stream",
+  "Streambar": "Streamable",
+  "Spiele, die auf einem anderen deiner Geräte installiert sind und sich hierher streamen lassen": "Games installed on another of your devices that can be streamed here",
+  "Gerade lässt sich nichts streamen. Dafür muss ein anderes deiner Geräte eingeschaltet und bei Steam angemeldet sein, und du musst in Ludora bei Steam angemeldet sein (Freunde → Steam).": "Nothing to stream right now. Another of your devices needs to be on and signed in to Steam, and you need to be signed in to Steam in Ludora (Friends → Steam).",
+  "Dieses Spiel lässt sich nicht streamen.": "This game can't be streamed."
 }

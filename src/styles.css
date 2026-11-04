@@ -153,6 +153,7 @@ svg.fill { fill: currentColor; stroke: none; }
 /* Zweite Leiste: Installiert/Alle + Sortierung */
 .toolbar { display: flex; align-items: center; gap: 16px; padding: 12px 28px 0; }
 .segmented.text button { padding: 6px 12px; font-size: 13px; }
+.seg-count { margin-left: 6px; font-size: 11px; padding: 1px 6px; border-radius: 99px; background: rgba(110,168,255,.25); color: #cfe0ff; }
 .sort { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
 .sort select { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; outline: none; }
 .banner.action { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text); }
