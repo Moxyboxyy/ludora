@@ -16,7 +16,9 @@
     "start": "vite build && electron .",
     "dist": "vite build && electron-builder --win",
     "test": "node --test",
-    "dist:mac": "vite build && electron-builder --mac"
+    "dist:mac": "vite build && electron-builder --mac",
+    "dist:linux": "vite build && electron-builder --linux",
+    "dist:all": "vite build && electron-builder --win --linux"
   },
   "dependencies": {
     "qrcode": "^1.5.4",
