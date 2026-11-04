@@ -85,6 +85,7 @@
   "Der Preisvergleich (CheapShark) hat Ludora wegen zu vieler Anfragen kurz gesperrt – noch etwa {0} Min.": "The price comparison (CheapShark) has temporarily blocked Ludora for too many requests – about {0} min left.",
   "Der Riot Client läuft gerade nur im Hintergrund (für Updates) – dabei ist sein Chat und damit die Freundesliste aus.": "The Riot Client is only running in the background right now (for updates) – its chat, and with it the friends list, is off.",
   "Der Shop ist nur in der Ludora-App verfügbar.": "The store is only available in the Ludora app.",
+  "Die Prüf-Funktion fehlt auf dem Ludora-Server (Supabase → Edge Functions, Inhalt von supabase/functions/link/index.ts).": "The verification function is missing on the Ludora server (Supabase → Edge Functions, content of supabase/functions/link/index.ts).",
   "Die Riot-Freundesliste kommt direkt vom Riot Client – der läuft gerade nicht.": "The Riot friends list comes directly from the Riot Client – it isn't running right now.",
   "Die Stores sind gerade nicht erreichbar. Bist du online?": "The stores are not reachable right now. Are you online?",
   "Diesen Ludora-Namen gibt es nicht.": "This Ludora name doesn't exist.",

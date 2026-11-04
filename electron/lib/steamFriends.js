@@ -614,7 +614,11 @@ async function getLinkProof() {
   if (state.status !== 'connected' || !refreshToken) return null;
   const token = await ensureAccess();
   const me = state.me?.steamid;
-  const name = me && chatUser?.users?.[me]?.player_name;
+  let name = me && chatUser?.users?.[me]?.player_name;
+  if (!name && me) {
+    // Live-Sitzung (noch) nicht da -> Anzeigename über die Web-API
+    try { name = (await loadDetails([me])).get(me)?.pub?.persona_name || null; } catch { name = null; }
+  }
   return { token, claim: name ? { name } : {}, accountId: me };
 }
 

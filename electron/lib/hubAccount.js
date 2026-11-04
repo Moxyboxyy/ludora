@@ -157,17 +157,32 @@ async function deleteAccount() {
   return { ok: true };
 }
 
+let workingFn = null;
+
 /** Launcher-Konto verknüpfen. token: Anmelde-Token des Launchers (wird nur zur Prüfung geschickt) */
 async function link(launcher, token, claim) {
   if (!session) return { ok: false, error: t("Nicht bei Ludora angemeldet") };
-  try {
-    const fn = encodeURIComponent(config().linkFunction || 'link');
-    const r = await request(`/functions/v1/${fn}`, { method: 'POST', body: { launcher, token: token || '', claim: claim || {} } });
-    await refreshState();
-    return { ok: true, ...r };
-  } catch (err) {
-    return { ok: false, error: friendly(err) };
+  // Name der Prüf-Funktion: laut hub-config.json; gibt es die auf dem Server nicht (umbenannt/neu angelegt),
+  // werden die üblichen Namen probiert und der funktionierende gemerkt.
+  const names = [...new Set([workingFn, config().linkFunction, 'link', 'hello-world'].filter(Boolean))];
+  let lastErr = null;
+  for (const name of names) {
+    try {
+      const r = await request(`/functions/v1/${encodeURIComponent(name)}`, { method: 'POST', body: { launcher, token: token || '', claim: claim || {} } });
+      workingFn = name;
+      await refreshState();
+      return { ok: true, ...r };
+    } catch (err) {
+      lastErr = err;
+      if (!(err.status === 404 || /Requested function was not found|NOT_FOUND/i.test(String(err.message) + err.code))) break;
+    }
   }
+  return {
+    ok: false,
+    error: /Requested function was not found|NOT_FOUND/i.test(String(lastErr?.message) + lastErr?.code)
+      ? t("Die Prüf-Funktion fehlt auf dem Ludora-Server (Supabase → Edge Functions, Inhalt von supabase/functions/link/index.ts).")
+      : friendly(lastErr)
+  };
 }
 
 async function unlink(launcher, accountId) {
