@@ -708,8 +708,20 @@ app.whenReady().then(() => {
   shop.setCacheFile(path.join(app.getPath('userData'), 'shop-cache.json'));
 
   // Updates aus den GitHub-Releases
-  updater.init({ app, net, shell });
+  updater.init({ app, net, shell, powerMonitor: require('electron').powerMonitor });
   updater.onChange((st) => broadcast('update:state', st));
+  // Neues Update, während Ludora offen ist -> einmal pro Version Bescheid geben (Knopf erscheint oben rechts)
+  let announced = null;
+  updater.onChange((st) => {
+    if (st.status !== 'available' || !st.latest || announced === st.latest) return;
+    announced = st.latest;
+    try {
+      if (!Notification.isSupported()) return;
+      const n = new Notification({ title: t("Update verfügbar"), body: t("Ludora {0} ist da – oben rechts klicken zum Aktualisieren.", [st.latest]) });
+      n.on('click', () => { if (win) { win.show(); win.focus(); } });
+      n.show();
+    } catch { /* egal */ }
+  });
   ipcMain.handle('update:get', () => updater.getState());
   ipcMain.handle('update:check', () => updater.check());
   ipcMain.handle('update:install', async () => {

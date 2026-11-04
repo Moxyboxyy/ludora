@@ -1,7 +1,8 @@
 // Updates aus den GitHub-Releases (Windows, macOS, Linux).
 //
-// Prüft beim Start und alle 6 Stunden https://api.github.com/repos/<repo>/releases/latest.
-// Ist dort eine neuere Version, zeigt Ludora oben rechts ein grünes Download-Symbol.
+// Prüft beim Start, danach alle 15 Minuten, wenn das Fenster wieder in den Vordergrund kommt und nach
+// dem Aufwachen aus dem Ruhezustand: https://api.github.com/repos/<repo>/releases/latest.
+// Ist dort eine neuere Version, zeigt Ludora sofort (ohne Neustart) oben rechts ein grünes Download-Symbol.
 // Ein Klick lädt den passenden Installer und installiert ihn:
 //   Windows   -> Setup.exe still (/S) ausführen, Ludora startet danach neu
 //   macOS     -> .zip entpacken, Ludora.app austauschen, neu starten
@@ -75,9 +76,29 @@ function linuxKind() {
   return fs.existsSync('/usr/bin/dpkg') ? 'deb' : 'appimage';
 }
 
-async function check() {
+const CHECK_EVERY = 15 * 60 * 1000;  // regelmäßig, solange Ludora offen ist
+const MIN_GAP = 3 * 60 * 1000;       // Fokus/Aufwachen: nicht öfter als alle 3 Minuten (GitHub-Limit: 60/h)
+let lastCheck = 0;
+let checking = null;
+
+/** Nachschauen, falls die letzte Prüfung länger her ist (Fenster im Vordergrund, Aufwachen …) */
+function poke(minGap = MIN_GAP) {
+  if (!electron || state.status === 'downloading' || state.status === 'installing') return;
+  if (Date.now() - lastCheck < minGap) return;
+  check().catch(() => {});
+}
+
+function check() {
+  if (!checking) checking = doCheck().finally(() => { checking = null; });
+  return checking;
+}
+
+async function doCheck() {
   const { app, net } = electron;
-  set({ status: state.status === 'downloading' ? 'downloading' : 'checking', current: app.getVersion(), error: null });
+  lastCheck = Date.now();
+  // Ein bereits angezeigtes Update bleibt während der Prüfung sichtbar (kein Flackern)
+  const keep = ['downloading', 'installing', 'available'].includes(state.status);
+  if (!keep) set({ status: 'checking', current: app.getVersion(), error: null });
   try {
     const r = await net.fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
       headers: { accept: 'application/vnd.github+json', 'user-agent': `Ludora/${app.getVersion()}` }
@@ -97,13 +118,17 @@ async function check() {
     }
     if (signed) {
       release = j;
-      set({ status: state.status === 'downloading' ? 'downloading' : 'available', latest, notes: j.body || null, page: j.html_url });
+      const busy = state.status === 'downloading' || state.status === 'installing';
+      set({ status: busy ? state.status : 'available', latest, notes: j.body || null, page: j.html_url, error: null });
+    } else if (state.status === 'downloading' || state.status === 'installing') {
+      // läuft schon – nichts umwerfen
     } else {
       release = null;
       set({ status: 'none', latest: latest || null, page: j.html_url || null });
     }
   } catch (err) {
-    set({ status: 'idle', error: String(err.message || err) }); // still: kein Netz o. Ä. -> nächstes Mal
+    // still: kein Netz o. Ä. -> nächstes Mal; ein schon gefundenes Update bleibt angezeigt
+    if (state.status === 'checking') set({ status: 'idle', error: String(err.message || err) });
   }
   return state;
 }
@@ -231,13 +256,17 @@ function init(el) {
   electron = el;
   state.current = el.app.getVersion();
   setTimeout(check, 8000).unref?.();
-  timer = setInterval(check, 6 * 60 * 60 * 1000);
+  timer = setInterval(() => poke(CHECK_EVERY - 30e3), 60 * 1000); // fällig? (übersteht auch Ruhezustand)
   timer.unref?.();
+  try {
+    el.app.on('browser-window-focus', () => poke());
+    el.powerMonitor?.on('resume', () => setTimeout(() => poke(0), 10e3)); // erst Netz abwarten
+  } catch { /* Tests */ }
 }
 
 module.exports = {
   _verifiedSha: verifiedSha,
-  init, check, install,
+  init, check, poke, install,
   getState: () => state,
   onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
   _newer: newer, _pickAsset: pickAsset
