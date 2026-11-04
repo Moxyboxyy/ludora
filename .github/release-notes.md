@@ -1,4 +1,4 @@
-**Ludora - the Client for all Game Clients** · Patch 0.4.1
+**Ludora - the Client for all Game Clients** · Release 0.5.0
 
 ### What's new
 - **Chat with Riot and Epic friends** right in Ludora – same chat window and notifications as for Steam (Riot via the running Riot Client; Epic live, history is saved by Ludora from now on)
@@ -14,11 +14,11 @@
 ### Downloads
 | System | File |
 |---|---|
-| Windows 10/11 | `Ludora-Setup-0.4.1.exe` |
-| macOS (Apple Silicon M1–M4) | `Ludora-0.4.1-arm64.dmg` (or `.zip`) |
-| macOS (Intel) | `Ludora-0.4.1-x64.dmg` (or `.zip`) |
-| Linux (any distribution) | `Ludora-0.4.1-x86_64.AppImage` |
-| Debian / Ubuntu | `Ludora-0.4.1-amd64.deb` |
+| Windows 10/11 | `Ludora-Setup-0.5.0.exe` |
+| macOS (Apple Silicon M1–M4) | `Ludora-0.5.0-arm64.dmg` (or `.zip`) |
+| macOS (Intel) | `Ludora-0.5.0-x64.dmg` (or `.zip`) |
+| Linux (any distribution) | `Ludora-0.5.0-x86_64.AppImage` |
+| Debian / Ubuntu | `Ludora-0.5.0-amd64.deb` |
 
 The files are not code-signed: on Windows click **More info → Run anyway**, on macOS **right-click → Open** on the first start.
 [Installation](https://github.com/MaxiMagDich93/ludora#installation) · [Anleitung auf Deutsch](https://github.com/MaxiMagDich93/ludora/blob/main/README.de.md#installation)
