@@ -63,6 +63,21 @@ export default function TitleBar({ page, onLibrary, onShop, onSettings, onRefres
     return api.hub.onUpdate?.(setHub);
   }, []);
   const signedIn = hub?.status === 'signedIn';
+
+  // Update aus GitHub verfügbar? -> grünes Download-Symbol neben dem Konto
+  const [update, setUpdate] = useState(null);
+  useEffect(() => {
+    if (!api.update?.get) return undefined;
+    api.update.get().then(setUpdate).catch(() => {});
+    return api.update.onChange(setUpdate);
+  }, []);
+  const installUpdate = async () => {
+    const r = await api.update.install();
+    if (r?.page) notify(t("Die Release-Seite ist geöffnet."));
+    else if (r?.manual) notify(t("Das Update ist geladen – bitte im geöffneten Fenster installieren."));
+    else if (r && !r.ok && !r.cancelled && r.error) notify(t("Update fehlgeschlagen: {0}", [r.error]), 'error');
+  };
+  const busy = update?.status === 'downloading' || update?.status === 'installing';
   const name = hub?.user?.display_name || hub?.user?.username;
 
   const about = async () => {
@@ -97,6 +112,16 @@ export default function TitleBar({ page, onLibrary, onShop, onSettings, onRefres
         <button className={page === 'shop' ? 'on' : ''} onClick={onShop}><StoreIcon /><span>{t("Shop")}</span></button>
       </nav>
       <div className="tb-drag" />
+      {(update?.status === 'available' || busy) && (
+        <button className={`tb-update ${busy ? 'busy' : ''}`} onClick={busy ? undefined : installUpdate} disabled={busy}
+          title={busy
+            ? (update.status === 'installing' ? t("Update wird installiert …") : t("Update wird geladen … {0} %", [Math.round((update.progress || 0) * 100)]))
+            : t("Ludora {0} ist da – klicken zum Aktualisieren", [update.latest])}
+          aria-label={t("Update installieren")}>
+          <svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+          {busy && <span className="tb-update-pct">{update.status === 'installing' ? '…' : `${Math.round((update.progress || 0) * 100)}%`}</span>}
+        </button>
+      )}
       <button className={`tb-account ${signedIn ? 'on' : ''}`} onClick={onAccount}
         title={signedIn ? t("Angemeldet als {0} – Ludora-Konto verwalten", [name]) : t("Beim Ludora-Konto anmelden")}>
         <span className="tb-avatar">{signedIn ? String(name || '?')[0].toUpperCase() : '?'}</span>

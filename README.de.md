@@ -125,7 +125,10 @@ E-Mail. Ludora verknüpft dann deine angemeldeten Launcher-Konten automatisch, s
 Plattform erkennen. Freunde über ihren Ludora-Namen hinzufügen, Anfragen im Reiter **Ludora** annehmen.
 **Konto löschen …** entfernt alles vom Server.
 
-### 9. Tray & Einstellungen
+### 9. Updates
+Gibt es auf GitHub eine neue Version, erscheint oben rechts neben deinem Namen ein **grünes Download-Symbol**. Klicken, bestätigen – Ludora lädt das Update, installiert es und startet neu, unter Windows, macOS und Linux (AppImage und .deb). Einstellungen und Anmeldungen bleiben erhalten.
+
+### 10. Tray & Einstellungen
 - Beim Schließen läuft Ludora im Tray weiter (Symbol neben der Uhr bzw. in der Menüleiste). Klick öffnet Ludora,
   Rechtsklick zeigt Bibliothek, Shop, Downloads, Freunde, deine Favoriten und **Ludora beenden**.
 - **Einstellungen** (Menü Ludora): Sprache, im Hintergrund weiterlaufen, mit dem System starten, wie sich Launcher

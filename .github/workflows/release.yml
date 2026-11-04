@@ -6,7 +6,7 @@ name: Release
 on:
   push:
     branches: [main]
-    paths: ['package.json']
+    paths: ['package.json', '.github/release-notes.md']
     tags: ['v*']
   workflow_dispatch:
 

@@ -120,7 +120,10 @@ Ludora then links your signed-in launcher accounts automatically, so friends who
 platform. Add friends by their Ludora name and accept requests in the **Ludora** tab. **Delete account …** removes
 everything from the server.
 
-### 9. Tray & settings
+### 9. Updates
+When a new version is released on GitHub, a **green download icon** appears at the top right next to your name. Click it, confirm, and Ludora downloads the update, installs it and restarts – on Windows, macOS and Linux (AppImage and .deb). Your settings and sign-ins are kept.
+
+### 10. Tray & settings
 - Closing the window keeps Ludora running in the tray (icon next to the clock / in the menu bar). Click it to open
   Ludora; right-click for library, store, downloads, friends, your favorites and **Quit Ludora**.
 - **Settings** (Ludora menu): language, keep running when closed, start with the system, how launchers behave when

@@ -635,3 +635,11 @@ svg.star.filled { fill: currentColor; }
 .lang-switch { align-self: flex-start; }
 .modal > * { flex-shrink: 0; } /* lange Einstellungen: Abschnitte nicht zusammenquetschen, Fenster scrollt */
 .freshness.stale { color: var(--warn); }
+/* Update-Symbol oben rechts */
+.tb-update { display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 8px; margin-right: 4px; border-radius: 8px; color: #fff;
+  background: linear-gradient(135deg, #3fb950, #2ea043); box-shadow: 0 0 0 1px rgba(63,185,80,.4), 0 2px 10px rgba(63,185,80,.35); }
+.tb-update:hover:not(:disabled) { filter: brightness(1.1); }
+.tb-update svg { width: 17px; height: 17px; stroke-width: 2.4; }
+.tb-update:not(.busy) svg { animation: bob 1.6s ease-in-out infinite; }
+.tb-update.busy { cursor: default; opacity: .95; }
+.tb-update-pct { font-size: 12px; font-weight: 700; }

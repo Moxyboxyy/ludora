@@ -102,6 +102,16 @@ contextBridge.exposeInMainWorld('gamehub', {
     ipcRenderer.on('library:cover', handler);
     return () => ipcRenderer.removeListener('library:cover', handler);
   },
+  update: {
+    get: () => ipcRenderer.invoke('update:get'),
+    check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.invoke('update:install'),
+    onChange: (fn) => {
+      const h = (_e, st) => fn(st);
+      ipcRenderer.on('update:state', h);
+      return () => ipcRenderer.removeListener('update:state', h);
+    }
+  },
   app: {
     onNavigate: (fn) => {
       const h = (_e, page) => fn(page);

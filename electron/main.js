@@ -64,6 +64,7 @@ const { scanAll, providers } = require('./providers');
 const hide = require('./lib/hide');
 const shop = require('./lib/shop');
 const tray = require('./lib/tray');
+const updater = require('./lib/updater');
 
 // Sprache für die Oberfläche (preload fragt sie beim Laden synchron ab)
 ipcMain.on('i18n:lang', (e) => { e.returnValue = i18n.getLanguage(); });
@@ -685,6 +686,24 @@ app.whenReady().then(() => {
   coverCheck.init(app.getPath('userData'));
   macIcon.init(app.getPath('userData'));
   shop.setCacheFile(path.join(app.getPath('userData'), 'shop-cache.json'));
+
+  // Updates aus den GitHub-Releases
+  updater.init({ app, net, shell });
+  updater.onChange((st) => broadcast('update:state', st));
+  ipcMain.handle('update:get', () => updater.getState());
+  ipcMain.handle('update:check', () => updater.check());
+  ipcMain.handle('update:install', async () => {
+    const st = updater.getState();
+    if (st.status !== 'available') return { ok: false };
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'info', buttons: [t("Später"), t("Jetzt aktualisieren")], defaultId: 1, cancelId: 0,
+      title: t("Update verfügbar"),
+      message: t("Ludora {0} ist da (du hast {1}).", [st.latest, st.current]),
+      detail: t("Ludora lädt das Update herunter, installiert es und startet danach neu. Deine Einstellungen und Anmeldungen bleiben erhalten.")
+    });
+    if (response !== 1) return { ok: false, cancelled: true };
+    return updater.install(quitApp);
+  });
 
   protocol.handle('ghimg', async (req) => {
     const u = new URL(req.url);

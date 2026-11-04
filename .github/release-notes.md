@@ -1,6 +1,7 @@
 **Ludora - the Client for all Game Clients** · Release 0.5.0
 
 ### What's new
+- **Updates with one click:** when a new release is out, a green download icon appears at the top right next to your name – click it and Ludora downloads, installs and restarts (Windows, macOS and Linux). From this version on, you never need to download installers manually again.
 - **Chat with Riot and Epic friends** right in Ludora – same chat window and notifications as for Steam (Riot via the running Riot Client; Epic live, history is saved by Ludora from now on)
 - **Friends lists update in real time**
   - Epic: connection no longer drops silently, statuses don't freeze anymore
@@ -25,6 +26,6 @@ The files are not code-signed: on Windows click **More info → Run anyway**, on
 
 ---
 
-**Deutsch:** Chat mit Riot- und Epic-Freunden direkt in Ludora, Freundeslisten aktualisieren sich in Echtzeit (Epic, Riot, GOG, Steam, Ludora), Verknüpfen des Ludora-Kontos repariert.
+**Deutsch:** Neue Versionen installierst du ab jetzt mit einem Klick auf das grüne Download-Symbol oben rechts. Chat mit Riot- und Epic-Freunden direkt in Ludora, Freundeslisten aktualisieren sich in Echtzeit (Epic, Riot, GOG, Steam, Ludora), Verknüpfen des Ludora-Kontos repariert.
 
 Ludora is not affiliated with Valve, Epic Games, GOG, EA, Ubisoft, Blizzard, Riot Games, Rockstar Games or Amazon.
