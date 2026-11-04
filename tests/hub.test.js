@@ -15,11 +15,13 @@ test('Registrieren, Verknüpfen, Nachschlagen (Ablauf wie bei Supabase)', async 
   const profiles = new Map(); // id -> { username, display_name }
   const links = []; // { launcher, account_id, user_id, verified }
   const seen = [];
+  const plainSeen = []; // Anfragen, in denen das echte Passwort stand
   const server = http.createServer((req, res) => {
     let body = '';
     req.on('data', (c) => { body += c; });
     req.on('end', () => {
       const j = body ? JSON.parse(body) : {};
+      if (/geheim12345|passwort123/.test(body)) plainSeen.push(req.url);
       const send = (code, obj) => { res.statusCode = code; res.setHeader('content-type', 'application/json'); res.end(obj === undefined ? '' : JSON.stringify(obj)); };
       seen.push(`${req.method} ${req.url.split('?')[0]}`);
       assert.strictEqual(req.headers.apikey, 'ANON');
@@ -34,6 +36,10 @@ test('Registrieren, Verknüpfen, Nachschlagen (Ablauf wie bei Supabase)', async 
         const u = users.get(j.email);
         if (!u || u.password !== j.password) return send(400, { error_description: 'Invalid login credentials' });
         return send(200, { access_token: `tok-${u.id}`, refresh_token: `ref-${u.id}`, expires_in: 3600, user: { id: u.id } });
+      }
+      if (req.method === 'PUT' && req.url === '/auth/v1/user') {
+        for (const u of users.values()) if (u.id === uid) u.password = j.password;
+        return send(200, { id: uid });
       }
       if (req.method === 'POST' && req.url === '/rest/v1/profiles') { profiles.set(j.id, { username: j.username, display_name: j.display_name }); return send(201); }
       if (req.method === 'GET' && req.url.startsWith('/rest/v1/profiles')) return send(200, [profiles.get(uid)]);
@@ -61,20 +67,32 @@ test('Registrieren, Verknüpfen, Nachschlagen (Ablauf wie bei Supabase)', async 
     const hub = require('../electron/lib/hubAccount');
     hub._reset();
     // Tobi legt sein Konto an und verknüpft Riot
-    let r = await hub.register('TobiTheGamer', 'geheim1');
+    let r = await hub.register('TobiTheGamer', 'geheim12345');
     assert.ok(r.ok, r.error);
     assert.strictEqual(hub.getState().user.display_name, 'TobiTheGamer');
     r = await hub.link('riot', '', { puuid: 'p2' });
     assert.ok(r.ok, r.error);
     // Name doppelt -> verständliche Meldung
     hub._reset();
-    r = await hub.register('tobithegamer', 'xxxxxx');
+    r = await hub.register('tobithegamer', 'xxxxxxxxxx');
     assert.strictEqual(r.error, 'Dieser Name ist schon vergeben.');
     // Alex meldet sich an (falsches, dann richtiges Passwort) und schlägt seine Freunde nach
-    await hub.register('Alex', 'passwort');
+    assert.match((await hub.register('Kurz', 'kurz123')).error, /mindestens 10/);
+    await hub.register('Alex', 'passwort123');
     hub._reset();
     assert.strictEqual((await hub.login('alex', 'falsch')).error, 'Name oder Passwort falsch.');
-    assert.ok((await hub.login('ALEX', 'passwort')).ok);
+    assert.ok((await hub.login('ALEX', 'passwort123')).ok);
+    assert.deepStrictEqual(plainSeen, [], 'das echte Passwort geht nie an den Server');
+    // Altes Konto (vor 0.7, Server kennt das echte Passwort) wird bei der Anmeldung umgestellt
+    users.set('oldie@gamehub.local', { id: 'u9', password: 'altes-pw' });
+    profiles.set('u9', { username: 'oldie', display_name: 'Oldie' });
+    hub._reset();
+    assert.ok((await hub.login('oldie', 'altes-pw')).ok);
+    assert.notStrictEqual(users.get('oldie@gamehub.local').password, 'altes-pw');
+    hub._reset();
+    assert.ok((await hub.login('oldie', 'altes-pw')).ok, 'danach klappt die Anmeldung mit dem abgeleiteten Wert');
+    hub._reset();
+    assert.ok((await hub.login('ALEX', 'passwort123')).ok);
     const found = await hub.lookup([{ launcher: 'riot', account_id: 'p2' }, { launcher: 'steam', account_id: 'unbekannt' }]);
     assert.deepStrictEqual(found, [{ launcher: 'riot', account_id: 'p2', username: 'tobithegamer', display_name: 'TobiTheGamer', verified: false }]);
     assert.ok(seen.some((x) => x.startsWith('POST /functions/v1/')));

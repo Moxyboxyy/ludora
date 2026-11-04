@@ -207,14 +207,27 @@ Ludora-Konten brauchen ein kleines [Supabase](https://supabase.com)-Projekt (der
 selbst baut, braucht ein eigenes Projekt:
 
 1. Auf supabase.com ein Projekt anlegen.
-2. **SQL Editor:** `supabase/schema.sql`, danach `supabase/02_friends.sql`, `supabase/03_delete_account.sql` und `supabase/04_vault.sql` ausführen.
+2. **SQL Editor:** `supabase/schema.sql`, danach `supabase/02_friends.sql`, `supabase/03_delete_account.sql`, `supabase/04_vault.sql` und `supabase/05_security.sql` ausführen.
 3. **Authentication → Sign In / Providers → Email:** „Confirm email“ ausschalten (Ludora-Konten haben keine E-Mail).
 4. **Edge Functions:** Funktion mit dem Inhalt von `supabase/functions/link/index.ts` anlegen, „Verify JWT“ ausschalten.
 5. `electron/hub-config.example.json` nach `electron/hub-config.json` kopieren und *Project URL*, den **öffentlichen**
    Schlüssel (*anon* / *publishable*) und den Funktionsnamen eintragen. Den *secret*/*service_role*-Schlüssel **nie**
    in die App schreiben. `hub-config.json` wird von Git ignoriert.
 
-Ohne `hub-config.json` funktioniert alles außer den Ludora-Konten. `supabase/test_dummies.sql` legt zwei Test-Profile an.
+Ohne `hub-config.json` funktioniert alles außer den Ludora-Konten.
+
+### Signierte Updates
+
+Ludora installiert nur Updates, die mit dem privaten Schlüssel des Entwicklers signiert sind (Ed25519). Der Schlüssel
+liegt **nicht** auf GitHub – selbst ein übernommenes GitHub-Konto kann so keine Schadsoftware an Ludora-Nutzer
+verteilen. Nachdem GitHub ein Release gebaut hat, auf deinem PC signieren und die entstandene
+`signatures/<tag>.json` auf `main` hochladen – erst dann bieten installierte Ludoras das Update an:
+
+```
+node scripts/sign-release.mjs v0.7.0 pfad/zu/private-key.pem
+```
+
+Eigener Fork? Eigenes Schlüsselpaar erzeugen und `PUBLIC_KEY` in `electron/lib/updater.js` ersetzen. `supabase/test_dummies.sql` legt zwei Test-Profile an.
 
 ## Lizenz
 

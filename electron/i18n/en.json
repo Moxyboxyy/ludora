@@ -284,7 +284,6 @@
   "Online = Ludora ist offen": "Online = Ludora is open",
   "Online in Ludora": "Online in Ludora",
   "Optional anmelden für die komplette Bibliothek": "Optionally sign in for the complete library",
-  "Passwort zu kurz (mindestens 6 Zeichen).": "Password too short (at least 6 characters).",
   "Pausieren": "Pause",
   "Pausieren (öffnet die Download-Ansicht des Launchers)": "Pause (opens the launcher's download view)",
   "Pausiert": "Paused",
@@ -477,5 +476,8 @@
   "Auf dem Ludora-Server fehlt noch supabase/04_vault.sql (im SQL Editor ausführen).": "The Ludora server is missing supabase/04_vault.sql (run it in the SQL Editor).",
   "Ludora-Server nicht erreichbar – neuer Versuch läuft …": "Ludora server unreachable – retrying …",
   "Steam nicht erreichbar – neuer Versuch läuft …": "Steam unreachable – retrying …",
-  "Epic nicht erreichbar – neuer Versuch läuft …": "Epic unreachable – retrying …"
+  "Epic nicht erreichbar – neuer Versuch läuft …": "Epic unreachable – retrying …",
+  "Passwort zu kurz (mindestens {0} Zeichen).": "Password too short (at least {0} characters).",
+  "Passwort (mind. {0} Zeichen)": "Password (at least {0} characters)",
+  "Passwort": "Password"
 }

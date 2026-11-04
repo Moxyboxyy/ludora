@@ -32,7 +32,8 @@ from the stores. With a **SteamGridDB key**, game names are sent to SteamGridDB 
 A Ludora account is optional. If you create one, the server (Supabase, region per project, e.g. Frankfurt) stores:
 
 - your Ludora name and display name,
-- your password – only as a hash (encrypted by Supabase),
+- a hash of a value derived from your password – **your password itself never leaves your device** (Ludora sends
+  only a value derived from it with scrypt, which Supabase stores as a hash),
 - the IDs and names of the launcher accounts you link (Steam, Epic, GOG, Riot),
 - your Ludora friendships and requests,
 - when Ludora was last online (for “Online in Ludora”),
@@ -41,7 +42,8 @@ A Ludora account is optional. If you create one, the server (Supabase, region pe
   whoever runs it) cannot read it. It is deleted together with your account.
 
 **Who sees what?**
-- Your Ludora **friends** see all accounts you linked.
+- Your Ludora **friends** see all accounts you linked and whether you're online in Ludora.
+- Nobody else can list Ludora names or online times – your profile is readable only by you.
 - Other signed-in Ludora users can only ask for a **specific** launcher account ID which Ludora name it belongs to
   (Ludora does this for the accounts in their friends lists). The server never hands out a list of all users or accounts.
 - Launcher sign-in tokens are only used briefly to verify with the provider; apart from the encrypted block above,

@@ -111,8 +111,16 @@ Deno.serve(async (req) => {
   // neuen Nachweis ersetzt (das Token beweist ja, wem das Konto jetzt gehört).
   const { data: existing } = await admin.from('linked_accounts')
     .select('user_id, verified').eq('launcher', launcher).eq('account_id', proof.account_id).maybeSingle();
-  if (existing && existing.user_id !== user.id && existing.verified && !proof.verified) {
-    return json({ error: 'Dieses Konto ist bereits mit einem anderen Ludora-Konto bestätigt verknüpft.' }, 409);
+  // Unbestätigte Angaben (Riot) dürfen nie die Verknüpfung eines anderen ersetzen – sonst könnte
+  // jeder fremde Riot-Konten auf sich umbiegen. Bestätigte Nachweise (Token) dürfen das.
+  if (existing && existing.user_id !== user.id && !proof.verified) {
+    return json({ error: 'Dieses Konto ist bereits mit einem anderen Ludora-Konto verknüpft.' }, 409);
+  }
+  // Unbestätigt: nur ein Konto pro Launcher (niemand kann massenhaft fremde Konten beanspruchen)
+  if (!proof.verified) {
+    const { error: dErr } = await admin.from('linked_accounts').delete()
+      .eq('user_id', user.id).eq('launcher', launcher).neq('account_id', proof.account_id);
+    if (dErr) return json({ error: `Server: ${dErr.message}` }, 500);
   }
 
   const { error } = await admin.from('linked_accounts').upsert({

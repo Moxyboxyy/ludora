@@ -19,3 +19,21 @@ test('Passende Installer-Datei je System', () => {
   assert.strictEqual(_pickAsset(assets, 'linux', 'x64', 'appimage').name, 'Ludora-0.5.0-x86_64.AppImage');
   assert.strictEqual(_pickAsset(assets, 'linux', 'x64', 'deb').name, 'Ludora-0.5.0-amd64.deb');
 });
+
+test('Updates nur mit gültiger Signatur', () => {
+  const crypto = require('crypto');
+  const { _verifiedSha } = require('../electron/lib/updater');
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
+  const pub = publicKey.export({ type: 'spki', format: 'pem' });
+  const sha = 'a'.repeat(64);
+  const sign = (tag, name, s) => crypto.sign(null, Buffer.from(`ludora-update\n${tag}\n${name}\n${s}`), privateKey).toString('base64');
+  const sigs = { tag: 'v0.7.0', files: { 'Ludora-Setup-0.7.0.exe': { sha256: sha, sig: sign('v0.7.0', 'Ludora-Setup-0.7.0.exe', sha) } } };
+  assert.strictEqual(_verifiedSha(sigs, 'v0.7.0', 'Ludora-Setup-0.7.0.exe', pub), sha);
+  // andere Datei, anderes Release, manipulierte Prüfsumme, fremder Schlüssel -> abgelehnt
+  assert.strictEqual(_verifiedSha(sigs, 'v0.7.0', 'Ludora-0.7.0-x86_64.AppImage', pub), null);
+  assert.strictEqual(_verifiedSha({ ...sigs, tag: 'v0.7.1' }, 'v0.7.1', 'Ludora-Setup-0.7.0.exe', pub), null);
+  const forged = { tag: 'v0.7.0', files: { 'Ludora-Setup-0.7.0.exe': { ...sigs.files['Ludora-Setup-0.7.0.exe'], sha256: 'b'.repeat(64) } } };
+  assert.strictEqual(_verifiedSha(forged, 'v0.7.0', 'Ludora-Setup-0.7.0.exe', pub), null);
+  assert.strictEqual(_verifiedSha(sigs, 'v0.7.0', 'Ludora-Setup-0.7.0.exe'), null); // echter Ludora-Schlüssel
+  assert.strictEqual(_verifiedSha(null, 'v0.7.0', 'x'), null);
+});

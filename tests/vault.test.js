@@ -59,7 +59,7 @@ test('vault: Anmeldung auf zweitem Gerät übernehmen, neuere gewinnt, Server si
   secrets.init({ dir: dirA });
   secrets.set('friendsEpic', { refresh_token: 'epic-A', account_id: 'e1' }, { at: 100 });
   secrets.set('steamWebToken', 'steam-A', { at: 100 });
-  vault.unlock('geheim123', 'Alex');
+  await vault.unlock('geheim123', 'Alex');
   vault.attach(server.req, 'u1');
   assert.deepStrictEqual(await vault.sync(), []);
   const stored = server.rows.get('u1').data;
@@ -71,7 +71,7 @@ test('vault: Anmeldung auf zweitem Gerät übernehmen, neuere gewinnt, Server si
   secrets.init({ dir: dirB });
   const restoredNames = [];
   const off = vault.onRestore((n) => restoredNames.push(n));
-  vault.unlock('geheim123', 'alex');
+  await vault.unlock('geheim123', 'alex');
   vault.attach(server.req, 'u1');
   assert.deepStrictEqual((await vault.sync()).sort(), ['friendsEpic', 'steamWebToken']);
   assert.deepStrictEqual(secrets.get('friendsEpic'), { refresh_token: 'epic-A', account_id: 'e1' });
@@ -99,20 +99,23 @@ test('vault: falsches Passwort kann nichts lesen, Abmelden vergisst den Schlüss
   const server = fakeServer();
   secrets.init({ dir: tmp() });
   secrets.set('friendsGog', { refresh_token: 'gog-1', user_id: '7' }, { at: 100, silent: true });
-  vault.unlock('richtig', 'sam');
+  await vault.unlock('richtig', 'sam');
   vault.attach(server.req, 'u2');
   await vault.sync();
   vault.detach();
 
   secrets.init({ dir: tmp() });
-  vault.unlock('falsch', 'sam');
+  await vault.unlock('falsch', 'sam');
   vault.attach(server.req, 'u2');
   assert.deepStrictEqual(await vault.sync(), []);
   assert.strictEqual(secrets.get('friendsGog'), null);
   vault.detach({ forget: true });
   assert.strictEqual(vault.hasKey(), false);
 
-  const k = vault._deriveKey('pw', 'x');
+  const k = await vault._deriveKey('pw', 'x');
   assert.deepStrictEqual(vault._decrypt(vault._encrypt({ a: 1 }, k), k), { a: 1 });
-  assert.throws(() => vault._decrypt(vault._encrypt({ a: 1 }, k), vault._deriveKey('pw2', 'x')));
+  const k2 = await vault._deriveKey('pw2', 'x');
+  assert.throws(() => vault._decrypt(vault._encrypt({ a: 1 }, k), k2));
+  // Was an den Server geht, ist unabhängig vom Tresor-Schlüssel
+  assert.notDeepStrictEqual(await vault._deriveKey('pw', 'x', 'auth'), k);
 });

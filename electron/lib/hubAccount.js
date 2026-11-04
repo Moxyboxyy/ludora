@@ -41,6 +41,15 @@ function normalizeName(name) {
 }
 const emailFor = (username) => `${username}@gamehub.local`;
 
+const MIN_PASSWORD = 10;
+/**
+ * Dein Passwort verlässt das Gerät nie: an den Server geht nur ein daraus abgeleiteter Wert (scrypt).
+ * Den Tresor-Schlüssel (vault.js) leitet Ludora getrennt davon ab – der Server kann ihn nicht berechnen.
+ */
+async function serverSecret(password, username) {
+  return (await vault.deriveKey(password, username, 'auth')).toString('base64');
+}
+
 async function request(pathname, { method = 'GET', body, auth = true, headers = {} } = {}) {
   const { url, anonKey } = config();
   const h = { apikey: anonKey, 'content-type': 'application/json', ...headers };
@@ -107,7 +116,7 @@ const friendly = (err) => {
   const m = String(err.message || err);
   if (/already registered|already exists|duplicate key/i.test(m)) return t("Dieser Name ist schon vergeben.");
   if (/Invalid login credentials/i.test(m)) return t("Name oder Passwort falsch.");
-  if (/Password should be/i.test(m)) return 'Passwort zu kurz (mindestens 6 Zeichen).';
+  if (/Password should be/i.test(m)) return t("Passwort zu kurz (mindestens {0} Zeichen).", [MIN_PASSWORD]);
   if (/Email not confirmed/i.test(m)) return t(
     "Im Supabase-Projekt ist \"Confirm email\" noch an – bitte ausschalten (siehe Anleitung)."
   );
@@ -118,8 +127,9 @@ async function register(name, password) {
   if (!configured()) return { ok: false, error: t("Ludora-Server ist noch nicht eingerichtet (hub-config.json).") };
   try {
     const { username, display } = normalizeName(name);
-    if (String(password || '').length < 6) throw new Error(t("Passwort zu kurz (mindestens 6 Zeichen)."));
-    const s = await request('/auth/v1/signup', { method: 'POST', auth: false, body: { email: emailFor(username), password, data: { username } } });
+    if (String(password || '').length < MIN_PASSWORD) throw new Error(t("Passwort zu kurz (mindestens {0} Zeichen).", [MIN_PASSWORD]));
+    const secret = await serverSecret(password, username);
+    const s = await request('/auth/v1/signup', { method: 'POST', auth: false, body: { email: emailFor(username), password: secret, data: { username } } });
     if (!s?.access_token) throw new Error('Email not confirmed');
     setSession(s);
     await request('/rest/v1/profiles', { method: 'POST', body: { id: session.user_id, username, display_name: display }, headers: { prefer: 'return=minimal' } });
@@ -135,7 +145,18 @@ async function login(name, password) {
   if (!configured()) return { ok: false, error: t("Ludora-Server ist noch nicht eingerichtet (hub-config.json).") };
   try {
     const { username } = normalizeName(name);
-    const s = await request('/auth/v1/token?grant_type=password', { method: 'POST', auth: false, body: { email: emailFor(username), password } });
+    const secret = await serverSecret(password, username);
+    const signIn = (pw) => request('/auth/v1/token?grant_type=password', { method: 'POST', auth: false, body: { email: emailFor(username), password: pw } });
+    let s;
+    try {
+      s = await signIn(secret);
+    } catch (err) {
+      if (!/Invalid login credentials/i.test(String(err.message))) throw err;
+      // Konto von vor 0.7: Server kennt noch das echte Passwort -> einmalig auf den abgeleiteten Wert umstellen
+      s = await signIn(password);
+      setSession(s);
+      await request('/auth/v1/user', { method: 'PUT', body: { password: secret } });
+    }
     setSession(s);
     await refreshState();
     const restored = await unlockVault(password, username);
@@ -148,7 +169,7 @@ async function login(name, password) {
 /** Launcher-Anmeldungen über das Konto abgleichen (Fehler hier verhindern die Anmeldung nicht) */
 async function unlockVault(password, username) {
   try {
-    vault.unlock(password, username);
+    await vault.unlock(password, username);
     return await vault.sync();
   } catch (err) {
     console.warn('[vault]', err.message);

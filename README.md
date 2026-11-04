@@ -217,14 +217,26 @@ Ludora accounts need a small [Supabase](https://supabase.com) project (the free 
 Ludora themselves needs their own project:
 
 1. Create a project on supabase.com.
-2. **SQL Editor:** run `supabase/schema.sql`, then `supabase/02_friends.sql`, `supabase/03_delete_account.sql` and `supabase/04_vault.sql`.
+2. **SQL Editor:** run `supabase/schema.sql`, then `supabase/02_friends.sql`, `supabase/03_delete_account.sql`, `supabase/04_vault.sql` and `supabase/05_security.sql`.
 3. **Authentication → Sign In / Providers → Email:** turn off “Confirm email” (Ludora accounts have no email).
 4. **Edge Functions:** create a function with the content of `supabase/functions/link/index.ts` and turn off “Verify JWT”.
 5. Copy `electron/hub-config.example.json` to `electron/hub-config.json` and enter the *Project URL*, the **public**
    key (*anon* / *publishable*) and the function name. Never put the *secret* / *service_role* key into the app.
    `hub-config.json` is git-ignored.
 
-Without `hub-config.json` everything except Ludora accounts works. `supabase/test_dummies.sql` creates two test profiles.
+Without `hub-config.json` everything except Ludora accounts works.
+
+### Signed updates
+
+Ludora only installs updates that are signed with the developer's private key (Ed25519). The key is **not** on
+GitHub, so even a hijacked GitHub account can't push malware to Ludora users. After GitHub has built a release, sign
+it on your PC and commit the resulting `signatures/<tag>.json` to `main` – only then do installed copies offer the update:
+
+```
+node scripts/sign-release.mjs v0.7.0 path/to/private-key.pem
+```
+
+Building your own fork? Generate your own key pair and replace `PUBLIC_KEY` in `electron/lib/updater.js`. `supabase/test_dummies.sql` creates two test profiles.
 
 ## License
 

@@ -735,7 +735,7 @@ function HubDialog({ hub, providerById, notify, onClose }) {
             </div>
             <form className="hub-form" onSubmit={submit}>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Name, z. B. alex")} autoFocus autoComplete="username" />
-              <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Passwort (mind. 6 Zeichen)" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
+              <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={mode === 'register' ? t("Passwort (mind. {0} Zeichen)", [10]) : t("Passwort")} type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
               {mode === 'register' && <p className="muted small">{t(
                 "Ohne E-Mail – merk dir dein Passwort gut, es lässt sich nicht zurücksetzen."
               )}</p>}

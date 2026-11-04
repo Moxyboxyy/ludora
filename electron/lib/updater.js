@@ -7,12 +7,32 @@
 //   macOS     -> .zip entpacken, Ludora.app austauschen, neu starten
 //   Linux     -> AppImage austauschen und neu starten; .deb über pkexec/apt (sonst Paketinstallation öffnen)
 // Im Entwicklungsmodus (npm run dev) wird nur die Release-Seite geöffnet.
+//
+// Sicherheit: Ludora installiert nur Dateien, die mit dem Release-Schlüssel des Entwicklers signiert sind
+// (Ed25519, signatures/<tag>.json im Repository, erstellt mit scripts/sign-release.mjs). Der private
+// Schlüssel liegt nicht auf GitHub – wer das GitHub-Konto übernimmt, kann trotzdem keine Updates verteilen.
+// Nach dem Download wird die SHA-256-Prüfsumme der Datei mit der signierten verglichen.
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 
 const REPO = 'MaxiMagDich93/ludora';
+const PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAbG63MKjZGta8GbK8BHMBjubqWbEa9O1ommvKAL5gwiA=
+-----END PUBLIC KEY-----`;
+let signatures = null; // { name: { sha256, sig } } für das aktuelle Release (nur geprüfte Einträge)
+
+/** Signierte Prüfsumme für eine Datei – null, wenn nicht (gültig) signiert (für Tests getrennt) */
+function verifiedSha(sigs, tag, name, publicKey = PUBLIC_KEY) {
+  const e = sigs?.tag === tag ? sigs.files?.[name] : null;
+  if (!e || !/^[0-9a-f]{64}$/.test(String(e.sha256))) return null;
+  try {
+    const msg = Buffer.from(`ludora-update\n${tag}\n${name}\n${e.sha256}`);
+    return crypto.verify(null, msg, crypto.createPublicKey(publicKey), Buffer.from(String(e.sig), 'base64')) ? e.sha256 : null;
+  } catch { return null; }
+}
 let state = { status: 'idle', current: null, latest: null, progress: 0, error: null, notes: null, page: null };
 const listeners = new Set();
 let release = null;
@@ -65,7 +85,17 @@ async function check() {
     if (!r.ok) throw new Error(`GitHub ${r.status}`);
     const j = await r.json();
     const latest = String(j.tag_name || '').replace(/^v/, '');
+    // Update erst anbieten, wenn die Datei für dieses System signiert ist
+    let signed = false;
     if (latest && newer(latest, app.getVersion())) {
+      const asset = pickAsset(j.assets, process.platform, process.arch, process.platform === 'linux' ? linuxKind() : null);
+      const sr = await net.fetch(`https://raw.githubusercontent.com/${REPO}/main/signatures/${encodeURIComponent(j.tag_name)}.json`, {
+        headers: { 'user-agent': `Ludora/${app.getVersion()}` }, cache: 'no-store'
+      }).catch(() => null);
+      signatures = sr?.ok ? await sr.json().catch(() => null) : null;
+      signed = !!(asset && verifiedSha(signatures, j.tag_name, asset.name));
+    }
+    if (signed) {
       release = j;
       set({ status: state.status === 'downloading' ? 'downloading' : 'available', latest, notes: j.body || null, page: j.html_url });
     } else {
@@ -126,7 +156,14 @@ async function install(quit) {
   const file = path.join(dir, asset.name);
   try {
     set({ status: 'downloading', progress: 0, error: null });
+    const expected = verifiedSha(signatures, release.tag_name, asset.name);
+    if (!expected) throw new Error('Update ist nicht signiert – aus Sicherheitsgründen nicht installiert');
     await download(asset, file);
+    const actual = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+    if (actual !== expected) {
+      fs.rmSync(dir, { recursive: true, force: true });
+      throw new Error('Prüfsumme stimmt nicht – Download verworfen');
+    }
     set({ status: 'installing' });
 
     if (process.platform === 'win32') {
@@ -199,6 +236,7 @@ function init(el) {
 }
 
 module.exports = {
+  _verifiedSha: verifiedSha,
   init, check, install,
   getState: () => state,
   onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },

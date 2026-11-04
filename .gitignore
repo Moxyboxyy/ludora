@@ -16,3 +16,7 @@ Thumbs.db
 
 # Übertragungs-Archiv
 ludora-src.zip
+
+# Signatur-Schlüssel nie hochladen
+*.pem
+private-key*

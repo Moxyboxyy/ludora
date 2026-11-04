@@ -21,9 +21,16 @@ let pushTimer = null;
 let applying = false;
 const restoreListeners = new Set();
 
-/** Schlüssel aus Passwort + Ludora-Name (gleich auf jedem Gerät) */
-function deriveKey(password, username) {
-  return crypto.scryptSync(String(password), `ludora-vault:${String(username).toLowerCase()}`, 32, { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 });
+/**
+ * Schlüssel aus Passwort + Ludora-Name ableiten (gleich auf jedem Gerät; läuft im Hintergrund).
+ * purpose 'vault' = Tresor-Schlüssel, 'auth' = was statt des Passworts an den Server geht.
+ * Beide sind voneinander unabhängig: aus dem, was der Server sieht, lässt sich der Tresor nicht öffnen.
+ */
+function deriveKey(password, username, purpose = 'vault') {
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(String(password), `ludora-${purpose}:${String(username).toLowerCase()}`, 32,
+      { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }, (err, key) => (err ? reject(err) : resolve(key)));
+  });
 }
 
 function encrypt(obj, key) {
@@ -113,8 +120,8 @@ secrets.onChange((name) => { if (SYNCED.includes(name)) schedulePush(); });
 module.exports = {
   SYNCED,
   /** Nach Anmeldung/Registrierung: Schlüssel aus dem Passwort ableiten und merken */
-  unlock(password, username) {
-    secrets.set(KEY_SECRET, deriveKey(password, username).toString('base64'));
+  async unlock(password, username) {
+    secrets.set(KEY_SECRET, (await deriveKey(password, username)).toString('base64'));
   },
   /** Verbindung zum Ludora-Server (aus hubAccount) */
   attach(req, uid) { request = req; userId = uid; },
@@ -128,5 +135,5 @@ module.exports = {
   hasKey: () => !!key(),
   /** fn(name): eine Anmeldung kam von einem anderen Gerät -> betreffendes Modul neu starten */
   onRestore(fn) { restoreListeners.add(fn); return () => restoreListeners.delete(fn); },
-  _deriveKey: deriveKey, _encrypt: encrypt, _decrypt: decrypt
+  deriveKey, _deriveKey: deriveKey, _encrypt: encrypt, _decrypt: decrypt
 };

@@ -33,7 +33,8 @@ direkt von den Stores. Mit einem **SteamGridDB-Key** werden Spielnamen an SteamG
 Ein Ludora-Konto ist freiwillig. Wenn du eins anlegst, speichert der Server (Supabase, Region laut Projekt, z. B. Frankfurt):
 
 - deinen Ludora-Namen und Anzeigenamen,
-- dein Passwort – nur als Hash (von Supabase verschlüsselt),
+- einen Hash eines aus deinem Passwort abgeleiteten Werts – **dein Passwort selbst verlässt dein Gerät nie**
+  (Ludora schickt nur einen per scrypt abgeleiteten Wert, den Supabase als Hash speichert),
 - die IDs und Namen der Launcher-Konten, die du verknüpfst (Steam, Epic, GOG, Riot),
 - deine Ludora-Freundschaften und -Anfragen,
 - wann Ludora zuletzt online war (für „Online in Ludora“),
@@ -42,7 +43,8 @@ Ein Ludora-Konto ist freiwillig. Wenn du eins anlegst, speichert der Server (Sup
   Ludora-Passwort verschlüsselt; der Server (und wer ihn betreibt) kann ihn nicht lesen. Er wird mit dem Konto gelöscht.
 
 **Wer sieht was?**
-- Deine Ludora-**Freunde** sehen alle Konten, die du verknüpft hast.
+- Deine Ludora-**Freunde** sehen alle Konten, die du verknüpft hast, und ob du in Ludora online bist.
+- Sonst kann niemand Ludora-Namen oder Online-Zeiten auflisten – dein Profil kann nur du selbst lesen.
 - Andere angemeldete Ludora-Nutzer können nur zu einer **konkreten** Launcher-Konto-ID nachfragen, zu welchem
   Ludora-Namen sie gehört (Ludora tut das für die Konten in deren Freundeslisten). Eine Liste aller Nutzer oder
   Konten gibt der Server nicht heraus.
