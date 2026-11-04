@@ -29,7 +29,7 @@ jobs:
         include:
           - os: windows-latest
             target: --win
-          - os: macos-latest
+          - os: macos-15
             target: --mac
           - os: ubuntu-latest
             target: --linux
@@ -63,8 +63,11 @@ jobs:
             release/*.deb
           if-no-files-found: error
 
+  # Veröffentlichen, auch wenn ein System (z. B. Mac – dort gibt es bei GitHub manchmal keine freien Rechner)
+  # ausfällt; dessen Installer fehlt dann im Release und kann später nachgereicht werden.
   release:
     needs: build
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
