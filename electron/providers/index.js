@@ -38,7 +38,7 @@ const DOWNLOADS = {
     rockstar: 'https://www.rockstargames.com/downloads'
   },
   darwin: {
-    steam: 'https://store.steampowered.com/about/',
+    steam: 'https://cdn.akamai.steamstatic.com/client/installer/steam.dmg',
     epic: 'https://store.epicgames.com/download',
     gog: 'https://www.gog.com/galaxy',
     battlenet: 'https://www.battle.net/download/getInstallerForGame?os=mac&gameProgram=BATTLENET_APP&version=Live',

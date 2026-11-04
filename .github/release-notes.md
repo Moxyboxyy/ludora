@@ -1,10 +1,9 @@
 **Ludora - the Client for all Game Clients** · Release 0.7.1
 
 ### What's new
-- **Download missing launchers with one click:** in the sidebar under “Not installed”, a green download icon now sits next to every launcher that isn't on your PC. Steam, GOG Galaxy, EA app, Amazon Games and Battle.net download their installer directly; Epic, Ubisoft, Rockstar and Riot open their official download page. On Linux it leads to Heroic or Lutris.
-- Only fixed, official addresses are used – Ludora never opens download links from anywhere else.
+- **Download missing launchers with one click:** in the sidebar under “Not installed”, every launcher whose app is missing now has a download icon. Steam, GOG Galaxy, EA app, Amazon Games and Battle.net download the official installer directly; Epic, Ubisoft, Rockstar and Riot open their official download page. On Linux it leads to Heroic or Lutris.
 
-Coming from 0.6 or older? 0.7.0 brought remembered sign-ins, sign-in sync across devices and a security update – sign out of your Ludora account and back in once after updating.
+Includes everything from 0.7.0 (remembered sign-ins, sign-in sync across devices, security update) – see the [0.7.0 release](https://github.com/MaxiMagDich93/ludora/releases/tag/v0.7.0).
 
 ### Downloads
 | System | File |
@@ -20,6 +19,6 @@ The files are not code-signed: on Windows click **More info → Run anyway**, on
 
 ---
 
-**Deutsch:** Fehlende Launcher mit einem Klick herunterladen – grünes Download-Symbol in der Seitenleiste unter „Nicht installiert“ (Steam, GOG, EA, Amazon und Battle.net direkt, die anderen über ihre offizielle Download-Seite). Von 0.6 oder älter? Nach dem Update einmal vom Ludora-Konto ab- und wieder anmelden.
+**Deutsch:** Fehlende Launcher lassen sich jetzt mit einem Klick herunterladen – in der Seitenleiste unter „Nicht installiert“ steht neben jedem fehlenden Launcher ein Download-Symbol (Steam, GOG, EA, Amazon und Battle.net laden den offiziellen Installer direkt). Enthält alles aus 0.7.0.
 
 Ludora is not affiliated with Valve, Epic Games, GOG, EA, Ubisoft, Blizzard, Riot Games, Rockstar Games or Amazon.
