@@ -21,7 +21,13 @@ if (flag === '--digests') {
   assets = JSON.parse(fs.readFileSync(digestFile, 'utf8'));
 } else {
   const r = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/${tag}`, { headers: { 'user-agent': 'ludora-sign' } });
-  if (!r.ok) throw new Error(`GitHub ${r.status} – gibt es das Release ${tag} schon?`);
+  if (r.status === 404) {
+    const l = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'user-agent': 'ludora-sign' } }).then((x) => x.json()).catch(() => ({}));
+    console.error(`Das Release ${tag} gibt es (noch) nicht.${l.tag_name ? ` Neuestes Release: ${l.tag_name}.` : ''}`);
+    console.error('Erst die Version erhöhen und warten, bis GitHub die Installer gebaut hat – dann signieren.');
+    process.exit(1);
+  }
+  if (!r.ok) throw new Error(`GitHub ${r.status}`);
   assets = (await r.json()).assets.map((a) => ({ name: a.name, digest: a.digest }));
 }
 
