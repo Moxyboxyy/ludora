@@ -17,6 +17,7 @@ const allProviders = [
   require('./amazon'),
   require('./riot'),
   require('./rockstar'),
+  ...require('./linux'), // Linux: Heroic + Lutris
   require('./manual')
 ];
 

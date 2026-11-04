@@ -68,7 +68,7 @@ Download the file for your system from the [**latest release**](https://github.c
 - **Debian / Ubuntu:** download **`Ludora-<version>-amd64.deb`** and run `sudo apt install ./Ludora-*-amd64.deb`.
   Ludora then appears in your app menu.
 
-On Linux Ludora detects Steam and your own games; store and friends work as usual.
+On Linux most launchers don't exist natively, so Ludora reads the two tools Linux gamers use instead: **[Heroic](https://heroicgameslauncher.com)** (Epic Games, GOG, Amazon) and **[Lutris](https://lutris.net)** (Battle.net, EA app, Ubisoft Connect, Rockstar and everything else). Install the games there once – Ludora shows them in one library and starts them. Normal and Flatpak installs are supported. Riot games (Valorant, League of Legends) don't run on Linux because of Riot's anti-cheat.
 
 ## Getting started – client tutorial
 
@@ -132,11 +132,13 @@ everything from the server.
 | Launcher | Windows | macOS | Linux |
 |---|---|---|---|
 | Steam | ✅ | ✅ | ✅ |
-| Epic Games | ✅ | ✅ | – |
-| GOG Galaxy | ✅ | ✅ | – |
-| Battle.net | ✅ | ✅ | – |
+| Epic Games | ✅ | ✅ | ✅ via Heroic |
+| GOG Galaxy | ✅ | ✅ | ✅ via Heroic |
+| Battle.net | ✅ | ✅ | ✅ via Lutris |
 | Riot Games | ✅ | ✅ | – |
-| EA app, Ubisoft Connect, Amazon Games, Rockstar | ✅ | – | – |
+| EA app, Ubisoft Connect, Rockstar | ✅ | – | ✅ via Lutris |
+| Amazon Games | ✅ | – | ✅ via Heroic |
+| Other Lutris games (emulators, GZDoom, …) | – | – | ✅ |
 | Own games | ✅ | ✅ | ✅ |
 
 Ludora reads the data the launchers keep on your PC anyway (install lists, manifests, download logs) and always starts

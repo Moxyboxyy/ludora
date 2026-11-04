@@ -312,7 +312,8 @@ export default function App() {
     favorite: favorites.has(g.id),
     onToggleFavorite: () => act.current.toggleFavorite(g),
     onFocus: () => act.current.focusGame(g),
-    onUninstall: g.status === 'installed' && g.provider !== 'manual' ? () => act.current.uninstallGame(g) : undefined,
+    // Linux: Heroic/Lutris deinstallieren selbst – dort nur Steam direkt aus Ludora
+    onUninstall: g.status === 'installed' && g.provider !== 'manual' && (api.platform !== 'linux' || g.provider === 'steam') ? () => act.current.uninstallGame(g) : undefined,
     onRemove: g.removable ? () => act.current.removeGame(g) : undefined
   });
 

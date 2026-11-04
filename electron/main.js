@@ -196,6 +196,9 @@ async function coverUrlOk(url) {
     if (url.startsWith('ghimg://steam/')) {
       const [appid, kind] = url.slice('ghimg://steam/'.length).split('/');
       ok = !!(await steam.findCachedImage(appid, kind));
+    } else if (url.startsWith('ghimg://lutris/')) {
+      const [slug, kind] = url.slice('ghimg://lutris/'.length).split('/');
+      ok = !!require('./lib/linuxLaunchers').lutrisImage(decodeURIComponent(slug), kind);
     } else if (url.startsWith('ghimg://custom/')) {
       ok = fs.existsSync(path.join(customCoverDir(), path.basename(decodeURIComponent(url.slice('ghimg://custom/'.length).split('?')[0]))));
     } else if (/^https:\/\//.test(url)) {
@@ -620,6 +623,11 @@ async function runLaunch(launch, { background = false } = {}) {
     await shell.openExternal(launch.target);
     return;
   }
+  if (launch.type === 'exe' && process.platform === 'linux' && !/\.desktop$/i.test(launch.target)) {
+    // Linux: Programme (Heroic, Lutris, AppImages, Skripte) direkt starten
+    await spawnDetached(launch.target, launch.args || [], launch.cwd || (path.isAbsolute(launch.target) ? path.dirname(launch.target) : undefined));
+    return;
+  }
   if (launch.type === 'exe' && !/\.exe$/i.test(launch.target)) {
     // Verknüpfungen (.lnk, .url, .bat) über Windows öffnen lassen
     const err = await shell.openPath(launch.target);
@@ -672,6 +680,10 @@ app.whenReady().then(() => {
         const file = path.join(base, 'Riot Games', 'Metadata', id, `${id}.ico`);
         if (fs.existsSync(file)) return net.fetch(pathToFileURL(file).toString());
       }
+    }
+    if (u.hostname === 'lutris') {
+      const file = require('./lib/linuxLaunchers').lutrisImage(decodeURIComponent(appid || ''), kind);
+      if (file) return net.fetch(pathToFileURL(file).toString());
     }
     if (u.hostname === 'launcher') {
       const png = await launcherIcon(decodeURIComponent(u.pathname.slice(1)));
@@ -854,7 +866,9 @@ app.whenReady().then(() => {
     try {
       const info = (lastScan.providers || []).find((x) => x.id === store.launcher);
       const hasLauncher = !!info && info.enabled !== false && (info.count > 0 || info.installed > 0);
-      if (uri && shop.isAllowedUri(uri) && hasLauncher) {
+      // Linux: nur Steam kennt dort sein Protokoll (Epic & Co. laufen über Heroic/Lutris) -> sonst Browser
+      const uriWorks = process.platform !== 'linux' || store.launcher === 'steam';
+      if (uri && uriWorks && shop.isAllowedUri(uri) && hasLauncher) {
         hide.stop(store.launcher); // Shop soll sichtbar sein
         await runLaunch({ type: 'uri', target: uri });
         return { ok: true, via: 'launcher' };
