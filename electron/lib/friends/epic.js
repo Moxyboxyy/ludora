@@ -8,7 +8,7 @@
 // sich dort als "Abwesend". Alle Schnittstellen sind inoffiziell (wie bei Legendary/Heroic/fnbr).
 const { t } = require('../i18n.js');
 const crypto = require('crypto');
-const { createStore, saveSecret, loadSecret, loginWindow, clearPartition, getJson, unescapeXml, escapeXml } = require('./common');
+const { createStore, saveSecret, loadSecret, isTransient, loginWindow, clearPartition, getJson, unescapeXml, escapeXml } = require('./common');
 
 // Öffentliche Kennung des Epic-Launchers (so nutzen sie auch Legendary/Heroic)
 const CLIENT = { id: '34a02cf8f4414e29b15921876da36f9a', secret: 'daafbccc737745039dffe53d94fc76cf' };
@@ -46,7 +46,12 @@ async function token(params) {
     body
   });
   const j = await res.json().catch(() => ({}));
-  if (!res.ok || !j.access_token) throw new Error(j.errorMessage || t("Epic-Anmeldung fehlgeschlagen ({0})", [res.status]));
+  if (!res.ok || !j.access_token) {
+    const err = new Error(j.errorMessage || t("Epic-Anmeldung fehlgeschlagen ({0})", [res.status]));
+    err.status = res.status;
+    err.code = j.errorCode || `HTTP ${res.status}`;
+    throw err;
+  }
   return {
     access_token: j.access_token,
     refresh_token: j.refresh_token,
@@ -56,9 +61,19 @@ async function token(params) {
   };
 }
 
-async function ensureToken() {
-  if (auth && auth.expires_at - 60000 > Date.now()) return auth;
+let renewing = null;
+function ensureToken() {
+  if (auth && auth.expires_at - 60000 > Date.now()) return Promise.resolve(auth);
+  // Gleichzeitige Aufrufe teilen sich eine Erneuerung (ein Refresh-Token gilt nur einmal)
+  renewing ||= renew().finally(() => { renewing = null; });
+  return renewing;
+}
+
+async function renew() {
   if (!auth?.refresh_token) throw new Error(t("Nicht angemeldet"));
+  // Hat eine andere Ludora-Instanz/ein anderes Gerät inzwischen erneuert? Dann deren Token nehmen
+  const disk = loadSecret(SECRET);
+  if (disk?.refresh_token && disk.account_id === auth.account_id) auth.refresh_token = disk.refresh_token;
   auth = await token({ grant_type: 'refresh_token', refresh_token: auth.refresh_token });
   saveSecret(SECRET, { refresh_token: auth.refresh_token, account_id: auth.account_id });
   return auth;
@@ -93,6 +108,7 @@ async function login(parent) {
 
 async function logout() {
   gen++;
+  clearTimeout(retryTimer);
   stopXmpp();
   clearTimeout(pollTimer);
   auth = null;
@@ -314,12 +330,37 @@ async function refresh() {
   }
 }
 
+let retryTimer = null;
+let retries = 0;
+
 function start() {
   const my = ++gen;
+  clearTimeout(retryTimer);
   store.set({ status: 'connecting', needsLogin: false, error: null });
   ensureToken()
-    .then(() => { refresh(); startXmpp(my); })
-    .catch(() => store.set({ status: 'disconnected', needsLogin: true, error: t("Epic-Anmeldung abgelaufen – bitte neu anmelden.") }));
+    .then(() => { retries = 0; refresh(); startXmpp(my); })
+    .catch((err) => {
+      if (my !== gen) return;
+      if (isTransient(err)) {
+        // Kein Internet / Epic kurz weg: angemeldet bleiben, gleich nochmal versuchen
+        store.set({ status: 'connecting', error: t("Epic nicht erreichbar – neuer Versuch läuft …") });
+        retryTimer = setTimeout(() => { if (my === gen) start(); }, Math.min(5 * 60e3, 10e3 * 2 ** (retries++)));
+        retryTimer.unref?.();
+        return;
+      }
+      store.set({ status: 'disconnected', needsLogin: true, error: t("Epic-Anmeldung abgelaufen – bitte neu anmelden.") });
+      // Vielleicht hat ein anderes Gerät die Anmeldung erneuert -> über das Ludora-Konto holen
+      require('../vault').sync().catch(() => { /* egal */ });
+    });
+}
+
+/** Anmeldung kam über das Ludora-Konto von einem anderen Gerät */
+function restore() {
+  const saved = loadSecret(SECRET);
+  if (!saved?.refresh_token || saved.refresh_token === auth?.refresh_token) return;
+  auth = { refresh_token: saved.refresh_token, account_id: saved.account_id, expires_at: 0 };
+  retries = 0;
+  start();
 }
 
 function init() {
@@ -351,6 +392,7 @@ module.exports = {
   _parseMessage: parseMessage,
   _splitPresences: splitPresences,
   id: 'epic',
+  restore,
   async getLinkProof() { if (!auth) return null; const a = await ensureToken(); return { token: a.access_token, accountId: a.account_id }; },
   name: 'Epic Games',
   getState: store.get,

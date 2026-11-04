@@ -32,9 +32,19 @@ async function token(params) {
   };
 }
 
-async function ensureToken() {
-  if (auth && auth.expires_at - 60000 > Date.now()) return auth;
+let renewing = null;
+function ensureToken() {
+  if (auth && auth.expires_at - 60000 > Date.now()) return Promise.resolve(auth);
+  // Gleichzeitige Aufrufe teilen sich eine Erneuerung (ein Refresh-Token gilt nur einmal)
+  renewing ||= renew().finally(() => { renewing = null; });
+  return renewing;
+}
+
+async function renew() {
   if (!auth?.refresh_token) throw new Error(t("Nicht angemeldet"));
+  // Hat eine andere Ludora-Instanz/ein anderes Gerät inzwischen erneuert? Dann deren Token nehmen
+  const disk = loadSecret(SECRET);
+  if (disk?.refresh_token && disk.user_id === auth.user_id) auth.refresh_token = disk.refresh_token;
   auth = await token({ grant_type: 'refresh_token', refresh_token: auth.refresh_token });
   saveSecret(SECRET, { refresh_token: auth.refresh_token, user_id: auth.user_id });
   return auth;
@@ -111,11 +121,14 @@ async function poll(loadList = false) {
       online = online.concat(r.items || []);
     }
     if (my !== gen) return;
+    poll.vaultAsked = false;
     store.set({ status: 'connected', needsLogin: false, error: null, friends: merge(friends, online) });
   } catch (err) {
     if (my !== gen) return;
-    if (err.status === 401 || /Nicht angemeldet/.test(err.message)) {
+    if (err.status === 400 || err.status === 401 || /Nicht angemeldet/.test(err.message)) {
       store.set({ status: 'disconnected', needsLogin: true, error: t("GOG-Anmeldung abgelaufen – bitte neu anmelden.") });
+      // Vielleicht hat ein anderes Gerät die Anmeldung erneuert -> über das Ludora-Konto holen
+      if (!poll.vaultAsked) { poll.vaultAsked = true; require('../vault').sync().catch(() => { /* egal */ }); }
       return;
     }
     store.set({ status: 'error', error: `GOG: ${err.message}` });
@@ -130,6 +143,14 @@ function start() {
   poll(true);
 }
 
+/** Anmeldung kam über das Ludora-Konto von einem anderen Gerät */
+function restore() {
+  const saved = loadSecret(SECRET);
+  if (!saved?.refresh_token || saved.refresh_token === auth?.refresh_token) return;
+  auth = { refresh_token: saved.refresh_token, user_id: saved.user_id, expires_at: 0 };
+  start();
+}
+
 function init() {
   const saved = loadSecret(SECRET);
   if (saved?.refresh_token) {
@@ -140,6 +161,7 @@ function init() {
 
 module.exports = {
   id: 'gog',
+  restore,
   async getLinkProof() { if (!auth) return null; const a = await ensureToken(); return { token: a.access_token, accountId: a.user_id }; },
   name: 'GOG',
   getState: store.get,

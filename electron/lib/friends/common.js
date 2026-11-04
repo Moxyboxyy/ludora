@@ -22,23 +22,15 @@ function createStore(initial) {
   };
 }
 
-function saveSecret(key, value) {
-  if (!value) { settings.set({ [key]: null }); return; }
-  try {
-    const { safeStorage } = electron();
-    if (!safeStorage.isEncryptionAvailable()) return; // unverschlüsselt speichern wir nicht
-    settings.set({ [key]: safeStorage.encryptString(JSON.stringify(value)).toString('base64') });
-  } catch { /* egal */ }
-}
+// Anmeldungen liegen gemeinsam in logins.json (siehe ../secrets.js)
+function saveSecret(key, value) { require('../secrets').set(key, value || null); }
+function loadSecret(key) { return require('../secrets').get(key); }
 
-function loadSecret(key) {
-  const enc = settings.get(key);
-  if (!enc) return null;
-  try {
-    const { safeStorage } = electron();
-    if (!safeStorage.isEncryptionAvailable()) return null;
-    return JSON.parse(safeStorage.decryptString(Buffer.from(enc, 'base64')));
-  } catch { return null; }
+/** Netzwerkfehler (kein Internet, Server kurz weg) – dann später erneut versuchen statt abzumelden */
+function isTransient(err) {
+  const m = String(err?.code || '') + ' ' + String(err?.message || err || '');
+  if (/invalid_grant|invalid_token|unauthori[sz]ed|\b40[013]\b|expired|revoked/i.test(m)) return false;
+  return /ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENETUNREACH|EHOSTUNREACH|socket|network|fetch failed|timeout|\b5\d\d\b|\b429\b/i.test(m);
 }
 
 /**
@@ -110,4 +102,4 @@ function escapeXml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
-module.exports = { createStore, saveSecret, loadSecret, loginWindow, clearPartition, getJson, unescapeXml, escapeXml };
+module.exports = { createStore, saveSecret, loadSecret, isTransient, loginWindow, clearPartition, getJson, unescapeXml, escapeXml };

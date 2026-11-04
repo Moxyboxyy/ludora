@@ -471,5 +471,11 @@
   "Überprüfen": "Verifying",
   "„Update“ startet den Launcher unsichtbar, er lädt dann selbst. Pausieren und Fortsetzen erlauben die Launcher nur in ihrer eigenen Download-Ansicht – der Knopf öffnet sie direkt. Geschwindigkeit und Restzeit misst Ludora selbst.": "“Update” starts the launcher invisibly and it downloads by itself. Launchers only allow pausing and resuming in their own download view – the button opens it directly. Ludora measures speed and remaining time itself.",
   "„{0}“ ({1}) zuordnen": "Assign “{0}” ({1})",
-  "✓ bestätigt": "✓ verified"
+  "✓ bestätigt": "✓ verified",
+  "Als {0} angemeldet – {1} gleich mit": "Signed in as {0} – {1} too",
+  "Auf einem neuen PC oder Laptop meldest du dich nur hier an – deine Steam-, Epic- und GOG-Anmeldungen kommen Ende-zu-Ende-verschlüsselt mit (nur mit deinem Passwort lesbar).": "On a new PC or laptop you only sign in here – your Steam, Epic and GOG sign-ins come along end-to-end encrypted (readable only with your password).",
+  "Auf dem Ludora-Server fehlt noch supabase/04_vault.sql (im SQL Editor ausführen).": "The Ludora server is missing supabase/04_vault.sql (run it in the SQL Editor).",
+  "Ludora-Server nicht erreichbar – neuer Versuch läuft …": "Ludora server unreachable – retrying …",
+  "Steam nicht erreichbar – neuer Versuch läuft …": "Steam unreachable – retrying …",
+  "Epic nicht erreichbar – neuer Versuch läuft …": "Epic unreachable – retrying …"
 }

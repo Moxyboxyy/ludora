@@ -15,6 +15,7 @@
 // Das Anmelde-Token wird verschlüsselt gespeichert (safeStorage), nie im Klartext.
 const { t } = require('./i18n.js');
 const settings = require('./settings');
+const { isTransient } = require('./friends/common');
 
 const electron = () => require('electron');
 const API = 'https://api.steampowered.com';
@@ -52,23 +53,8 @@ function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
 const TOKEN_KEY = 'steamWebToken'; // neu: Web-Token (das alte Client-Token wird verworfen)
 
-function loadToken() {
-  const enc = settings.get(TOKEN_KEY);
-  if (!enc) return null;
-  try {
-    const { safeStorage } = electron();
-    return safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(Buffer.from(enc, 'base64')) : null;
-  } catch { return null; }
-}
-
-function saveToken(token) {
-  if (!token) { settings.set({ [TOKEN_KEY]: null }); return; }
-  try {
-    const { safeStorage } = electron();
-    if (!safeStorage.isEncryptionAvailable()) return; // unverschlüsselt speichern wir nicht
-    settings.set({ [TOKEN_KEY]: safeStorage.encryptString(token).toString('base64') });
-  } catch { /* egal */ }
-}
+const loadToken = () => require('./secrets').get(TOKEN_KEY);
+const saveToken = (token) => require('./secrets').set(TOKEN_KEY, token || null);
 
 /** Inhalt eines JWT (ohne Prüfung – nur um SteamID und Ablauf zu lesen) */
 function jwtPayload(token) {
@@ -118,6 +104,9 @@ async function ensureAccess() {
   return accessToken;
 }
 
+let retryTimer = null;
+let retries = 0;
+
 async function connect(token, firstAccess) {
   const my = ++gen;
   stopChat();
@@ -130,12 +119,21 @@ async function connect(token, firstAccess) {
   try {
     await ensureAccess();
     if (my !== gen) return;
+    retries = 0;
     emit({ status: 'connected', error: null, me: { steamid } });
     schedulePoll(100);
     ensureChat().catch(() => { /* klappt beim ersten Senden erneut; Liste läuft auch ohne */ });
   } catch (err) {
     if (my !== gen) return;
     if (/AccessDenied|Expired|Revoked|InvalidSignature|InvalidPassword|401/i.test(String(err.message))) saveToken(null);
+    else if (isTransient(err)) {
+      // Kein Internet / Steam kurz weg: angemeldet bleiben und es gleich nochmal versuchen
+      emit({ status: 'connecting', error: t("Steam nicht erreichbar – neuer Versuch läuft …") });
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(() => { if (my === gen) connect(token); }, Math.min(5 * 60e3, 10e3 * 2 ** (retries++)));
+      retryTimer.unref?.();
+      return;
+    }
     emit({ status: 'disconnected', error: t(
       "Steam-Anmeldung abgelaufen – bitte neu per QR-Code anmelden. ({0})",
       [err.message]
@@ -145,6 +143,7 @@ async function connect(token, firstAccess) {
 
 function logout() {
   gen++;
+  clearTimeout(retryTimer);
   stopPoll();
   stopChat();
   clearTimeout(chatTimer);
@@ -354,6 +353,12 @@ function init() {
   settings.set({ steamFriendsToken: null }); // altes Client-Token (zweite Steam-Sitzung) nicht mehr verwenden
   const token = loadToken();
   if (token) connect(token);
+}
+
+/** Anmeldung kam über das Ludora-Konto von einem anderen Gerät */
+function restore() {
+  const token = loadToken();
+  if (token && token !== refreshToken) { retries = 0; connect(token); }
 }
 
 /** Steams eigener "Spiel beitreten"-Link – Steam kümmert sich um Lobby/Server */
@@ -624,7 +629,7 @@ async function getLinkProof() {
 
 module.exports = {
   getLinkProof,
-  init, startQr, logout, onChange, onChat, getState, setFast, joinUrl, findFriend,
+  init, restore, startQr, logout, onChange, onChat, getState, setFast, joinUrl, findFriend,
   history, send, typing, markRead, watch,
   _test: { avatarUrl, jwtPayload, toSteamId, toAccountId }
 };

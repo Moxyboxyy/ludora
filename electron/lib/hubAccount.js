@@ -4,11 +4,13 @@
 //   Ludora nimmt dafür "<name>@gamehub.local" (es werden nie E-Mails verschickt).
 // - Verknüpfen: Launcher-Konten (Steam, Epic, GOG, Riot) über die Prüf-Funktion "link".
 // - Nachschlagen: Zu welchem Ludora-Konto gehören die Konten meiner Freundesliste?
-// Die Anmeldung wird verschlüsselt gespeichert (safeStorage).
+// Die Anmeldung wird verschlüsselt gespeichert (safeStorage, siehe secrets.js).
+// Mit dem Passwort werden außerdem die Launcher-Anmeldungen Ende-zu-Ende-verschlüsselt abgeglichen (vault.js).
 const { t } = require('./i18n.js');
 const path = require('path');
 const fs = require('fs');
 const { createStore, saveSecret, loadSecret } = require('./friends/common');
+const vault = require('./vault');
 
 const SECRET = 'hubSession';
 const store = createStore({ status: 'signedOut', user: null, links: [], friends: [], configured: false });
@@ -70,11 +72,17 @@ function setSession(s) {
   saveSecret(SECRET, session ? { refresh_token: session.refresh_token, user_id: session.user_id } : null);
 }
 
+let refreshing = null;
 async function ensureSession() {
   if (!session) throw new Error(t("Nicht bei Ludora angemeldet"));
   if (session.expires_at - 60000 > Date.now()) return;
-  const s = await request('/auth/v1/token?grant_type=refresh_token', { method: 'POST', auth: false, body: { refresh_token: session.refresh_token } });
-  setSession(s);
+  // Läuft Ludora zweimal (installiert + Entwicklung), hat die andere vielleicht schon erneuert -> deren Token nehmen
+  const disk = loadSecret(SECRET);
+  if (disk?.refresh_token && disk.user_id === session.user_id) session.refresh_token = disk.refresh_token;
+  refreshing ||= request('/auth/v1/token?grant_type=refresh_token', { method: 'POST', auth: false, body: { refresh_token: session.refresh_token } })
+    .then(setSession)
+    .finally(() => { refreshing = null; });
+  await refreshing;
 }
 
 async function loadProfile() {
@@ -89,9 +97,9 @@ async function loadLinks() {
 
 async function refreshState() {
   const [profile, links] = await Promise.all([loadProfile(), loadLinks()]);
-  const wasSignedIn = store.get().status === 'signedIn';
   store.set({ status: 'signedIn', error: null, user: profile, links });
-  if (!wasSignedIn) startLoops();
+  vault.attach(request, session.user_id);
+  if (!beatTimer) startLoops();
   return store.get();
 }
 
@@ -116,6 +124,7 @@ async function register(name, password) {
     setSession(s);
     await request('/rest/v1/profiles', { method: 'POST', body: { id: session.user_id, username, display_name: display }, headers: { prefer: 'return=minimal' } });
     await refreshState();
+    await unlockVault(password, username);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: friendly(err) };
@@ -129,15 +138,32 @@ async function login(name, password) {
     const s = await request('/auth/v1/token?grant_type=password', { method: 'POST', auth: false, body: { email: emailFor(username), password } });
     setSession(s);
     await refreshState();
-    return { ok: true };
+    const restored = await unlockVault(password, username);
+    return { ok: true, restored };
   } catch (err) {
     return { ok: false, error: friendly(err) };
   }
 }
 
+/** Launcher-Anmeldungen über das Konto abgleichen (Fehler hier verhindern die Anmeldung nicht) */
+async function unlockVault(password, username) {
+  try {
+    vault.unlock(password, username);
+    return await vault.sync();
+  } catch (err) {
+    console.warn('[vault]', err.message);
+    store.set({ vaultError: /vaults|PGRST205|42P01|404/i.test(String(err.message) + err.code)
+      ? t("Auf dem Ludora-Server fehlt noch supabase/04_vault.sql (im SQL Editor ausführen).")
+      : null });
+    return [];
+  }
+}
+
 async function logout() {
+  clearTimeout(retryTimer);
   try { if (session) await request('/auth/v1/logout', { method: 'POST' }); } catch { /* egal */ }
   setSession(null);
+  vault.detach({ forget: true });
   stopLoops();
   store.set({ status: 'signedOut', user: null, links: [], friends: [], error: null });
   return { ok: true };
@@ -152,6 +178,7 @@ async function deleteAccount() {
     return { ok: false, error: friendly(err) };
   }
   setSession(null);
+  vault.detach({ forget: true });
   stopLoops();
   store.set({ status: 'signedOut', user: null, links: [], friends: [], error: null });
   return { ok: true };
@@ -273,6 +300,8 @@ async function goOffline() {
 function stopLoops() {
   clearInterval(beatTimer);
   clearInterval(friendsTimer);
+  beatTimer = null;
+  friendsTimer = null;
 }
 
 const REQUEST_TEXT = {
@@ -308,9 +337,29 @@ async function init() {
   const saved = loadSecret(SECRET);
   if (!configured() || !saved?.refresh_token) return;
   session = { refresh_token: saved.refresh_token, user_id: saved.user_id, expires_at: 0 };
-  try { await refreshState(); } catch (err) {
-    if (err.status === 400 || err.status === 401) { setSession(null); store.set({ status: 'signedOut', error: t("Ludora-Anmeldung abgelaufen – bitte neu anmelden.") }); }
-    else store.set({ status: 'signedIn', error: t("Ludora-Server nicht erreichbar.") });
+  await connectSaved();
+}
+
+let retryTimer = null;
+let retries = 0;
+/** Gespeicherte Anmeldung verwenden; ohne Internet angemeldet bleiben und es später erneut versuchen */
+async function connectSaved() {
+  clearTimeout(retryTimer);
+  try {
+    await refreshState();
+    retries = 0;
+    if (vault.hasKey()) vault.sync().catch((err) => console.warn('[vault]', err.message));
+  } catch (err) {
+    if (!session) return;
+    if (err.status === 400 || err.status === 401) {
+      setSession(null);
+      vault.detach();
+      store.set({ status: 'signedOut', error: t("Ludora-Anmeldung abgelaufen – bitte neu anmelden.") });
+      return;
+    }
+    store.set({ status: 'signedIn', error: t("Ludora-Server nicht erreichbar – neuer Versuch läuft …") });
+    retryTimer = setTimeout(connectSaved, Math.min(5 * 60e3, 10e3 * 2 ** (retries++)));
+    retryTimer.unref?.();
   }
 }
 

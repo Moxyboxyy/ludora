@@ -688,6 +688,8 @@ function AssignDialog({ a, people, onCancel, onPick }) {
   );
 }
 
+const RESTORED_NAME = { steamWebToken: 'Steam', friendsEpic: 'Epic', friendsGog: 'GOG' };
+
 /** Mein Ludora-Konto: registrieren / anmelden / verknüpfte Konten */
 function HubDialog({ hub, providerById, notify, onClose }) {
   const [mode, setMode] = useState('login');
@@ -703,7 +705,13 @@ function HubDialog({ hub, providerById, notify, onClose }) {
     const r = await (mode === 'login' ? api.hub.login(name, pw) : api.hub.register(name, pw));
     setBusy(false);
     if (!r.ok) setError(r.error);
-    else { setPw(''); notify(mode === 'login' ? t("Als {0} angemeldet", [name]) : t("Ludora-Konto {0} angelegt", [name])); }
+    else {
+      setPw('');
+      const names = (r.restored || []).map((k) => RESTORED_NAME[k]).filter(Boolean);
+      notify(mode === 'login'
+        ? (names.length ? t("Als {0} angemeldet – {1} gleich mit", [name, names.join(', ')]) : t("Als {0} angemeldet", [name]))
+        : t("Ludora-Konto {0} angelegt", [name]));
+    }
   }
 
   const linked = new Map((hub.links || []).map((l) => [l.launcher, l]));
@@ -717,6 +725,9 @@ function HubDialog({ hub, providerById, notify, onClose }) {
           <>
             <p className="muted small">{t(
               "Mit einem Ludora-Konto erkennen Freunde, die auch Ludora nutzen, deine Steam-, Riot-, Epic- und GOG-Konten automatisch als dich."
+            )}</p>
+            <p className="muted small">{t(
+              "Auf einem neuen PC oder Laptop meldest du dich nur hier an – deine Steam-, Epic- und GOG-Anmeldungen kommen Ende-zu-Ende-verschlüsselt mit (nur mit deinem Passwort lesbar)."
             )}</p>
             <div className="seg">
               <button className={mode === 'login' ? 'on' : ''} onClick={() => setMode('login')}>{t("Anmelden")}</button>
@@ -761,6 +772,7 @@ function HubDialog({ hub, providerById, notify, onClose }) {
               "Verknüpft wird automatisch, sobald du in Ludora bei einem Launcher angemeldet bist. Steam, Epic und GOG werden dabei beim Anbieter bestätigt; Riot gibt nur lokale Daten heraus."
             )}</p>
             {hub.error && <p className="form-error">{hub.error}</p>}
+            {hub.vaultError && <p className="form-error small">{hub.vaultError}</p>}
             <div className="hub-actions">
               <button className="secondary small" onClick={() => api.hub.relink()}>{t("Jetzt verknüpfen")}</button>
               <button className="link" onClick={() => api.hub.logout()}>{t("Abmelden")}</button>

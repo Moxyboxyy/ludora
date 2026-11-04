@@ -35,13 +35,17 @@ A Ludora account is optional. If you create one, the server (Supabase, region pe
 - your password – only as a hash (encrypted by Supabase),
 - the IDs and names of the launcher accounts you link (Steam, Epic, GOG, Riot),
 - your Ludora friendships and requests,
-- when Ludora was last online (for “Online in Ludora”).
+- when Ludora was last online (for “Online in Ludora”),
+- an **end-to-end encrypted** block with your Steam, Epic and GOG sign-ins, so you are signed in there on your
+  other devices too. It is encrypted on your device with a key derived from your Ludora password; the server (and
+  whoever runs it) cannot read it. It is deleted together with your account.
 
 **Who sees what?**
 - Your Ludora **friends** see all accounts you linked.
 - Other signed-in Ludora users can only ask for a **specific** launcher account ID which Ludora name it belongs to
   (Ludora does this for the accounts in their friends lists). The server never hands out a list of all users or accounts.
-- Launcher sign-in tokens are only used briefly to verify with the provider and are not stored.
+- Launcher sign-in tokens are only used briefly to verify with the provider; apart from the encrypted block above,
+  which only you can read, they are not stored on the server.
 
 **Deletion:** You can remove links in Ludora at any time. Delete the whole account under Ludora account →
 **Delete account …** – name, links and friendships are removed from the server immediately.

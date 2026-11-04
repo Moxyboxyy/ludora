@@ -39,7 +39,8 @@ Hintergrund bleiben.
 | **Sprachen** | Englisch (Standard) und Deutsch, umschaltbar in den Einstellungen. |
 
 Ludora sieht deine Launcher-Passwörter nie: Die Anmeldung läuft immer über die echte Seite des Anbieters, und
-Anmelde-Tokens werden nur verschlüsselt auf deinem PC gespeichert.
+Anmelde-Tokens werden verschlüsselt auf deinem PC gespeichert. Mit Ludora-Konto kommen sie Ende-zu-Ende-verschlüsselt
+auf deine anderen Geräte mit – auf einem neuen PC einmal bei Ludora anmelden, und du bist auch bei Steam, Epic und GOG drin.
 
 ## Installation
 
@@ -156,7 +157,8 @@ Download-Logs), und startet Spiele immer über den Launcher selbst (z. B. `steam
 
 Kurz: Fast alles bleibt auf deinem PC. Anmelde-Tokens werden mit der Schlüsselverwaltung deines Betriebssystems
 verschlüsselt. Ein (optionales) Ludora-Konto speichert nur deinen Ludora-Namen, einen Passwort-Hash, die IDs der
-Launcher-Konten, die du verknüpfst, und deine Ludora-Freundschaften. Details: [PRIVACY.de.md](PRIVACY.de.md).
+Launcher-Konten, die du verknüpfst, deine Ludora-Freundschaften und einen Ende-zu-Ende-verschlüsselten Block deiner
+Anmeldungen (nur mit deinem Passwort lesbar). Details: [PRIVACY.de.md](PRIVACY.de.md).
 
 ## Rechtliches & Risiken
 
@@ -205,7 +207,7 @@ Ludora-Konten brauchen ein kleines [Supabase](https://supabase.com)-Projekt (der
 selbst baut, braucht ein eigenes Projekt:
 
 1. Auf supabase.com ein Projekt anlegen.
-2. **SQL Editor:** `supabase/schema.sql`, danach `supabase/02_friends.sql` und `supabase/03_delete_account.sql` ausführen.
+2. **SQL Editor:** `supabase/schema.sql`, danach `supabase/02_friends.sql`, `supabase/03_delete_account.sql` und `supabase/04_vault.sql` ausführen.
 3. **Authentication → Sign In / Providers → Email:** „Confirm email“ ausschalten (Ludora-Konten haben keine E-Mail).
 4. **Edge Functions:** Funktion mit dem Inhalt von `supabase/functions/link/index.ts` anlegen, „Verify JWT“ ausschalten.
 5. `electron/hub-config.example.json` nach `electron/hub-config.json` kopieren und *Project URL*, den **öffentlichen**

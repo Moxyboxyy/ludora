@@ -38,7 +38,8 @@ search every store for games and deals – while the individual launchers stay q
 | **Languages** | English (default) and German, switchable in the settings. |
 
 Ludora never sees your launcher passwords: signing in always happens on the provider's real page, and sign-in
-tokens are stored encrypted on your PC only.
+tokens are stored encrypted on your PC. With a Ludora account they come along to your other devices end-to-end
+encrypted – sign in to Ludora once on a new PC and you're signed in to Steam, Epic and GOG as well.
 
 ## Installation
 
@@ -151,7 +152,8 @@ games through the launcher itself (e.g. `steam://rungameid/<id>`).
 
 Short version: almost everything stays on your PC. Sign-in tokens are encrypted with your operating system's key
 store. An (optional) Ludora account stores only your Ludora name, a password hash, the IDs of the launcher accounts you
-link and your Ludora friendships. Details: [PRIVACY.md](PRIVACY.md).
+link, your Ludora friendships and an end-to-end encrypted block of your sign-ins (readable only with your password).
+Details: [PRIVACY.md](PRIVACY.md).
 
 ## Legal & risks
 
@@ -215,7 +217,7 @@ Ludora accounts need a small [Supabase](https://supabase.com) project (the free 
 Ludora themselves needs their own project:
 
 1. Create a project on supabase.com.
-2. **SQL Editor:** run `supabase/schema.sql`, then `supabase/02_friends.sql` and `supabase/03_delete_account.sql`.
+2. **SQL Editor:** run `supabase/schema.sql`, then `supabase/02_friends.sql`, `supabase/03_delete_account.sql` and `supabase/04_vault.sql`.
 3. **Authentication → Sign In / Providers → Email:** turn off “Confirm email” (Ludora accounts have no email).
 4. **Edge Functions:** create a function with the content of `supabase/functions/link/index.ts` and turn off “Verify JWT”.
 5. Copy `electron/hub-config.example.json` to `electron/hub-config.json` and enter the *Project URL*, the **public**

@@ -31,9 +31,11 @@ app.commandLine.appendSwitch('disk-cache-size', String(200 * 1024 * 1024));
 // Entwickler-Start (npm run dev) bekommt einen eigenen Datenordner. So kommt er dem installierten
 // Ludora nicht in die Quere (sonst: "Unable to move the cache: Zugriff verweigert").
 // Beim ersten Mal werden Einstellungen, Steam-Anmeldung und eigene Cover übernommen.
+// Anmeldungen (logins.json) liegen immer im Ordner der installierten App – auch im Entwicklungsmodus.
+const SHARED_DIR = app.getPath('userData');
 if (process.env.VITE_DEV_SERVER_URL) {
   const fsx = require('fs');
-  const main = app.getPath('userData');
+  const main = SHARED_DIR;
   const dev = `${main}-dev`;
   if (!fsx.existsSync(dev)) {
     try {
@@ -45,6 +47,21 @@ if (process.env.VITE_DEV_SERVER_URL) {
       }
     } catch { /* dann eben frisch */ }
   }
+  // Denselben Windows-Schlüssel wie die installierte App benutzen (steht in "Local State"),
+  // sonst kann der Entwicklungsmodus die gemeinsam gespeicherten Anmeldungen nicht entschlüsseln.
+  try {
+    const read = (f) => JSON.parse(fsx.readFileSync(f, 'utf8'));
+    const mainState = read(path.join(main, 'Local State'));
+    if (mainState?.os_crypt) {
+      const devFile = path.join(dev, 'Local State');
+      let devState = {};
+      try { devState = read(devFile); } catch { /* neu */ }
+      if (JSON.stringify(devState.os_crypt) !== JSON.stringify(mainState.os_crypt)) {
+        devState.os_crypt = mainState.os_crypt;
+        fsx.writeFileSync(devFile, JSON.stringify(devState));
+      }
+    }
+  } catch { /* installierte App noch nie gestartet -> eigener Schlüssel */ }
   app.setPath('userData', dev);
 }
 
@@ -681,6 +698,7 @@ app.whenReady().then(() => {
   if (!primaryInstance) return; // zweiter Start: nur das offene Fenster nach vorne holen (siehe oben)
   manual.init(app.getPath('userData'));
   settings.init(app.getPath('userData'));
+  require('./lib/secrets').init({ dir: SHARED_DIR, settings });
   i18n.setLanguage(settings.get('language', 'en')); // Standard: Englisch
   covers.init(app.getPath('userData'));
   coverCheck.init(app.getPath('userData'));
@@ -1043,6 +1061,12 @@ app.whenReady().then(() => {
   // ---------- Ludora-Konto (Server) ----------
   const hub = require('./lib/hubAccount');
   hub.onChange((st) => broadcast('hub:update', st));
+  // Anmeldung kam über das Ludora-Konto von einem anderen Gerät -> betreffende Freundesliste neu verbinden
+  require('./lib/vault').onRestore((name) => {
+    if (name === 'steamWebToken') steamFriends.restore();
+    if (name === 'friendsEpic') otherFriends.epic.restore();
+    if (name === 'friendsGog') otherFriends.gog.restore();
+  });
   const linkSources = { steam: steamFriends, ...otherFriends };
   const linkedOnce = new Map(); // launcher -> Konto, das in dieser Sitzung schon verknüpft wurde
   async function autoLink(launcher) {

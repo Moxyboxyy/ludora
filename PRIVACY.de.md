@@ -36,14 +36,18 @@ Ein Ludora-Konto ist freiwillig. Wenn du eins anlegst, speichert der Server (Sup
 - dein Passwort – nur als Hash (von Supabase verschlüsselt),
 - die IDs und Namen der Launcher-Konten, die du verknüpfst (Steam, Epic, GOG, Riot),
 - deine Ludora-Freundschaften und -Anfragen,
-- wann Ludora zuletzt online war (für „Online in Ludora“).
+- wann Ludora zuletzt online war (für „Online in Ludora“),
+- einen **Ende-zu-Ende-verschlüsselten** Block mit deinen Steam-, Epic- und GOG-Anmeldungen, damit du auf deinen
+  anderen Geräten dort gleich mit angemeldet bist. Er wird auf deinem Gerät mit einem Schlüssel aus deinem
+  Ludora-Passwort verschlüsselt; der Server (und wer ihn betreibt) kann ihn nicht lesen. Er wird mit dem Konto gelöscht.
 
 **Wer sieht was?**
 - Deine Ludora-**Freunde** sehen alle Konten, die du verknüpft hast.
 - Andere angemeldete Ludora-Nutzer können nur zu einer **konkreten** Launcher-Konto-ID nachfragen, zu welchem
   Ludora-Namen sie gehört (Ludora tut das für die Konten in deren Freundeslisten). Eine Liste aller Nutzer oder
   Konten gibt der Server nicht heraus.
-- Anmelde-Tokens der Launcher werden nur kurz zur Bestätigung beim Anbieter genutzt und nicht gespeichert.
+- Anmelde-Tokens der Launcher werden nur kurz zur Bestätigung beim Anbieter genutzt; außer im verschlüsselten Block
+  oben, den nur du lesen kannst, werden sie nicht auf dem Server gespeichert.
 
 **Löschen:** Verknüpfungen kannst du jederzeit in Ludora entfernen. Das ganze Konto löschst du unter
 Ludora-Konto → **Konto löschen …** – Name, Verknüpfungen und Freundschaften werden dabei sofort vom Server entfernt.
