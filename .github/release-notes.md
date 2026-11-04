@@ -4,7 +4,7 @@
 - **Download missing launchers with one click:** in the sidebar under “Not installed”, a green download icon now sits next to every launcher that isn't on your PC. Steam, GOG Galaxy, EA app, Amazon Games and Battle.net download their installer directly; Epic, Ubisoft, Rockstar and Riot open their official download page. On Linux it leads to Heroic or Lutris.
 - Only fixed, official addresses are used – Ludora never opens download links from anywhere else.
 
-Coming from 0.6 or older? 0.7.1 brought remembered sign-ins, sign-in sync across devices and a security update – sign out of your Ludora account and back in once after updating.
+Coming from 0.6 or older? 0.7.0 brought remembered sign-ins, sign-in sync across devices and a security update – sign out of your Ludora account and back in once after updating.
 
 ### Downloads
 | System | File |
