@@ -263,7 +263,7 @@ export default function App() {
     else if (res.fallback || (res.visible && !show)) notify(t(
       "{0} startet das Update nicht von selbst – {1} ist jetzt bei {2} geöffnet, dort auf „Aktualisieren“ klicken.",
       [via, via, game.name]
-    ));
+    ) + (res.steamError ? ` (${res.steamError})` : ''), res.steamError ? 'error' : undefined);
     else if (show) notify(t("{0} wird geöffnet …", [via]));
     else notify(t(
       "Update von {0} läuft im Hintergrund über {1} – Fortschritt unter „Downloads“.",

@@ -138,10 +138,14 @@ async function accessFromCookies(s) {
   return tokens.access;
 }
 
-/** Aus Set-Cookie-Zeilen: Zugriffs-Token (steamLoginSecure, bevorzugt Community) + Cookie-Kopf für steamcommunity.com */
+/**
+ * Aus Set-Cookie-Zeilen: Zugriffs-Token (steamLoginSecure) + Cookie-Kopf für steamcommunity.com.
+ * Bevorzugt das Store-Token: Steams Fernsteuerung (Remote-Download, IClientCommService) läuft über den Store.
+ */
 function cookieTokens(cookies) {
-  let access = null;
-  let fallback = null;
+  let store = null;
+  let community = null;
+  let other = null;
   const jar = new Map();
   for (const c of cookies || []) {
     const [pair, ...attrs] = String(c).split(';');
@@ -150,15 +154,17 @@ function cookieTokens(cookies) {
     const name = pair.slice(0, i).trim();
     const value = pair.slice(i + 1).trim();
     const domain = attrs.map((a) => a.trim()).find((a) => /^domain=/i.test(a)) || '';
-    const community = !domain || /steamcommunity\.com/i.test(domain);
+    const isCommunity = !domain || /steamcommunity\.com/i.test(domain);
     if (name === 'steamLoginSecure') {
       const tok = decodeURIComponent(value).split('||')[1] || null;
-      if (tok && community) access = tok; else if (tok && !fallback) fallback = tok;
+      if (tok && /store\.steampowered\.com/i.test(domain)) store = tok;
+      else if (tok && isCommunity) community = tok;
+      else if (tok && !other) other = tok;
     }
-    if (community) jar.set(name, value);
+    if (isCommunity) jar.set(name, value);
   }
   if (!jar.has('sessionid')) jar.set('sessionid', require('crypto').randomBytes(12).toString('hex'));
-  return { access: access || fallback, header: [...jar].map(([k, v]) => `${k}=${v}`).join('; ') };
+  return { access: store || community || other, header: [...jar].map(([k, v]) => `${k}=${v}`).join('; ') };
 }
 
 let retryTimer = null;
@@ -474,7 +480,7 @@ async function thisClient(thisMachine = require('os').hostname()) {
  * (Steam wurde evtl. gerade erst gestartet). -> true, wenn Steam den Auftrag angenommen hat.
  */
 async function startUpdate(appid, { waitMs = 0 } = {}) {
-  if (state.status !== 'connected') return false;
+  if (state.status !== 'connected') throw new Error(t("In Ludora nicht bei Steam angemeldet"));
   const until = Date.now() + waitMs;
   let id = null;
   for (;;) {
@@ -482,7 +488,7 @@ async function startUpdate(appid, { waitMs = 0 } = {}) {
     if (id || Date.now() >= until) break;
     await new Promise((r) => setTimeout(r, 3000));
   }
-  if (!id) return false;
+  if (!id) throw new Error(t("Steam läuft auf diesem PC nicht mit deinem Konto ({0})", [require('os').hostname()]));
   // action 1 = aktualisieren (intern: CMsgClientSetClientAppUpdateState { update: true })
   await call('IClientCommService', 'SetClientAppUpdateState', { appid: String(appid), action: 1, client_instanceid: id }, { post: true });
   return true;

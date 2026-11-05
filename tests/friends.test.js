@@ -123,12 +123,12 @@ test('steam: Zugriffs-Token aus den Web-Cookies (Neustart ohne neue Anmeldung)',
     `steamLoginSecure=${encodeURIComponent(`76561197960287930||${tok('web:community')}`)}; Path=/; Secure; Domain=steamcommunity.com`,
     'sessionid=abc; Path=/; Domain=steamcommunity.com'
   ]);
-  assert.strictEqual(r.access, tok('web:community'), 'Community-Token bevorzugt');
+  assert.strictEqual(r.access, tok('web:store'), 'Store-Token bevorzugt (Fernsteuerung läuft über den Store)');
   assert.match(r.header, /steamLoginSecure=76561197960287930%7C%7C/);
   assert.match(r.header, /sessionid=abc/);
   assert.ok(!/steamRefresh_steam/.test(r.header), 'nur Cookies für steamcommunity.com');
-  // Nur Store-Cookie vorhanden -> das nehmen
-  const only = _cookieTokens([`steamLoginSecure=${encodeURIComponent(`1||${tok('web:store')}`)}; Domain=store.steampowered.com`]);
-  assert.strictEqual(only.access, tok('web:store'));
+  // Nur Community-Cookie vorhanden -> das nehmen
+  const only = _cookieTokens([`steamLoginSecure=${encodeURIComponent(`1||${tok('web:community')}`)}; Domain=steamcommunity.com`]);
+  assert.strictEqual(only.access, tok('web:community'));
   assert.strictEqual(_cookieTokens([]).access, null);
 });

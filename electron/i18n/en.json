@@ -504,5 +504,8 @@
   "Du hast Version {0}": "You have version {0}",
   "Was ist neu": "What's new",
   "Wird installiert – Ludora startet gleich neu …": "Installing – Ludora will restart in a moment …",
-  "Wird geladen … {0} %": "Downloading … {0} %"
+  "Wird geladen … {0} %": "Downloading … {0} %",
+  "Steam läuft auf diesem PC nicht mit deinem Konto ({0})": "Steam isn't running on this PC with your account ({0})",
+  "In Ludora nicht bei Steam angemeldet": "Not signed in to Steam in Ludora",
+  "Steam hat den Auftrag angenommen, lädt aber nicht": "Steam accepted the request but isn't downloading"
 }

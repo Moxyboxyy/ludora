@@ -33,6 +33,30 @@ app.commandLine.appendSwitch('disk-cache-size', String(200 * 1024 * 1024));
 // Beim ersten Mal werden Einstellungen, Steam-Anmeldung und eigene Cover übernommen.
 // Anmeldungen (logins.json) liegen immer im Ordner der installierten App – auch im Entwicklungsmodus.
 const SHARED_DIR = app.getPath('userData');
+
+// Protokoll: Warnungen und Fehler des Hauptprozesses zusätzlich in <Datenordner>/logs/main.log
+// (max. ~1 MB, danach main.old.log) – damit sich Probleme nachträglich nachvollziehen lassen.
+(() => {
+  const fsl = require('fs');
+  const dir = path.join(SHARED_DIR + (process.env.VITE_DEV_SERVER_URL ? '-dev' : ''), 'logs');
+  const file = path.join(dir, 'main.log');
+  try { fsl.mkdirSync(dir, { recursive: true }); } catch { return; }
+  const write = (level, args) => {
+    try {
+      try { if (fsl.statSync(file).size > 1024 * 1024) fsl.renameSync(file, path.join(dir, 'main.old.log')); } catch { /* neu */ }
+      const text = args.map((a) => (a instanceof Error ? a.stack || a.message : typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+      fsl.appendFileSync(file, `[${new Date().toISOString()}] ${level} ${text}\n`);
+    } catch { /* egal */ }
+  };
+  for (const level of ['log', 'warn', 'error']) {
+    const orig = console[level].bind(console);
+    console[level] = (...args) => {
+      orig(...args);
+      // Normale Ausgaben nur, wenn sie zu Updates gehören (sonst zu viel)
+      if (level !== 'log' || /^\[(update|steam|vault)\]/.test(String(args[0]))) write(level.toUpperCase(), args);
+    };
+  }
+})();
 if (process.env.VITE_DEV_SERVER_URL) {
   const fsx = require('fs');
   const main = SHARED_DIR;
@@ -1268,23 +1292,32 @@ app.whenReady().then(() => {
       hide.keepInBackground(p.id, procNames(p), { seconds: 90, mode: mode0 === 'off' ? 'hide' : mode0 });
       // Steam: Update direkt beim Steam-Client auf diesem PC anstoßen (wie "Remote-Download" auf der Webseite).
       // Läuft Steam noch nicht, erst unsichtbar starten und warten, bis es angemeldet ist.
-      if (p.id === 'steam' && steamFriends.getState().status === 'connected') {
+      let steamError = null;
+      if (p.id === 'steam') {
         try {
-          let ok = await steamFriends.startUpdate(game.nativeId);
-          if (!ok && p.backgroundUpdate) {
-            const bg = await p.backgroundUpdate(game);
-            if (bg) await runLaunch(bg, { background: true });
-            ok = await steamFriends.startUpdate(game.nativeId, { waitMs: 45000 });
+          let ok = false;
+          try { ok = await steamFriends.startUpdate(game.nativeId); } catch (err) {
+            // Steam läuft hier evtl. noch nicht -> unsichtbar starten und warten, bis es angemeldet ist
+            if (!/nicht bei Steam angemeldet|not signed in/i.test(err.message) && p.backgroundUpdate) {
+              const bg = await p.backgroundUpdate(game);
+              if (bg) await runLaunch(bg, { background: true });
+              ok = await steamFriends.startUpdate(game.nativeId, { waitMs: 45000 });
+            } else throw err;
           }
+          console.log('[update] Steam-Fernsteuerung: Auftrag für', game.nativeId, ok ? 'angenommen' : 'nicht angenommen');
           if (ok && await waitForDownload(game, p, p.updateWaitMs || 25000)) return { ok: true, visible: false };
-        } catch (err) { console.warn('[update] Steam-Fernsteuerung', err.message); }
+          if (ok) steamError = t("Steam hat den Auftrag angenommen, lädt aber nicht");
+        } catch (err) {
+          steamError = String(err.message || err);
+          console.warn('[update] Steam-Fernsteuerung', game.nativeId, steamError);
+        }
       }
       const launch = p?.backgroundUpdate ? await p.backgroundUpdate(game) : p?.client && (await p.client());
       if (!launch) {
         // Ging im Hintergrund nicht -> Launcher sichtbar beim Spiel öffnen
         hide.stop(game.provider);
         await runLaunch(await page());
-        return { ok: true, visible: true, fallback: true };
+        return { ok: true, visible: true, fallback: true, steamError };
       }
       const mode = settings.get('launcherMode', 'hide');
       hide.keepInBackground(p.id, procNames(p), { seconds: 40, mode: mode === 'off' ? 'hide' : mode });
@@ -1294,7 +1327,7 @@ app.whenReady().then(() => {
       // 3. Nein -> Launcher sichtbar beim Spiel öffnen, dort reicht ein Klick auf "Aktualisieren"
       hide.stop(game.provider);
       await runLaunch(await page());
-      return { ok: true, visible: true, fallback: true };
+      return { ok: true, visible: true, fallback: true, steamError };
     } catch (err) {
       return { ok: false, error: String(err.message || err) };
     }
