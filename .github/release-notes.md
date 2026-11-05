@@ -2,7 +2,7 @@
 
 ### What's new
 - **Steam really stays signed in now – also after restarting Ludora.** Since 2025, Steam refuses to renew web sign-ins the old way, so Ludora lost the Steam sign-in on every restart. Ludora now renews it the same way a web browser does (via Steam's web cookies). After updating, sign in to Steam once more (Friends → Steam) – from then on it stays.
-- Included from 0.7.7: updates show up while Ludora is open (checked every 15 minutes, when the window comes to the front and after waking from sleep).
+- Included from 0.7.6: updates show up while Ludora is open (checked every 15 minutes, when the window comes to the front and after waking from sleep).
 
 ### Downloads
 | System | File |
