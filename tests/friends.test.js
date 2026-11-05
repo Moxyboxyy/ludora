@@ -113,3 +113,22 @@ test('Epic-Chat: eingehende XMPP-Nachricht lesen', () => {
   assert.deepStrictEqual(m, { from: '0123456789abcdef0123456789abcdef', text: 'Hallo & tschüss' });
   assert.strictEqual(epic._parseMessage('<message type="headline" from="a@b"><body>x</body></message>'), null);
 });
+
+test('steam: Zugriffs-Token aus den Web-Cookies (Neustart ohne neue Anmeldung)', () => {
+  const { _cookieTokens } = require('../electron/lib/steamFriends');
+  const tok = (aud) => `eyJhbGciOiJFZERTQSJ9.${Buffer.from(JSON.stringify({ aud: [aud], exp: 2e9 })).toString('base64url')}.sig`;
+  const r = _cookieTokens([
+    'steamRefresh_steam=xyz; Path=/; Domain=login.steampowered.com',
+    `steamLoginSecure=${encodeURIComponent(`76561197960287930||${tok('web:store')}`)}; Path=/; Secure; Domain=store.steampowered.com`,
+    `steamLoginSecure=${encodeURIComponent(`76561197960287930||${tok('web:community')}`)}; Path=/; Secure; Domain=steamcommunity.com`,
+    'sessionid=abc; Path=/; Domain=steamcommunity.com'
+  ]);
+  assert.strictEqual(r.access, tok('web:community'), 'Community-Token bevorzugt');
+  assert.match(r.header, /steamLoginSecure=76561197960287930%7C%7C/);
+  assert.match(r.header, /sessionid=abc/);
+  assert.ok(!/steamRefresh_steam/.test(r.header), 'nur Cookies für steamcommunity.com');
+  // Nur Store-Cookie vorhanden -> das nehmen
+  const only = _cookieTokens([`steamLoginSecure=${encodeURIComponent(`1||${tok('web:store')}`)}; Domain=store.steampowered.com`]);
+  assert.strictEqual(only.access, tok('web:store'));
+  assert.strictEqual(_cookieTokens([]).access, null);
+});

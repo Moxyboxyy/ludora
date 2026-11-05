@@ -96,6 +96,7 @@ function adoptStoredToken() {
   if (!stored || stored === refreshToken) return false;
   refreshToken = stored;
   session = null;
+  cookieCache = null;
   accessToken = null;
   accessExp = 0;
   return true;
@@ -107,13 +108,57 @@ async function ensureAccess() {
   const { LoginSession, EAuthTokenPlatformType } = require('steam-session');
   if (!session) session = new LoginSession(EAuthTokenPlatformType.WebBrowser);
   session.refreshToken = refreshToken;
-  // Holt ein frisches Zugriffs-Token und verlängert dabei, wenn Steam will, auch das Anmelde-Token
-  let renewed = false;
-  try { renewed = await session.renewRefreshToken(); } catch { await session.refreshAccessToken(); }
-  if (renewed && session.refreshToken) { refreshToken = session.refreshToken; saveToken(refreshToken); }
-  accessToken = session.accessToken;
+  // Seit 2025 lehnt Steam das direkte Erneuern bei Web-Anmeldungen ab (AccessDenied). Darum wie ein Browser:
+  // mit dem Anmelde-Token frische Web-Cookies holen – im Cookie "steamLoginSecure" steckt das Zugriffs-Token.
+  // (Früher ging das nur direkt nach dem QR-Code; nach jedem Neustart war man dadurch abgemeldet.)
+  let token = null;
+  try {
+    token = await accessFromCookies(session);
+  } catch (err) {
+    // Ersatzweise der direkte Weg (falls Steam ihn wieder erlaubt)
+    let renewed = false;
+    try { renewed = await session.renewRefreshToken(); } catch { try { await session.refreshAccessToken(); } catch { throw err; } }
+    if (renewed && session.refreshToken) { refreshToken = session.refreshToken; saveToken(refreshToken); }
+    token = session.accessToken;
+  }
+  if (!token) throw new Error(t("Steam hat kein Zugriffs-Token geliefert"));
+  accessToken = token;
   accessExp = Number(jwtPayload(accessToken).exp) || Date.now() / 1000 + 3600;
   return accessToken;
+}
+
+let cookieCache = null; // { header, at } – Web-Cookies für steamcommunity.com (Chat)
+
+/** Web-Cookies holen (wie die Anmeldung im Browser) und das Zugriffs-Token daraus lesen */
+async function accessFromCookies(s) {
+  const cookies = await s.getWebCookies();
+  const tokens = cookieTokens(cookies);
+  if (!tokens.access) throw new Error(t("Steam hat kein Zugriffs-Token geliefert"));
+  cookieCache = { header: tokens.header, at: Date.now() };
+  return tokens.access;
+}
+
+/** Aus Set-Cookie-Zeilen: Zugriffs-Token (steamLoginSecure, bevorzugt Community) + Cookie-Kopf für steamcommunity.com */
+function cookieTokens(cookies) {
+  let access = null;
+  let fallback = null;
+  const jar = new Map();
+  for (const c of cookies || []) {
+    const [pair, ...attrs] = String(c).split(';');
+    const i = pair.indexOf('=');
+    if (i <= 0) continue;
+    const name = pair.slice(0, i).trim();
+    const value = pair.slice(i + 1).trim();
+    const domain = attrs.map((a) => a.trim()).find((a) => /^domain=/i.test(a)) || '';
+    const community = !domain || /steamcommunity\.com/i.test(domain);
+    if (name === 'steamLoginSecure') {
+      const tok = decodeURIComponent(value).split('||')[1] || null;
+      if (tok && community) access = tok; else if (tok && !fallback) fallback = tok;
+    }
+    if (community) jar.set(name, value);
+  }
+  if (!jar.has('sessionid')) jar.set('sessionid', require('crypto').randomBytes(12).toString('hex'));
+  return { access: access || fallback, header: [...jar].map(([k, v]) => `${k}=${v}`).join('; ') };
 }
 
 let retryTimer = null;
@@ -124,6 +169,7 @@ async function connect(token, firstAccess) {
   stopChat();
   refreshToken = token;
   session = null;
+  cookieCache = null;
   accessToken = firstAccess || null;
   accessExp = firstAccess ? Number(jwtPayload(firstAccess).exp) || 0 : 0;
   const steamid = String(jwtPayload(token).sub || '');
@@ -169,6 +215,7 @@ function logout() {
   session = null;
   refreshToken = null;
   accessToken = null;
+  cookieCache = null;
   saveToken(null);
   unread.clear();
   lastMsg.clear();
@@ -430,20 +477,14 @@ let chatReady = null;   // Promise, solange die Verbindung aufgebaut wird
 let chatRetry = null;
 
 async function webCookieHeader() {
+  // Frisch geholte Cookies (beim Erneuern des Zugriffs-Tokens) wiederverwenden
+  if (cookieCache && Date.now() - cookieCache.at < 30 * 60e3) return cookieCache.header;
   const { LoginSession, EAuthTokenPlatformType } = require('steam-session');
   const s = new LoginSession(EAuthTokenPlatformType.WebBrowser);
   s.refreshToken = refreshToken;
-  const cookies = await s.getWebCookies();
-  const jar = new Map();
-  for (const c of cookies) {
-    const [pair, ...attrs] = String(c).split(';');
-    const domain = attrs.map((a) => a.trim()).find((a) => /^domain=/i.test(a));
-    if (domain && !/steamcommunity\.com/i.test(domain)) continue;
-    const i = pair.indexOf('=');
-    if (i > 0) jar.set(pair.slice(0, i).trim(), pair.slice(i + 1).trim());
-  }
-  if (!jar.has('sessionid')) jar.set('sessionid', require('crypto').randomBytes(12).toString('hex'));
-  return [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
+  const tokens = cookieTokens(await s.getWebCookies());
+  cookieCache = { header: tokens.header, at: Date.now() };
+  return tokens.header;
 }
 
 async function chatToken() {
@@ -676,6 +717,7 @@ async function getLinkProof() {
 
 module.exports = {
   getLinkProof,
+  _cookieTokens: cookieTokens,
   init, restore, startQr, remoteInstalled, logout, onChange, onChat, getState, setFast, joinUrl, findFriend,
   history, send, typing, markRead, watch,
   _test: { avatarUrl, jwtPayload, toSteamId, toAccountId, sameMachine }
