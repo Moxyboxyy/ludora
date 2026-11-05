@@ -309,7 +309,7 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
           <Avatar a={{ ...best, avatar: avatarFrom.avatar }} name={p.name} />
           <div className="friend-info">
             <div className="friend-name">{p.name}{p.hub && <span className="hub-badge" title={t("Ludora-Konto – Konten automatisch erkannt")}>{t("Ludora")}</span>}{members.some((m) => m.unread) && <span className="unread">{members.reduce((n, m) => n + (m.unread || 0), 0)}</span>}</div>
-            <div className="friend-status">{statusText(best)}{best.state !== 'offline' && best.launcher ? <span className="rp"> · {LAUNCHER_NAME[best.launcher]}</span> : null}</div>
+            <div className="friend-status">{statusText(best)}</div>
           </div>
           <span className="person-logos">
             {members.map((m) => <span key={m.key} className={`acc-dot ${cls(m)}`} title={`${LAUNCHER_NAME[m.launcher]}: ${m.name}`}><LauncherLogo provider={providerById[m.launcher]} small /></span>)}
@@ -488,16 +488,16 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
         <div className="friends-tabs" role="tablist">
           <button role="tab" aria-selected={tab === 'all'} className={tab === 'all' ? 'on' : ''} onClick={() => setTab('all')}>{t("Alle")} {onlineCount > 0 && <span className="tab-count">{onlineCount}</span>}
           </button>
-          <button role="tab" aria-selected={tab === 'hub'} className={tab === 'hub' ? 'on' : ''} onClick={() => setTab('hub')} title={t("Ludora-Freunde")}>
-            <span>{t("Ludora")}</span>
+          <button role="tab" aria-selected={tab === 'hub'} aria-label={t("Ludora-Freunde")} className={`icon-tab ${tab === 'hub' ? 'on' : ''}`} onClick={() => setTab('hub')} title={t("Ludora-Freunde")}>
+            <LauncherLogo provider={{ id: 'manual' }} />
             {incoming.length > 0 ? <span className="tab-count req">{incoming.length}</span>
               : hubFriends.filter((f) => f.online).length > 0 && <span className="tab-count">{hubFriends.filter((f) => f.online).length}</span>}
           </button>
           {LAUNCHERS.map(([id, name]) => (
-            <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)} title={name}>
-              <LauncherLogo provider={providerById[id]} small />
-              <span>{name}</span>
-              {connectedOf(id) ? (onlineOf(id) > 0 && <span className="tab-count">{onlineOf(id)}</span>) : <span className="tab-off" title={t("Nicht verbunden")}>•</span>}
+            <button key={id} role="tab" aria-selected={tab === id} aria-label={name} className={`icon-tab ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}
+              title={connectedOf(id) ? name : t("{0} – nicht verbunden", [name])}>
+              {providerById[id]?.logo ? <LauncherLogo provider={providerById[id]} dim={!connectedOf(id)} /> : <span className={connectedOf(id) ? '' : 'tab-off'}>{name}</span>}
+              {connectedOf(id) && onlineOf(id) > 0 && <span className="tab-count">{onlineOf(id)}</span>}
             </button>
           ))}
         </div>

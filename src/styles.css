@@ -460,6 +460,11 @@ svg.star.filled { fill: currentColor; }
 .friends-tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
 .tab-count { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; background: rgba(107,227,161,.16); color: var(--ok); }
 .tab-off { color: var(--muted); opacity: .6; }
+/* Reiter nur mit Logo (Name als Tooltip) */
+.friends-tabs button.icon-tab { padding: 6px 10px; gap: 4px; }
+.friends-tabs button.icon-tab .launcher-logo { width: 20px; height: 20px; opacity: .7; transition: opacity .15s ease; }
+.friends-tabs button.icon-tab:hover .launcher-logo, .friends-tabs button.icon-tab.on .launcher-logo { opacity: 1; }
+.friends-tabs button.icon-tab .launcher-logo.dim { opacity: .35; }
 .suggestions { margin: 6px 20px 4px; display: flex; flex-direction: column; gap: 6px; }
 .suggestion { display: flex; align-items: center; gap: 10px; justify-content: space-between; font-size: 12px; color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 .suggestion b { color: var(--text); font-weight: 600; }
