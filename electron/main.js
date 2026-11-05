@@ -1294,6 +1294,7 @@ app.whenReady().then(() => {
       // Läuft Steam noch nicht, erst unsichtbar starten und warten, bis es angemeldet ist.
       let steamError = null;
       if (p.id === 'steam') {
+        console.log('[update] Steam-Update angefordert:', game.nativeId, game.name, '| Steam-Anmeldung:', steamFriends.getState().status);
         try {
           let ok = false;
           try { ok = await steamFriends.startUpdate(game.nativeId); } catch (err) {

@@ -132,3 +132,14 @@ test('steam: Zugriffs-Token aus den Web-Cookies (Neustart ohne neue Anmeldung)',
   assert.strictEqual(only.access, tok('web:community'));
   assert.strictEqual(_cookieTokens([]).access, null);
 });
+
+test('steam: diesen PC unter den Steam-Clients finden, 64-Bit-IDs nicht runden', () => {
+  const { _pickThisClient, _parseJsonBig } = require('../electron/lib/steamFriends');
+  const r = _parseJsonBig('{"response":{"sessions":[{"client_instanceid":12345678901234567891,"os_name":"Windows 11","machine_name":""},{"client_instanceid":"98765432109876543","machine_name":"Air-von-Max","os_name":"macOS"}]}}');
+  assert.strictEqual(r.response.sessions[0].client_instanceid, '12345678901234567891', 'nicht gerundet');
+  const s = r.response.sessions;
+  assert.strictEqual(_pickThisClient(s, 'MAX', 'win32'), s[0], 'namenloser Windows-Client = dieser PC');
+  assert.strictEqual(_pickThisClient(s, 'air-von-max.local', 'darwin'), s[1], 'per Name');
+  assert.strictEqual(_pickThisClient([s[1]], 'MAX', 'win32'), null);
+  assert.deepStrictEqual(_parseJsonBig('kaputt'), {});
+});

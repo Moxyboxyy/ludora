@@ -230,7 +230,7 @@ function logout() {
 
 // ---------- Web-API ----------
 
-async function call(iface, method, params = {}, { post = false } = {}) {
+async function call(iface, method, params = {}, { post = false, timeoutMs = 20000 } = {}) {
   const token = await ensureAccess();
   const qs = new URLSearchParams();
   qs.set('access_token', token);
@@ -239,15 +239,28 @@ async function call(iface, method, params = {}, { post = false } = {}) {
     else if (v !== undefined && v !== null) qs.set(k, String(v));
   }
   const url = `${API}/${iface}/${method}/v1/`;
-  const res = post
-    ? await fetch(url, { method: 'POST', body: qs, headers: { 'content-type': 'application/x-www-form-urlencoded' } })
-    : await fetch(`${url}?${qs}`);
+  // Zeitlimit: Anfragen an deine Steam-Clients (IClientCommService) können sonst minutenlang hängen
+  const signal = AbortSignal.timeout(timeoutMs);
+  let res;
+  try {
+    res = post
+      ? await fetch(url, { method: 'POST', body: qs, headers: { 'content-type': 'application/x-www-form-urlencoded' }, signal })
+      : await fetch(`${url}?${qs}`, { signal });
+  } catch (err) {
+    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') throw new Error(t("Steam antwortet nicht ({0})", [method]));
+    throw err;
+  }
   if (res.status === 401 || res.status === 403) { accessExp = 0; throw new Error(t("Steam lehnt die Anfrage ab ({0})", [res.status])); }
   if (!res.ok) throw new Error(t("Steam antwortet mit {0}", [res.status]));
   const eresult = Number(res.headers.get('x-eresult') || 1);
   if (eresult !== 1) throw new Error(t("Steam-Fehler {0}", [eresult]));
-  const data = await res.json().catch(() => ({}));
+  const data = parseJsonBig(await res.text());
   return data.response || {};
+}
+
+/** JSON lesen, große Ganzzahlen (64-Bit-IDs) aber als Text behalten – JavaScript würde sie runden */
+function parseJsonBig(text) {
+  try { return JSON.parse(String(text).replace(/([:\[,]\s*)(-?\d{16,})(?=\s*[,\]}])/g, '$1"$2"')) || {}; } catch { return {}; }
 }
 
 const toSteamId = (accountid) => String(STEAMID_BASE + BigInt(accountid));
@@ -448,8 +461,9 @@ async function remoteInstalled(thisMachine = require('os').hostname()) {
   if (state.status !== 'connected' || !refreshToken) return [];
   const r = await call('IClientCommService', 'GetAllClientLogonInfo');
   const out = [];
+  const self = pickThisClient(r.sessions, thisMachine);
   for (const s of r.sessions || []) {
-    if (!s.client_instanceid || sameMachine(s.machine_name, thisMachine)) continue;
+    if (!s.client_instanceid || s === self || sameMachine(s.machine_name, thisMachine)) continue;
     try {
       const list = await call('IClientCommService', 'GetClientAppList', {
         client_instanceid: s.client_instanceid, fields: 'games', filters: 'installed', language: 'english'
@@ -467,11 +481,27 @@ async function remoteInstalled(thisMachine = require('os').hostname()) {
 // (IClientCommService) anweisen, das Update eines Spiels sofort zu starten – ohne das Steam-Fenster.
 // Voraussetzung: Ludora ist bei Steam angemeldet und Steam läuft auf diesem PC (mit demselben Konto).
 
+/**
+ * Diesen PC unter Steams angemeldeten Clients finden (für Tests getrennt).
+ * Steam liefert den Rechnernamen nicht immer mit – dann: der einzige namenlose Client mit demselben Betriebssystem.
+ */
+function pickThisClient(sessions, thisMachine, platform = process.platform) {
+  const list = (sessions || []).filter((x) => x.client_instanceid);
+  const byName = list.find((x) => sameMachine(x.machine_name, thisMachine));
+  if (byName) return byName;
+  const os = { win32: /windows/i, darwin: /mac/i, linux: /linux|steamos/i }[platform] || /./;
+  const nameless = list.filter((x) => !x.machine_name && (!x.os_name || os.test(x.os_name)));
+  return nameless.length === 1 ? nameless[0] : null;
+}
+
 /** client_instanceid des Steam-Clients auf diesem PC (null = Steam läuft hier nicht / nicht angemeldet) */
 async function thisClient(thisMachine = require('os').hostname()) {
   if (state.status !== 'connected' || !refreshToken) return null;
   const r = await call('IClientCommService', 'GetAllClientLogonInfo');
-  const s = (r.sessions || []).find((x) => x.client_instanceid && sameMachine(x.machine_name, thisMachine));
+  const sessions = r.sessions || [];
+  const s = pickThisClient(sessions, thisMachine);
+  console.log('[update] Steam-Clients:', sessions.map((x) => `${x.machine_name || '(ohne Name)'}/${x.os_name || '?'}/${String(x.client_instanceid || '').length}`).join(', ') || 'keine',
+    '| dieser PC:', thisMachine, '->', s ? (s.machine_name || '(ohne Name)') : 'nicht gefunden');
   return s ? String(s.client_instanceid) : null;
 }
 
@@ -490,7 +520,9 @@ async function startUpdate(appid, { waitMs = 0 } = {}) {
   }
   if (!id) throw new Error(t("Steam läuft auf diesem PC nicht mit deinem Konto ({0})", [require('os').hostname()]));
   // action 1 = aktualisieren (intern: CMsgClientSetClientAppUpdateState { update: true })
-  await call('IClientCommService', 'SetClientAppUpdateState', { appid: String(appid), action: 1, client_instanceid: id }, { post: true });
+  console.log('[update] SetClientAppUpdateState', appid, '…');
+  await call('IClientCommService', 'SetClientAppUpdateState', { appid: String(appid), action: 1, client_instanceid: id }, { post: true, timeoutMs: 30000 });
+  console.log('[update] SetClientAppUpdateState', appid, 'ok');
   return true;
 }
 
@@ -756,7 +788,7 @@ async function getLinkProof() {
 
 module.exports = {
   getLinkProof,
-  _cookieTokens: cookieTokens,
+  _cookieTokens: cookieTokens, _pickThisClient: pickThisClient, _parseJsonBig: parseJsonBig,
   init, restore, startQr, remoteInstalled, startUpdate, logout, onChange, onChat, getState, setFast, joinUrl, findFriend,
   history, send, typing, markRead, watch,
   _test: { avatarUrl, jwtPayload, toSteamId, toAccountId, sameMachine }
