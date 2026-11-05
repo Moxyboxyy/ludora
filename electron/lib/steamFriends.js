@@ -455,6 +455,39 @@ async function remoteInstalled(thisMachine = require('os').hostname()) {
   return out;
 }
 
+// ---------- Updates auf diesem PC anstoßen ----------
+//
+// Wie Steams "Remote-Download" auf der Webseite: Steam auf diesem PC über die eigene Fernsteuerung
+// (IClientCommService) anweisen, das Update eines Spiels sofort zu starten – ohne das Steam-Fenster.
+// Voraussetzung: Ludora ist bei Steam angemeldet und Steam läuft auf diesem PC (mit demselben Konto).
+
+/** client_instanceid des Steam-Clients auf diesem PC (null = Steam läuft hier nicht / nicht angemeldet) */
+async function thisClient(thisMachine = require('os').hostname()) {
+  if (state.status !== 'connected' || !refreshToken) return null;
+  const r = await call('IClientCommService', 'GetAllClientLogonInfo');
+  const s = (r.sessions || []).find((x) => x.client_instanceid && sameMachine(x.machine_name, thisMachine));
+  return s ? String(s.client_instanceid) : null;
+}
+
+/**
+ * Update von appid auf diesem PC starten. waitMs: so lange warten, bis Steam hier erreichbar ist
+ * (Steam wurde evtl. gerade erst gestartet). -> true, wenn Steam den Auftrag angenommen hat.
+ */
+async function startUpdate(appid, { waitMs = 0 } = {}) {
+  if (state.status !== 'connected') return false;
+  const until = Date.now() + waitMs;
+  let id = null;
+  for (;;) {
+    id = await thisClient().catch(() => null);
+    if (id || Date.now() >= until) break;
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  if (!id) return false;
+  // action 1 = aktualisieren (intern: CMsgClientSetClientAppUpdateState { update: true })
+  await call('IClientCommService', 'SetClientAppUpdateState', { appid: String(appid), action: 1, client_instanceid: id }, { post: true });
+  return true;
+}
+
 /** Steams eigener "Spiel beitreten"-Link – Steam kümmert sich um Lobby/Server */
 function joinUrl(f) {
   return f?.appid ? `steam://friends/joingame/${f.steamid}` : null;
@@ -718,7 +751,7 @@ async function getLinkProof() {
 module.exports = {
   getLinkProof,
   _cookieTokens: cookieTokens,
-  init, restore, startQr, remoteInstalled, logout, onChange, onChat, getState, setFast, joinUrl, findFriend,
+  init, restore, startQr, remoteInstalled, startUpdate, logout, onChange, onChat, getState, setFast, joinUrl, findFriend,
   history, send, typing, markRead, watch,
   _test: { avatarUrl, jwtPayload, toSteamId, toAccountId, sameMachine }
 };

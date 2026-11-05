@@ -131,7 +131,7 @@ export const api = native || {
   getStreams: async () => ({}),
   onStreams: () => () => {},
   stream: async () => ({ ok: true }),
-  update: { get: async () => ({ status: 'available', current: '0.5.0', latest: '0.5.1', progress: 0 }), check: async () => ({}), install: async () => ({ ok: true, page: true }), onChange: () => () => {} },
+  update: { get: async () => ({ status: 'available', current: '0.5.0', latest: '0.5.1', progress: 0 }), check: async () => ({}), install: async () => ({ ok: true, page: true }), onChange: () => () => {}, onOpen: () => () => {}, },
   app: { onNavigate: () => () => {}, info: async () => ({ version: '0.2.0', electron: 'Vorschau' }), devtools: async () => true, quit: async () => true, openData: async () => true },
   platform: 'demo'
 };

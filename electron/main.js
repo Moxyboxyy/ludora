@@ -718,22 +718,16 @@ app.whenReady().then(() => {
     try {
       if (!Notification.isSupported()) return;
       const n = new Notification({ title: t("Update verfügbar"), body: t("Ludora {0} ist da – oben rechts klicken zum Aktualisieren.", [st.latest]) });
-      n.on('click', () => { if (win) { win.show(); win.focus(); } });
+      n.on('click', () => { if (win) { win.show(); win.focus(); win.webContents.send('update:open'); } });
       n.show();
     } catch { /* egal */ }
   });
   ipcMain.handle('update:get', () => updater.getState());
   ipcMain.handle('update:check', () => updater.check());
+  // Bestätigt wird im eigenen Ludora-Dialog (UpdateDialog.jsx), nicht mehr im Systemfenster
   ipcMain.handle('update:install', async () => {
     const st = updater.getState();
     if (st.status !== 'available') return { ok: false };
-    const { response } = await dialog.showMessageBox(win, {
-      type: 'info', buttons: [t("Später"), t("Jetzt aktualisieren")], defaultId: 1, cancelId: 0,
-      title: t("Update verfügbar"),
-      message: t("Ludora {0} ist da (du hast {1}).", [st.latest, st.current]),
-      detail: t("Ludora lädt das Update herunter, installiert es und startet danach neu. Deine Einstellungen und Anmeldungen bleiben erhalten.")
-    });
-    if (response !== 1) return { ok: false, cancelled: true };
     return updater.install(quitApp);
   });
 
@@ -1272,6 +1266,19 @@ app.whenReady().then(() => {
       //    Das Verstecken läuft schon vorher, weil backgroundUpdate den Launcher evtl. selbst startet.
       const mode0 = settings.get('launcherMode', 'hide');
       hide.keepInBackground(p.id, procNames(p), { seconds: 90, mode: mode0 === 'off' ? 'hide' : mode0 });
+      // Steam: Update direkt beim Steam-Client auf diesem PC anstoßen (wie "Remote-Download" auf der Webseite).
+      // Läuft Steam noch nicht, erst unsichtbar starten und warten, bis es angemeldet ist.
+      if (p.id === 'steam' && steamFriends.getState().status === 'connected') {
+        try {
+          let ok = await steamFriends.startUpdate(game.nativeId);
+          if (!ok && p.backgroundUpdate) {
+            const bg = await p.backgroundUpdate(game);
+            if (bg) await runLaunch(bg, { background: true });
+            ok = await steamFriends.startUpdate(game.nativeId, { waitMs: 45000 });
+          }
+          if (ok && await waitForDownload(game, p, p.updateWaitMs || 25000)) return { ok: true, visible: false };
+        } catch (err) { console.warn('[update] Steam-Fernsteuerung', err.message); }
+      }
       const launch = p?.backgroundUpdate ? await p.backgroundUpdate(game) : p?.client && (await p.client());
       if (!launch) {
         // Ging im Hintergrund nicht -> Launcher sichtbar beim Spiel öffnen

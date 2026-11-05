@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { StoreIcon } from './bits.jsx';
 import logoUrl from '../assets/logo.svg';
 import { t } from '../i18n.js';
+import UpdateDialog from './UpdateDialog.jsx';
 
 // Fensterleiste ganz oben (wie bei Steam): Logo, Menü „Ludora“, die Bereiche und rechts das Ludora-Konto. Die Leiste zieht das Fenster; Knöpfe sind davon ausgenommen.
 // Unter Windows zeichnet Electron rechts die echten Fensterknöpfe (–, □, ✕) darüber.
@@ -71,8 +72,11 @@ export default function TitleBar({ page, onLibrary, onShop, onSettings, onRefres
     api.update.get().then(setUpdate).catch(() => {});
     return api.update.onChange(setUpdate);
   }, []);
+  const [updateOpen, setUpdateOpen] = useState(false);
+  useEffect(() => api.update?.onOpen?.(() => setUpdateOpen(true)), []); // Klick auf die Benachrichtigung
   const installUpdate = async () => {
     const r = await api.update.install();
+    if (!r?.ok || r.page || r.manual) setUpdateOpen(false);
     if (r?.page) notify(t("Die Release-Seite ist geöffnet."));
     else if (r?.manual) notify(t("Das Update ist geladen – bitte im geöffneten Fenster installieren."));
     else if (r && !r.ok && !r.cancelled && r.error) notify(t("Update fehlgeschlagen: {0}", [r.error]), 'error');
@@ -113,7 +117,7 @@ export default function TitleBar({ page, onLibrary, onShop, onSettings, onRefres
       </nav>
       <div className="tb-drag" />
       {(update?.status === 'available' || busy) && (
-        <button className={`tb-update ${busy ? 'busy' : ''}`} onClick={busy ? undefined : installUpdate} disabled={busy}
+        <button className={`tb-update ${busy ? 'busy' : ''}`} onClick={() => setUpdateOpen(true)}
           title={busy
             ? (update.status === 'installing' ? t("Update wird installiert …") : t("Update wird geladen … {0} %", [Math.round((update.progress || 0) * 100)]))
             : t("Ludora {0} ist da – klicken zum Aktualisieren", [update.latest])}
@@ -122,6 +126,7 @@ export default function TitleBar({ page, onLibrary, onShop, onSettings, onRefres
           {busy && <span className="tb-update-pct">{update.status === 'installing' ? '…' : `${Math.round((update.progress || 0) * 100)}%`}</span>}
         </button>
       )}
+      {updateOpen && update && <UpdateDialog update={update} onConfirm={installUpdate} onClose={() => setUpdateOpen(false)} />}
       <button className={`tb-account ${signedIn ? 'on' : ''}`} onClick={onAccount}
         title={signedIn ? t("Angemeldet als {0} – Ludora-Konto verwalten", [name]) : t("Beim Ludora-Konto anmelden")}>
         <span className="tb-avatar">{signedIn ? String(name || '?')[0].toUpperCase() : '?'}</span>

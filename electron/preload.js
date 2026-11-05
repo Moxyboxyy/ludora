@@ -120,6 +120,11 @@ contextBridge.exposeInMainWorld('gamehub', {
     get: () => ipcRenderer.invoke('update:get'),
     check: () => ipcRenderer.invoke('update:check'),
     install: () => ipcRenderer.invoke('update:install'),
+    onOpen: (cb) => {
+      const h = () => cb();
+      ipcRenderer.on('update:open', h);
+      return () => ipcRenderer.removeListener('update:open', h);
+    },
     onChange: (fn) => {
       const h = (_e, st) => fn(st);
       ipcRenderer.on('update:state', h);

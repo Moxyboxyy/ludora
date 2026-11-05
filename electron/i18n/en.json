@@ -499,5 +499,10 @@
   "Dieses Spiel lässt sich nicht streamen.": "This game can't be streamed.",
   "Stream": "Stream",
   "Ludora {0} ist da – oben rechts klicken zum Aktualisieren.": "Ludora {0} is available – click the button in the top right to update.",
-  "{0} – nicht verbunden": "{0} – not connected"
+  "{0} – nicht verbunden": "{0} – not connected",
+  "Ludora {0} ist da": "Ludora {0} is available",
+  "Du hast Version {0}": "You have version {0}",
+  "Was ist neu": "What's new",
+  "Wird installiert – Ludora startet gleich neu …": "Installing – Ludora will restart in a moment …",
+  "Wird geladen … {0} %": "Downloading … {0} %"
 }
