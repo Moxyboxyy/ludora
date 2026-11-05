@@ -1,7 +1,7 @@
 {
   "name": "ludora",
   "productName": "Ludora",
-  "version": "0.7.7",
+  "version": "0.7.8",
   "description": "Ludora - the Client for all Game Clients",
   "main": "electron/main.js",
   "author": {
