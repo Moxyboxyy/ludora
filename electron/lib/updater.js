@@ -165,6 +165,65 @@ const detached = (cmd, args, opts = {}) => {
   p.unref();
 };
 
+/**
+ * Neustart nach dem Update, sicher gegen "Ludora läuft noch":
+ * Ein kleines Skript wartet, bis dieses Ludora (PID) wirklich beendet ist (höchstens 60 s, dann hart beenden),
+ * führt dann die Installation aus und startet Ludora erst danach neu. Würde Ludora früher starten,
+ * sähe es die alte Instanz noch laufen und schlösse sich sofort wieder (Einzelinstanz-Sperre).
+ */
+function restartScript(platform, { pid, install = [], start }) {
+  if (platform === 'win32') {
+    // "timeout" geht ohne Konsole nicht -> ping als Pause
+    return [
+      '@echo off',
+      'setlocal',
+      'set /a n=0',
+      ':wait',
+      `tasklist /FI "PID eq ${pid}" /NH 2>NUL | find " ${pid} " >NUL`,
+      'if errorlevel 1 goto go',
+      'set /a n+=1',
+      `if %n% GEQ 60 (taskkill /F /PID ${pid} >NUL 2>&1 & ping -n 3 127.0.0.1 >NUL & goto go)`,
+      'ping -n 2 127.0.0.1 >NUL',
+      'goto wait',
+      ':go',
+      'ping -n 2 127.0.0.1 >NUL',
+      ...install,
+      start,
+      ''
+    ].join('\r\n');
+  }
+  return [
+    '#!/bin/sh',
+    'n=0',
+    `while kill -0 ${pid} 2>/dev/null; do`,
+    '  n=$((n+1))',
+    `  if [ $n -ge 120 ]; then kill -9 ${pid} 2>/dev/null; sleep 1; break; fi`,
+    '  sleep 0.5',
+    'done',
+    'sleep 1',
+    ...install,
+    start,
+    ''
+  ].join('\n');
+}
+
+/** Skript schreiben und unabhängig von Ludora starten */
+function runRestart(dir, platform, opts) {
+  const win = platform === 'win32';
+  const script = path.join(dir, win ? 'update.cmd' : 'update.sh');
+  fs.writeFileSync(script, restartScript(platform, { pid: process.pid, ...opts }));
+  if (win) detached('cmd.exe', ['/d', '/c', script], { windowsHide: true });
+  else { fs.chmodSync(script, 0o755); detached('/bin/sh', [script]); }
+}
+
+/** Ludora beenden; hängt das Beenden (z. B. ein Dienst antwortet nicht), nach 10 s hart beenden */
+function leave(quit) {
+  setTimeout(quit, 300);
+  setTimeout(() => { try { electron.app.exit(0); } catch { process.exit(0); } }, 10000).unref?.();
+}
+
+const q = (x) => `"${String(x).replace(/"/g, '')}"`;
+
 /** Update herunterladen und installieren. quit(): Ludora sauber beenden (Tray, Fenster) */
 async function install(quit) {
   const { app, shell } = electron;
@@ -192,9 +251,12 @@ async function install(quit) {
     set({ status: 'installing' });
 
     if (process.platform === 'win32') {
-      // Still installieren (gleicher Ordner wie bisher), danach startet Ludora von selbst neu
-      detached(file, ['/S', '--updated', '--force-run']);
-      setTimeout(quit, 300);
+      // Still installieren (gleicher Ordner wie bisher), erst wenn Ludora beendet ist; danach neu starten
+      runRestart(dir, 'win32', {
+        install: [`start "" /wait ${q(file)} /S --updated`],
+        start: `start "" ${q(process.execPath)} --after-update`
+      });
+      leave(quit);
       return { ok: true };
     }
 
@@ -206,17 +268,15 @@ async function install(quit) {
       const newApp = fs.readdirSync(unpack).find((n) => n.endsWith('.app'));
       const current = path.resolve(app.getPath('exe'), '..', '..', '..'); // …/Ludora.app/Contents/MacOS/Ludora
       if (!newApp || !current.endsWith('.app')) throw new Error('App-Paket nicht gefunden');
-      const script = path.join(dir, 'update.sh');
-      fs.writeFileSync(script, [
-        '#!/bin/sh',
-        `while kill -0 ${process.pid} 2>/dev/null; do sleep 0.5; done`,
-        `rm -rf "${current}"`,
-        `mv "${path.join(unpack, newApp)}" "${current}"`,
-        `xattr -dr com.apple.quarantine "${current}" 2>/dev/null`,
-        `open "${current}"`
-      ].join('\n'));
-      detached('/bin/sh', [script]);
-      setTimeout(quit, 300);
+      runRestart(dir, 'darwin', {
+        install: [
+          `rm -rf ${q(current)}`,
+          `mv ${q(path.join(unpack, newApp))} ${q(current)}`,
+          `xattr -dr com.apple.quarantine ${q(current)} 2>/dev/null`
+        ],
+        start: `open -n ${q(current)} --args --after-update`
+      });
+      leave(quit);
       return { ok: true };
     }
 
@@ -226,8 +286,8 @@ async function install(quit) {
       fs.copyFileSync(file, next);
       fs.chmodSync(next, 0o755);
       fs.renameSync(next, target); // laufendes AppImage bleibt bis zum Beenden gemountet
-      detached(target, [], { env: { ...process.env, APPIMAGE: target } });
-      setTimeout(quit, 300);
+      runRestart(dir, 'linux', { start: `${q(target)} --after-update >/dev/null 2>&1 &` });
+      leave(quit);
       return { ok: true };
     }
 
@@ -236,8 +296,8 @@ async function install(quit) {
       fs.chmodSync(file, 0o644);
       const code = fs.existsSync('/usr/bin/pkexec') ? await run('/usr/bin/pkexec', ['/usr/bin/apt-get', 'install', '-y', file]) : 1;
       if (code === 0) {
-        detached('/opt/Ludora/ludora', []);
-        setTimeout(quit, 300);
+        runRestart(dir, 'linux', { start: '/opt/Ludora/ludora --after-update >/dev/null 2>&1 &' });
+        leave(quit);
         return { ok: true };
       }
       await shell.openPath(file);
@@ -266,6 +326,7 @@ function init(el) {
 
 module.exports = {
   _verifiedSha: verifiedSha,
+  _restartScript: restartScript,
   init, check, poke, install,
   getState: () => state,
   onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },

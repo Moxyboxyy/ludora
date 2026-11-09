@@ -49,3 +49,18 @@ test('Launcher-Downloads: nur offizielle https-Adressen', () => {
     }
   }
 });
+
+test('updater: Neustart-Skript wartet auf das alte Ludora, installiert und startet danach', () => {
+  const u = require('../electron/lib/updater');
+  const win = u._restartScript('win32', { pid: 4242, install: ['start "" /wait "C:\\t\\Setup.exe" /S --updated'], start: 'start "" "C:\\L\\Ludora.exe" --after-update' });
+  const lines = win.split('\r\n');
+  assert.ok(lines.some((l) => l.includes('PID eq 4242')), 'wartet auf die PID');
+  assert.ok(lines.some((l) => l.includes('taskkill /F /PID 4242')), 'beendet hart nach Zeitlimit');
+  assert.ok(!/\btimeout\b/.test(win), 'kein "timeout" (geht ohne Konsole nicht)');
+  const iInstall = lines.findIndex((l) => l.includes('Setup.exe'));
+  const iStart = lines.findIndex((l) => l.includes('Ludora.exe'));
+  assert.ok(lines.indexOf(':go') < iInstall && iInstall < iStart, 'erst warten, dann installieren, dann starten');
+  const sh = u._restartScript('linux', { pid: 7, start: '/opt/Ludora/ludora &' });
+  assert.match(sh, /while kill -0 7/);
+  assert.ok(sh.trim().endsWith('/opt/Ludora/ludora &'));
+});
