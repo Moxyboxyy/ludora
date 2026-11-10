@@ -4,10 +4,21 @@
 //!   paths.rs    – Datenordner
 //!   log.rs      – Protokoll logs/main.log
 
+pub mod accounts;
 pub mod ipc;
 pub mod log;
+pub mod net;
 pub mod paths;
+pub mod protobuf;
+pub mod providers;
+pub mod reg;
+pub mod running;
+pub mod secrets;
 pub mod settings;
+pub mod sqlite;
+pub mod util;
+pub mod vdf;
+pub mod webauth;
 
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
