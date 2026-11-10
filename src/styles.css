@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark; /* Systemsteuerelemente (Auswahllisten, Scrollbalken) dunkel – auch in WebView2/WebKit */
   --bg: #0f1115;
   --panel: #151820;
   --panel-2: #1b1f29;
@@ -155,7 +156,12 @@ svg.fill { fill: currentColor; stroke: none; }
 .segmented.text button { padding: 6px 12px; font-size: 13px; }
 .seg-count { margin-left: 6px; font-size: 11px; padding: 1px 6px; border-radius: 99px; background: rgba(110,168,255,.25); color: #cfe0ff; }
 .sort { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
-.sort select { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; outline: none; }
+.sort select {
+  background: var(--panel-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a91a3' stroke-width='1.4'/%3E%3C/svg%3E") no-repeat right 9px center / 10px 6px;
+  color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 26px 6px 8px; font: inherit; outline: none;
+  -webkit-appearance: none; appearance: none;
+}
+.sort select option { background: var(--panel-2); color: var(--text); }
 .banner.action { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text); }
 .banner.action .secondary { padding: 6px 12px; }
 
@@ -596,6 +602,15 @@ svg.star.filled { fill: currentColor; }
 }
 .titlebar.darwin { padding-left: 84px; padding-right: 12px; } /* links sitzen die Ampel-Knöpfe */
 .titlebar.demo { padding-right: 12px; }
+.titlebar.own-controls { padding-right: 0; }
+.win-controls { display: flex; align-self: stretch; margin-left: 4px; }
+.wc-btn {
+  width: 46px; height: 100%; display: grid; place-items: center; border: 0; border-radius: 0;
+  background: transparent; color: #aab1c2; cursor: default; padding: 0;
+}
+.wc-btn svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.1; }
+.wc-btn:hover { background: rgba(255,255,255,.08); color: #fff; }
+.wc-btn.close:hover { background: #e81123; color: #fff; }
 .titlebar button, .tb-dropdown { -webkit-app-region: no-drag; }
 .tb-brand { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .tb-brand img { width: 22px; height: 22px; border-radius: 6px; }

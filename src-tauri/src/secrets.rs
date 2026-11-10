@@ -120,7 +120,7 @@ pub mod crypto {
         use aes_gcm::aead::{Aead, KeyInit};
         use aes_gcm::{Aes256Gcm, Nonce};
         use windows_sys::Win32::Security::Cryptography::{CryptProtectData, CryptUnprotectData, CRYPT_INTEGER_BLOB};
-        use windows_sys::Win32::System::Memory::LocalFree;
+        use windows_sys::Win32::Foundation::LocalFree;
 
         fn dpapi(data: &[u8], protect: bool) -> Option<Vec<u8>> {
             unsafe {

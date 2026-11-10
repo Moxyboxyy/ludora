@@ -28,7 +28,7 @@ export default function Cover({ game, provider, wide = false }) {
       style={{ '--c1': provider?.color || '#222', '--c2': provider?.accent || '#888' }}
     >
       {game.iconUrl && iconOk ? (
-        <img className={`fallback-icon ${game.iconUrl.startsWith('ghimg://riot/') ? 'big' : ''}`} src={game.iconUrl} alt="" draggable={false} onError={() => setIconOk(false)} />
+        <img className={`fallback-icon ${/^(ghimg:\/\/|http:\/\/ghimg\.localhost\/)riot\//.test(game.iconUrl) ? 'big' : ''}`} src={game.iconUrl} alt="" draggable={false} onError={() => setIconOk(false)} />
       ) : (
         <span className="initials">{initials || '?'}</span>
       )}

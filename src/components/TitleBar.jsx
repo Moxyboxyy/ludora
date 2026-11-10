@@ -4,10 +4,14 @@ import { StoreIcon } from './bits.jsx';
 import logoUrl from '../assets/logo.svg';
 import { t } from '../i18n.js';
 import UpdateDialog from './UpdateDialog.jsx';
+import WindowControls from './WindowControls.jsx';
 
 // Fensterleiste ganz oben (wie bei Steam): Logo, Menü „Ludora“, die Bereiche und rechts das Ludora-Konto. Die Leiste zieht das Fenster; Knöpfe sind davon ausgenommen.
 // Unter Windows zeichnet Electron rechts die echten Fensterknöpfe (–, □, ✕) darüber.
 const platform = api.platform || 'demo';
+// Rust-Version (Tauri): eigene Fensterknöpfe unter Windows/Linux; gezogen wird über data-tauri-drag-region
+const tauri = api.runtime === 'tauri';
+const ownControls = tauri && platform !== 'darwin';
 
 const LibraryIcon = () => (
   <svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="16" rx="1" /><path d="m17.5 5.2 3 .8-3.6 14-3-.8" /></svg>
@@ -106,7 +110,7 @@ export default function TitleBar({ page, onLibrary, onShop, onSettings, onRefres
   ];
 
   return (
-    (<header className={`titlebar ${platform}`}>
+    (<header className={`titlebar ${platform} ${ownControls ? 'own-controls' : ''}`} data-tauri-drag-region>
       <div className="tb-brand">
         <img src={logoUrl} alt="" draggable={false} />
         <MenuBar menus={menus} />
@@ -115,7 +119,7 @@ export default function TitleBar({ page, onLibrary, onShop, onSettings, onRefres
         <button className={page === 'library' ? 'on' : ''} onClick={onLibrary}><LibraryIcon /><span>{t("Bibliothek")}</span></button>
         <button className={page === 'shop' ? 'on' : ''} onClick={onShop}><StoreIcon /><span>{t("Shop")}</span></button>
       </nav>
-      <div className="tb-drag" />
+      <div className="tb-drag" data-tauri-drag-region />
       {(update?.status === 'available' || busy) && (
         <button className={`tb-update ${busy ? 'busy' : ''}`} onClick={() => setUpdateOpen(true)}
           title={busy
@@ -132,6 +136,7 @@ export default function TitleBar({ page, onLibrary, onShop, onSettings, onRefres
         <span className="tb-avatar">{signedIn ? String(name || '?')[0].toUpperCase() : '?'}</span>
         <span className="tb-name">{signedIn ? name : t("Anmelden")}</span>
       </button>
+      {ownControls && <WindowControls />}
     </header>)
   );
 }

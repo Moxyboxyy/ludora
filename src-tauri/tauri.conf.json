@@ -31,7 +31,13 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "dmg", "app", "appimage", "deb"],
+    "targets": [
+      "nsis",
+      "dmg",
+      "app",
+      "appimage",
+      "deb"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -41,7 +47,25 @@
     ],
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "installerHooks": "windows/hooks.nsh",
+        "languages": [
+          "German",
+          "English"
+        ],
+        "displayLanguageSelector": false
+      }
+    },
+    "publisher": "Moxyboxyy",
+    "category": "Game",
+    "shortDescription": "Ludora - the Client for all Game Clients",
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "11.0"
+    },
+    "linux": {
+      "deb": {
+        "depends": []
       }
     }
   }

@@ -32,7 +32,7 @@ regex = "1"
 unicode-normalization = "0.1"
 futures = "0.3"
 async-trait = "0.1"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "gzip", "cookies"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots", "gzip", "cookies", "multipart"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 flate2 = "1"
 base64 = "0.22"
@@ -48,10 +48,15 @@ hmac = "0.12"
 rand = "0.8"
 hex = "0.4"
 ed25519-dalek = "2"
+png = "0.17"
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+tauri-plugin-autostart = "2"
+scrypt = { version = "0.11", default-features = false }
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["connect", "rustls-tls-webpki-roots", "rustls-tls-native-roots"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"
-windows-sys = { version = "0.59", features = ["Win32_Security_Cryptography", "Win32_Foundation", "Win32_System_Memory", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading"] }
+windows-sys = { version = "0.59", features = ["Win32_Security_Cryptography", "Win32_Foundation", "Win32_System_Memory", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_UI_Shell", "Win32_Graphics_Gdi", "Win32_Storage_FileSystem"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "3", features = ["apple-native"] }
