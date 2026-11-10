@@ -224,6 +224,26 @@ function leave(quit) {
 
 const q = (x) => `"${String(x).replace(/"/g, '')}"`;
 
+// Ab 0.8.0 ist Ludora eine Rust-App (Tauri). Deren Installer legt Ludora.exe pro Benutzer unter
+// %LOCALAPPDATA%\Ludora ab und entfernt die alte Electron-Version. Nach dem Update also die neue
+// App starten, wenn es sie gibt – sonst wie bisher die alte.
+function winStart(execPath) {
+  const next = '"%LOCALAPPDATA%\\Ludora\\Ludora.exe"';
+  // Sprungmarken statt Klammern: Pfade mit ")" würden einen (…)-Block zerlegen
+  return [
+    `if exist ${next} goto rust`,
+    `start "" ${q(execPath)} --after-update`,
+    'goto done',
+    ':rust',
+    `start "" ${next} --after-update`,
+    ':done'
+  ].join('\r\n');
+}
+// Linux (.deb): die Rust-Version liegt unter /usr/bin/ludora, die Electron-Version unter /opt/Ludora
+function linuxDebStart() {
+  return 'if [ -x /usr/bin/ludora ]; then /usr/bin/ludora --after-update >/dev/null 2>&1 & else /opt/Ludora/ludora --after-update >/dev/null 2>&1 & fi';
+}
+
 /** Update herunterladen und installieren. quit(): Ludora sauber beenden (Tray, Fenster) */
 async function install(quit) {
   const { app, shell } = electron;
@@ -254,7 +274,7 @@ async function install(quit) {
       // Still installieren (gleicher Ordner wie bisher), erst wenn Ludora beendet ist; danach neu starten
       runRestart(dir, 'win32', {
         install: [`start "" /wait ${q(file)} /S --updated`],
-        start: `start "" ${q(process.execPath)} --after-update`
+        start: winStart(process.execPath)
       });
       leave(quit);
       return { ok: true };
@@ -296,7 +316,7 @@ async function install(quit) {
       fs.chmodSync(file, 0o644);
       const code = fs.existsSync('/usr/bin/pkexec') ? await run('/usr/bin/pkexec', ['/usr/bin/apt-get', 'install', '-y', file]) : 1;
       if (code === 0) {
-        runRestart(dir, 'linux', { start: '/opt/Ludora/ludora --after-update >/dev/null 2>&1 &' });
+        runRestart(dir, 'linux', { start: linuxDebStart() });
         leave(quit);
         return { ok: true };
       }
@@ -327,6 +347,7 @@ function init(el) {
 module.exports = {
   _verifiedSha: verifiedSha,
   _restartScript: restartScript,
+  _winStart: winStart,
   init, check, poke, install,
   getState: () => state,
   onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },

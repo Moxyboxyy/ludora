@@ -64,3 +64,16 @@ test('updater: Neustart-Skript wartet auf das alte Ludora, installiert und start
   assert.match(sh, /while kill -0 7/);
   assert.ok(sh.trim().endsWith('/opt/Ludora/ludora &'));
 });
+
+test('updater: nach dem Umstieg auf die Rust-Version startet die neue App (sonst die alte)', () => {
+  const u = require('../electron/lib/updater');
+  const lines = u._winStart('C:\\L (x86)\\Ludora.exe').split('\r\n');
+  assert.deepStrictEqual(lines, [
+    'if exist "%LOCALAPPDATA%\\Ludora\\Ludora.exe" goto rust',
+    'start "" "C:\\L (x86)\\Ludora.exe" --after-update',
+    'goto done',
+    ':rust',
+    'start "" "%LOCALAPPDATA%\\Ludora\\Ludora.exe" --after-update',
+    ':done'
+  ]);
+});
