@@ -508,5 +508,6 @@
   "Steam läuft auf diesem PC nicht mit deinem Konto ({0})": "Steam isn't running on this PC with your account ({0})",
   "In Ludora nicht bei Steam angemeldet": "Not signed in to Steam in Ludora",
   "Steam hat den Auftrag angenommen, lädt aber nicht": "Steam accepted the request but isn't downloading",
-  "Steam antwortet nicht ({0})": "Steam isn't responding ({0})"
+  "Steam antwortet nicht ({0})": "Steam isn't responding ({0})",
+  "{0} ließ sich nicht starten": "{0} couldn't be started"
 }

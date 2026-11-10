@@ -505,6 +505,16 @@ async function thisClient(thisMachine = require('os').hostname()) {
   return s ? String(s.client_instanceid) : null;
 }
 
+/** Warten, bis Steam auf diesem PC bei deinem Konto angemeldet ist (nach dem Start von Steam) */
+async function waitForThisClient(ms = 60000) {
+  const until = Date.now() + ms;
+  for (;;) {
+    if (await thisClient().catch(() => null)) return true;
+    if (Date.now() >= until) return false;
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+}
+
 /**
  * Update von appid auf diesem PC starten. waitMs: so lange warten, bis Steam hier erreichbar ist
  * (Steam wurde evtl. gerade erst gestartet). -> true, wenn Steam den Auftrag angenommen hat.
@@ -789,7 +799,7 @@ async function getLinkProof() {
 module.exports = {
   getLinkProof,
   _cookieTokens: cookieTokens, _pickThisClient: pickThisClient, _parseJsonBig: parseJsonBig,
-  init, restore, startQr, remoteInstalled, startUpdate, logout, onChange, onChat, getState, setFast, joinUrl, findFriend,
+  init, restore, startQr, remoteInstalled, startUpdate, waitForThisClient, logout, onChange, onChat, getState, setFast, joinUrl, findFriend,
   history, send, typing, markRead, watch,
   _test: { avatarUrl, jwtPayload, toSteamId, toAccountId, sameMachine }
 };

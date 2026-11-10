@@ -705,6 +705,58 @@ async function runLaunch(launch, { background = false } = {}) {
   throw new Error(`Unbekannter Starttyp: ${launch.type}`);
 }
 
+// ---------- Launcher bereit machen (vor Update und Installation) ----------
+//
+// Ein Launcher, der gerade erst startet, verschluckt Aufträge (Update-Link, Installieren-Link, Fernsteuerung).
+// Darum: erst prüfen, ob er läuft; wenn nicht, unsichtbar starten und warten, bis er bereit ist – dann erst
+// den Auftrag geben. Läuft er schon, geht es sofort weiter.
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Läuft der Launcher? true/false, null = lässt sich hier nicht prüfen (z. B. Linux) */
+async function launcherRunning(p) {
+  const names = procNames(p);
+  if (!names || !['win32', 'darwin'].includes(process.platform)) return null;
+  const procs = await running.listProcesses().catch(() => []);
+  if (!procs.length) return null; // Prozessliste nicht lesbar -> nicht raten
+  const want = names.map((n) => n.toLowerCase());
+  return procs.some((x) => want.includes(path.basename(String(x.exe)).replace(/\.(exe|app)$/i, '').toLowerCase()));
+}
+
+/**
+ * Launcher starten, falls er nicht läuft, und warten, bis er bereit ist.
+ * hideWindow: Launcher-Fenster danach im Hintergrund halten (Update); bei Installationen nicht,
+ * damit der Installieren-Dialog sichtbar bleibt.
+ */
+async function ensureLauncher(p, game, { hideWindow = true } = {}) {
+  const up = await launcherRunning(p);
+  console.log('[update] Launcher', p.name, up === null ? 'Zustand unbekannt' : up ? 'läuft schon' : 'läuft nicht – wird gestartet');
+  if (up !== false) return { started: false };
+  if (hideWindow && procNames(p)) {
+    const mode = settings.get('launcherMode', 'hide');
+    hide.keepInBackground(p.id, procNames(p), { seconds: 90, mode: mode === 'off' ? 'hide' : mode });
+  }
+  // unsichtbar starten (Steam: -silent), sonst normal
+  const launch = (p.backgroundUpdate && await p.backgroundUpdate(game)) || (await p.client?.());
+  if (!launch) throw new Error(t("{0} wurde nicht gefunden.", [p.name]));
+  await runLaunch(launch, { background: true });
+  const until = Date.now() + 60000;
+  while (!(await launcherRunning(p))) {
+    if (Date.now() >= until) throw new Error(t("{0} ließ sich nicht starten", [p.name]));
+    await sleep(1500);
+  }
+  // Prozess läuft – ist der Launcher auch bereit?
+  if (p.id === 'steam' && steamFriends.getState().status === 'connected') {
+    const ok = await steamFriends.waitForThisClient(60000);
+    console.log('[update] Steam', ok ? 'ist bereit (bei deinem Konto angemeldet)' : 'läuft, ist nach 60 s aber noch nicht angemeldet');
+    await sleep(2000);
+  } else {
+    await sleep(p.readyMs || 12000); // Zeit zum Hochfahren (Anmeldung, Bibliothek laden)
+  }
+  console.log('[update] Launcher', p.name, 'gestartet und bereit');
+  return { started: true };
+}
+
 async function launchGame(game) {
   const provider = providers.find((p) => p.id === game.provider);
   // Beim Spielen den Launcher im Hintergrund halten. Beim Installieren erst den
@@ -712,6 +764,11 @@ async function launchGame(game) {
   const installed = game.status !== 'notInstalled';
   if (procNames(provider) && installed) {
     hide.keepInBackground(provider.id, procNames(provider), { mode: settings.get('launcherMode', 'hide') });
+  }
+  if (!installed && provider) {
+    // Installieren: Launcher muss laufen und bereit sein, sonst verschluckt er den Installieren-Link
+    console.log('[update] Installation angefordert:', game.name, `(${provider.id})`);
+    await ensureLauncher(provider, game, { hideWindow: false }).catch((err) => console.warn('[update] Launcher-Start', err.message));
   }
   if (!installed && settings.get('launcherMode', 'hide') !== 'off') watchInstallStart(game);
   await runLaunch(game.launch, { background: installed && settings.get('launcherMode', 'hide') !== 'off' });
@@ -1278,6 +1335,7 @@ app.whenReady().then(() => {
   ipcMain.handle('game:update', async (_e, id, visible = false) => {
     const game = findGame(id);
     const p = providers.find((x) => x.id === game.provider);
+    console.log('[update] Klick auf Update:', game.name, `(${game.provider}, ${game.nativeId})`, visible ? '– Launcher sichtbar öffnen' : '– im Hintergrund');
     // Seite im Launcher, auf der man das Update von Hand anstoßen kann
     const page = async () => (p?.updatePage ? p.updatePage(game) : null) || (await p?.client?.()) || game.launch;
     try {
@@ -1286,50 +1344,44 @@ app.whenReady().then(() => {
         await runLaunch(await page());
         return { ok: true, visible: true };
       }
-      // 1. Launcher unsichtbar starten bzw. Update direkt beim Launcher-Dienst anstoßen.
-      //    Das Verstecken läuft schon vorher, weil backgroundUpdate den Launcher evtl. selbst startet.
+      // 1. Launcher muss laufen und bereit sein – sonst erst unsichtbar starten und abwarten
+      await ensureLauncher(p, game);
       const mode0 = settings.get('launcherMode', 'hide');
-      hide.keepInBackground(p.id, procNames(p), { seconds: 90, mode: mode0 === 'off' ? 'hide' : mode0 });
-      // Steam: Update direkt beim Steam-Client auf diesem PC anstoßen (wie "Remote-Download" auf der Webseite).
-      // Läuft Steam noch nicht, erst unsichtbar starten und warten, bis es angemeldet ist.
+      hide.keepInBackground(p.id, procNames(p), { seconds: 60, mode: mode0 === 'off' ? 'hide' : mode0 });
+
+      // 2. Update anstoßen
       let steamError = null;
       if (p.id === 'steam') {
-        console.log('[update] Steam-Update angefordert:', game.nativeId, game.name, '| Steam-Anmeldung:', steamFriends.getState().status);
+        // Steam: direkt beim Steam-Client auf diesem PC (wie "Remote-Download" auf der Steam-Webseite)
+        console.log('[update] Steam-Anmeldung in Ludora:', steamFriends.getState().status);
         try {
-          let ok = false;
-          try { ok = await steamFriends.startUpdate(game.nativeId); } catch (err) {
-            // Steam läuft hier evtl. noch nicht -> unsichtbar starten und warten, bis es angemeldet ist
-            if (!/nicht bei Steam angemeldet|not signed in/i.test(err.message) && p.backgroundUpdate) {
-              const bg = await p.backgroundUpdate(game);
-              if (bg) await runLaunch(bg, { background: true });
-              ok = await steamFriends.startUpdate(game.nativeId, { waitMs: 45000 });
-            } else throw err;
-          }
+          const ok = await steamFriends.startUpdate(game.nativeId, { waitMs: 20000 });
           console.log('[update] Steam-Fernsteuerung: Auftrag für', game.nativeId, ok ? 'angenommen' : 'nicht angenommen');
-          if (ok && await waitForDownload(game, p, p.updateWaitMs || 25000)) return { ok: true, visible: false };
+          if (ok && await waitForDownload(game, p, p.updateWaitMs || 25000)) {
+            console.log('[update]', game.name, 'lädt');
+            return { ok: true, visible: false };
+          }
           if (ok) steamError = t("Steam hat den Auftrag angenommen, lädt aber nicht");
         } catch (err) {
           steamError = String(err.message || err);
           console.warn('[update] Steam-Fernsteuerung', game.nativeId, steamError);
         }
+      } else {
+        // Andere Launcher: deren Update-Link bzw. Launcher-Aufruf (läuft jetzt sicher)
+        const launch = p?.backgroundUpdate ? await p.backgroundUpdate(game) : null;
+        if (launch) await runLaunch(launch, { background: true });
+        if (await waitForDownload(game, p, p.updateWaitMs || 25000)) {
+          console.log('[update]', game.name, 'lädt');
+          return { ok: true, visible: false };
+        }
       }
-      const launch = p?.backgroundUpdate ? await p.backgroundUpdate(game) : p?.client && (await p.client());
-      if (!launch) {
-        // Ging im Hintergrund nicht -> Launcher sichtbar beim Spiel öffnen
-        hide.stop(game.provider);
-        await runLaunch(await page());
-        return { ok: true, visible: true, fallback: true, steamError };
-      }
-      const mode = settings.get('launcherMode', 'hide');
-      hide.keepInBackground(p.id, procNames(p), { seconds: 40, mode: mode === 'off' ? 'hide' : mode });
-      await runLaunch(launch, { background: true });
-      // 2. Prüfen, ob der Download wirklich losgeht
-      if (await waitForDownload(game, p, p.updateWaitMs || 25000)) return { ok: true, visible: false };
-      // 3. Nein -> Launcher sichtbar beim Spiel öffnen, dort reicht ein Klick auf "Aktualisieren"
+      // 3. Ging nicht -> Launcher sichtbar beim Spiel öffnen, dort reicht ein Klick auf "Aktualisieren"
+      console.warn('[update]', game.name, 'startet nicht von selbst – Launcher wird sichtbar geöffnet', steamError || '');
       hide.stop(game.provider);
       await runLaunch(await page());
       return { ok: true, visible: true, fallback: true, steamError };
     } catch (err) {
+      console.warn('[update] Fehler', game.name, err.message);
       return { ok: false, error: String(err.message || err) };
     }
   });
