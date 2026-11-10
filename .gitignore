@@ -21,3 +21,7 @@ ludora-src.zip
 *.pem
 private-key*
 node_modules
+
+# Rust/Tauri
+src-tauri/target/
+src-tauri/gen/

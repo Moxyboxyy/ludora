@@ -1,0 +1,41 @@
+[package]
+name = "ludora"
+version = "0.8.0"
+description = "Ludora – the Client for all Game Clients"
+authors = ["Moxyboxyy"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.80"
+
+[lib]
+name = "ludora_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "process", "fs", "sync"] }
+dirs = "5"
+anyhow = "1"
+once_cell = "1"
+parking_lot = "0.12"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
+
+[profile.release]
+# Klein und sparsam
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
