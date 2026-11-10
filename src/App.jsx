@@ -258,7 +258,8 @@ export default function App() {
     const show = visible || game.update?.state === 'downloading';
     const via = providerById[game.provider]?.name;
     if (!show) notify(t("Update von {0} wird über {1} gestartet …", [game.name, via]));
-    const res = await api.update(game.id, show);
+    let res;
+    try { res = await api.updateGame(game.id, show); } catch (err) { res = { ok: false, error: String(err?.message || err) }; }
     if (!res.ok) notify(res.error || t("Launcher konnte nicht gestartet werden"), 'error');
     else if (res.fallback || (res.visible && !show)) notify(t(
       "{0} startet das Update nicht von selbst – {1} ist jetzt bei {2} geöffnet, dort auf „Aktualisieren“ klicken.",

@@ -113,7 +113,7 @@ export const api = native || {
     'steam:413150': { state: 'available' },
     'battlenet:diablo-iv': { state: 'paused' }
   }),
-  update: async () => ({ ok: true }),
+  updateGame: async () => ({ ok: true }),
   manageDownload: async () => ({ ok: true, name: 'Steam' }),
   pickExe: async () => 'C:\\Games\\MeinSpiel\\MeinSpiel.exe',
   addManual: async () => ({ ok: true }),

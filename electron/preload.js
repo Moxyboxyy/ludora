@@ -71,7 +71,8 @@ contextBridge.exposeInMainWorld('gamehub', {
   },
   downloadsStatus: () => ipcRenderer.invoke('downloads:status'),
   manageDownload: (gameId) => ipcRenderer.invoke('download:manage', gameId),
-  update: (gameId, visible) => ipcRenderer.invoke('game:update', gameId, visible),
+  // Spiel aktualisieren (NICHT "update" nennen – das ist unten Ludoras eigener Updater; doppelte Namen überschreiben sich)
+  updateGame: (gameId, visible) => ipcRenderer.invoke('game:update', gameId, visible),
   setCover: (gameId) => ipcRenderer.invoke('game:setCover', gameId),
   running: () => ipcRenderer.invoke('games:running'),
   shop: {
