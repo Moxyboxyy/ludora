@@ -329,8 +329,12 @@ async fn epic(o: &Opts) -> anyhow::Result<List> {
         vars["onSale"] = json!(true);
     }
     let mut last = anyhow::anyhow!("Epic: unerwartete Antwort");
-    for ep in ["https://store.epicgames.com/graphql", "https://graphql.epicgames.com/graphql"] {
-        match get_json(ep, Some(json!({ "query": EPIC_QUERY, "variables": vars }))).await {
+    let body = json!({ "query": EPIC_QUERY, "variables": vars });
+    for ep in ["webview", "https://store.epicgames.com/graphql", "https://graphql.epicgames.com/graphql"] {
+        // Epic sperrt Programme ohne Browser (Cloudflare, 403) – darum zuerst über ein unsichtbares
+        // Fenster mit der Epic-Seite, das wie ein normaler Browser fragt
+        let res = if ep == "webview" { epic_via_webview(&body).await } else { get_json(ep, Some(body.clone())).await };
+        match res {
             Ok(j) => {
                 let ss = &j["data"]["Catalog"]["searchStore"];
                 if let Some(els) = ss["elements"].as_array() {
@@ -351,6 +355,79 @@ async fn epic(o: &Opts) -> anyhow::Result<List> {
                 crate::log::warn(&format!("[shop] epic {ep}: {e}"));
                 last = e
             }
+        }
+    }
+    Err(last)
+}
+
+static APP: once_cell::sync::OnceCell<tauri::AppHandle> = once_cell::sync::OnceCell::new();
+static EPIC_LOCK: Lazy<tokio::sync::Mutex<()>> = Lazy::new(|| tokio::sync::Mutex::new(()));
+const EPIC_LABEL: &str = "epic-shop";
+
+pub fn init(app: tauri::AppHandle) {
+    let _ = APP.set(app);
+}
+
+/// Unsichtbares Fenster mit store.epicgames.com (wird wiederverwendet)
+async fn epic_window(app: &tauri::AppHandle) -> anyhow::Result<tauri::WebviewWindow> {
+    use tauri::Manager;
+    if let Some(w) = app.get_webview_window(EPIC_LABEL) {
+        return Ok(w);
+    }
+    let w = tauri::WebviewWindowBuilder::new(app, EPIC_LABEL, tauri::WebviewUrl::External("https://store.epicgames.com/de/".parse()?))
+        .title("Epic Games Store")
+        .visible(false)
+        .skip_taskbar(true)
+        .inner_size(1000.0, 700.0)
+        .build()?;
+    // Seite (und ggf. Cloudflare-Prüfung) laden lassen
+    for _ in 0..40 {
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        if w.url().map_or(false, |u| u.host_str() == Some("store.epicgames.com")) {
+            break;
+        }
+    }
+    tokio::time::sleep(Duration::from_millis(2500)).await;
+    Ok(w)
+}
+
+/// GraphQL-Anfrage aus der Epic-Seite heraus; die Antwort kommt über den Adress-Anker (#…) zurück
+async fn epic_via_webview(body: &Value) -> anyhow::Result<Value> {
+    let app = APP.get().ok_or_else(|| anyhow::anyhow!("keine App"))?.clone();
+    let _g = EPIC_LOCK.lock().await;
+    let mut last = anyhow::anyhow!("Epic: keine Antwort");
+    for attempt in 0..3 {
+        let w = epic_window(&app).await?;
+        let id = format!("{:x}", rand::random::<u64>());
+        let script = format!(
+            "(async()=>{{let out;try{{const r=await fetch('/graphql',{{method:'POST',headers:{{'content-type':'application/json'}},body:{body}}});out=r.status+'|'+await r.text();}}catch(e){{out='0|'+e}}window.location.hash='ludora-{id}='+encodeURIComponent(out);}})();",
+            body = serde_json::to_string(&body.to_string())?
+        );
+        w.eval(&script)?;
+        let marker = format!("ludora-{id}=");
+        let mut got: Option<String> = None;
+        for _ in 0..100 {
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            if let Ok(u) = w.url() {
+                if let Some(frag) = u.fragment().filter(|f| f.starts_with(&marker)) {
+                    got = Some(crate::covers::urlencoding_decode(&frag[marker.len()..]));
+                    break;
+                }
+            }
+        }
+        let Some(text) = got else {
+            last = anyhow::anyhow!("Epic: keine Antwort");
+            continue;
+        };
+        let (status, rest) = text.split_once('|').unwrap_or(("0", ""));
+        if status == "200" {
+            return Ok(serde_json::from_str(rest)?);
+        }
+        last = anyhow::anyhow!(t_args("{0} antwortet mit {1}", &["store.epicgames.com", status]));
+        // Cloudflare-Prüfung läuft evtl. noch: Seite neu laden und noch einmal
+        if attempt < 2 {
+            let _ = w.eval("window.location.href='https://store.epicgames.com/de/'");
+            tokio::time::sleep(Duration::from_millis(4000)).await;
         }
     }
     Err(last)

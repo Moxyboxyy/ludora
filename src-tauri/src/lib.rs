@@ -182,6 +182,7 @@ pub fn run() {
             friends::init(h.clone());
             hub::init(h.clone());
             updater::init(h.clone());
+            shop::init(h.clone());
             #[cfg(debug_assertions)]
             if let Ok(js) = std::env::var("LUDORA_SELFTEST") {
                 // Nur Entwicklung: Skript im Hauptfenster ausführen (Ergebnisse über "debug:log" ins Protokoll)
