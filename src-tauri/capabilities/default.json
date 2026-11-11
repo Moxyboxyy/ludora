@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Rechte der Ludora-Oberfläche: nur der eigene Verteiler (ipc) und Ereignisse – kein direkter Systemzugriff",
-  "windows": ["main", "chat-*"],
+  "windows": ["main", "chat-*", "debug"],
   "permissions": [
     "core:default",
     "core:window:allow-minimize",

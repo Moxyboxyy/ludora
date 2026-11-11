@@ -64,3 +64,18 @@ test('i18n: Oberfläche und Rust nutzen dieselbe Übersetzungsdatei', () => {
   assert.match(read('src/i18n.js'), /src-tauri\/i18n\/en\.json/);
   assert.match(read('src-tauri/src/util.rs'), /i18n\/en\.json/);
 });
+
+test('Funktionstest: jede Funktion der Oberfläche steht im Debug-Fenster', () => {
+  const tb = read('src/tauriBridge.js');
+  const suite = read('src/debug/suite.js');
+  const covered = new Set([...suite.matchAll(/channels: \[([^\]]*)\]/g)].flatMap((m) => [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1])));
+  const missing = [...set(tb, /call\('([^']+)'\)/g)].filter((c) => !covered.has(c));
+  assert.deepStrictEqual(missing, []);
+});
+
+test('Funktionstest: nur in der Testversion (Debug-Build, Vite-Entwicklung)', () => {
+  assert.match(read('src/main.jsx'), /import\.meta\.env\.DEV && window\.location\.hash === '#debug'/);
+  const lib = read('src-tauri/src/lib.rs');
+  assert.match(lib, /#\[cfg\(debug_assertions\)\]\s*pub mod selftest;/);
+  assert.match(lib, /#\[cfg\(debug_assertions\)\]\s*selftest::open_window/);
+});

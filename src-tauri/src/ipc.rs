@@ -274,6 +274,14 @@ pub async fn dispatch(app: &AppHandle, channel: &str, args: Vec<Value>) -> Resul
             crate::log::info(&format!("[selftest] {}", a0.chars().take(600).collect::<String>()));
             Value::Null
         }
+        #[cfg(debug_assertions)]
+        "debug:options" => crate::selftest::options(),
+        #[cfg(debug_assertions)]
+        "debug:status" => crate::selftest::status(),
+        #[cfg(debug_assertions)]
+        "debug:report" => crate::selftest::report(&arg(&args, 0)),
+        #[cfg(debug_assertions)]
+        "debug:finish" => crate::selftest::finish(app, &arg(&args, 0)),
 
         _ => return Err(format!("Unbekannter Kanal: {channel}")),
     })

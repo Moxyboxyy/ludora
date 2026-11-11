@@ -13,6 +13,7 @@
     "dev": "tauri dev",
     "build": "vite build",
     "test": "node --test && cargo test --manifest-path src-tauri/Cargo.toml",
+    "selftest": "node scripts/selftest.mjs",
     "dist": "tauri build",
     "dev:web": "vite",
     "tauri": "tauri",

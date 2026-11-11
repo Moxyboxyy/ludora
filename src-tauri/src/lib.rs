@@ -27,6 +27,8 @@ pub mod running;
 pub mod secrets;
 pub mod settings;
 pub mod shop;
+#[cfg(debug_assertions)]
+pub mod selftest;
 pub mod sqlite;
 pub mod steam;
 pub mod steamcm;
@@ -191,6 +193,7 @@ pub fn run() {
             });
         })
         .invoke_handler(tauri::generate_handler![ipc])
+
         .setup(move |app| {
             let h = app.handle().clone();
             if let Some(w) = app.get_webview_window("main") {
@@ -235,18 +238,9 @@ pub fn run() {
             hub::init(h.clone());
             updater::init(h.clone());
             shop::init(h.clone());
+            // Funktionstest-Fenster (nur Testversion, nicht im Release)
             #[cfg(debug_assertions)]
-            if let Ok(js) = std::env::var("LUDORA_SELFTEST") {
-                // Nur Entwicklung: Skript im Hauptfenster ausführen (Ergebnisse über "debug:log" ins Protokoll)
-                let h2 = h.clone();
-                tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(std::time::Duration::from_secs(6)).await;
-                    if let Some(w) = h2.get_webview_window("main") {
-                        let code = std::fs::read_to_string(&js).unwrap_or(js);
-                        let _ = w.eval(&code);
-                    }
-                });
-            }
+            selftest::open_window(&h);
             Ok(())
         })
         .build(tauri::generate_context!())

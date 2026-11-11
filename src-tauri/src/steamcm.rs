@@ -371,6 +371,11 @@ async fn session() -> anyhow::Result<Arc<Session>> {
     Ok(s)
 }
 
+/// Steht die Chat-Verbindung gerade? (für den Funktionstest)
+pub fn is_alive() -> bool {
+    SESSION.try_lock().ok().and_then(|g| g.as_ref().map(|s| s.alive.load(Ordering::SeqCst))).unwrap_or(false)
+}
+
 pub async fn stop() {
     *SESSION.lock().await = None; // Schreib-Kanal fällt weg -> Verbindung wird geschlossen
 }

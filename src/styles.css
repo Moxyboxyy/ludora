@@ -693,3 +693,46 @@ svg.star.filled { fill: currentColor; }
 .update-bar span { display: block; height: 100%; background: var(--ok); border-radius: inherit; transition: width .25s ease; }
 .update-bar span.pulse { animation: update-pulse 1.2s ease-in-out infinite; }
 @keyframes update-pulse { 50% { opacity: .45; } }
+
+/* ---------- Funktionstest (nur Testversion) ---------- */
+.dbg { min-height: 100vh; background: var(--bg); color: var(--text); padding: 18px 22px 40px; overflow-y: auto; height: 100vh; box-sizing: border-box; }
+.dbg-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.dbg-head h1 { font-size: 20px; margin: 0 0 4px; }
+.dbg-sub { margin: 0; color: var(--muted); font-size: 13px; max-width: 560px; }
+.dbg-sum { display: flex; gap: 6px; }
+.dbg-chip { min-width: 34px; text-align: center; padding: 4px 8px; border-radius: 999px; font-weight: 600; font-size: 13px; }
+.dbg-chip.ok { background: rgba(107,227,161,.15); color: var(--ok); }
+.dbg-chip.warn { background: rgba(255,200,87,.15); color: var(--warn); }
+.dbg-chip.fail { background: rgba(255,107,107,.15); color: var(--danger); }
+.dbg-chip.open { background: var(--panel-2); color: var(--muted); }
+.dbg-bar { display: flex; align-items: center; gap: 10px; margin: 16px 0 10px; flex-wrap: wrap; }
+.dbg button { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.dbg button:disabled { opacity: .5; cursor: default; }
+.dbg button.dbg-primary { background: var(--accent); border-color: var(--accent); color: #0f1115; font-weight: 600; }
+.dbg-tabs { display: flex; gap: 4px; }
+.dbg-tabs button.on { border-color: var(--accent); color: var(--accent); }
+.dbg-params { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; }
+.dbg-params summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.dbg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
+.dbg-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.dbg-field select, .dbg-field input { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px; font: inherit; font-size: 13px; }
+.dbg-list section { margin-top: 18px; }
+.dbg-list h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 6px; }
+.dbg-row { display: flex; align-items: center; gap: 12px; padding: 9px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; }
+.dbg-row.fail { border-color: rgba(255,107,107,.45); }
+.dbg-row.warn { border-color: rgba(255,200,87,.35); }
+.dbg-dot { width: 12px; height: 12px; border-radius: 50%; background: #3a4050; flex: none; }
+.dbg-dot.ok { background: var(--ok); box-shadow: 0 0 8px rgba(107,227,161,.5); }
+.dbg-dot.warn { background: var(--warn); box-shadow: 0 0 8px rgba(255,200,87,.5); }
+.dbg-dot.fail { background: var(--danger); box-shadow: 0 0 8px rgba(255,107,107,.5); }
+.dbg-dot.running { background: var(--accent); animation: dbg-pulse 1s infinite; }
+@keyframes dbg-pulse { 50% { opacity: .3; } }
+.dbg-main { flex: 1; min-width: 0; }
+.dbg-name { font-size: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.dbg-name code, .dbg-detail code { font-size: 11px; color: var(--muted); background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+.dbg-tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: rgba(124,156,255,.15); color: var(--accent); }
+.dbg-tag.danger { background: rgba(255,107,107,.12); color: var(--danger); }
+.dbg-detail { font-size: 12px; color: var(--muted); margin-top: 3px; word-break: break-word; }
+.dbg-row.fail .dbg-detail { color: #ff9a9a; }
+.dbg-row.warn .dbg-detail { color: #ffd98a; }
+.dbg-ms { opacity: .6; margin-left: 4px; }
