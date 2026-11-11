@@ -10,7 +10,7 @@ export default function FriendsWindow({ tab }) {
 
   useEffect(() => {
     document.title = t("Ludora – Freunde");
-    api.cachedLibrary?.().then((r) => r && setLib({ games: r.games || [], providers: r.providers || [] })).catch(() => {});
+    (api.cachedLibrary ? api.cachedLibrary() : api.scan()).then((r) => r && setLib({ games: r.games || [], providers: r.providers || [] })).catch(() => {});
   }, []);
   const providerById = useMemo(() => Object.fromEntries(lib.providers.map((p) => [p.id, p])), [lib.providers]);
 

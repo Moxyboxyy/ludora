@@ -132,13 +132,18 @@ pub fn open_friends(app: &AppHandle, tab: &str) -> Value {
     }
     // Gleiche Seite wie das Hauptfenster, aber mit #friends=<liste> (siehe src/main.jsx)
     let script = format!("if (!/^#friends=/.test(window.location.hash)) window.location.hash = {};", serde_json::to_string(&format!("friends={tab}")).unwrap());
-    let built = WebviewWindowBuilder::new(app, "friends", WebviewUrl::App("index.html".into()))
+    let b = WebviewWindowBuilder::new(app, "friends", WebviewUrl::App("index.html".into()))
         .title("Ludora – Freunde")
         .inner_size(400.0, 680.0)
         .min_inner_size(320.0, 420.0)
         .background_color(tauri::window::Color(15, 17, 21, 255))
-        .initialization_script(&script)
-        .build();
+        .initialization_script(&script);
+    // Eigene Fensterleiste wie im Hauptfenster: Windows/Linux ohne Systemrahmen, Mac mit Ampel über dem Inhalt
+    #[cfg(target_os = "macos")]
+    let b = b.title_bar_style(tauri::TitleBarStyle::Overlay).hidden_title(true).traffic_light_position(tauri::LogicalPosition::new(14.0, 22.0));
+    #[cfg(not(target_os = "macos"))]
+    let b = b.decorations(false);
+    let built = b.build();
     match built {
         Ok(_) => json!({ "ok": true }),
         Err(e) => json!({ "ok": false, "error": e.to_string() }),

@@ -3,6 +3,11 @@ import { api } from '../api.js';
 import { UsersIcon, PlayIcon, LauncherLogo, UserAddIcon, UserCopyIcon } from './bits.jsx';
 import { t } from '../i18n.js';
 import { useExit } from '../useExit.js';
+import WindowControls from './WindowControls.jsx';
+
+// Freundefenster: eigene Fensterleiste (wie TitleBar.jsx)
+const FW_PLATFORM = api.platform || 'demo';
+const FW_OWN_CONTROLS = api.runtime === 'tauri' && FW_PLATFORM !== 'darwin';
 
 const STATE_LABEL = { online: t("Online"), away: t("Abwesend"), snooze: t("Abwesend"), busy: t("Beschäftigt"), offline: t("Offline") };
 const LAUNCHERS = [
@@ -109,7 +114,7 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
     if (!switcher) return undefined;
     // Klicks außerhalb der Leiste schließen die Auswahl. Erst im nächsten Durchlauf anmelden: React führt diesen Effekt
     // noch während des Klicks aus, der die Auswahl geöffnet hat – sonst schlösse genau dieser Klick sie gleich wieder.
-    const close = (e) => { if (!(e.target instanceof Element && e.target.closest('.fw-bar'))) setSwitcher(false); };
+    const close = (e) => { if (!(e.target instanceof Element && e.target.closest('.fw-current, .fw-switcher'))) setSwitcher(false); };
     const key = (e) => { if (e.key === 'Escape') setSwitcher(false); };
     const timer = setTimeout(() => { window.addEventListener('click', close); window.addEventListener('keydown', key); }, 0);
     return () => { clearTimeout(timer); window.removeEventListener('click', close); window.removeEventListener('keydown', key); };
@@ -505,17 +510,20 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
   const body = (
       <aside className={windowMode ? 'friends-window friends' : 'drawer friends'} ref={panelRef} onMouseDown={(e) => e.stopPropagation()}>
         {windowMode ? (
-          <header className="drawer-head fw-bar" onClick={() => setSwitcher((v) => !v)}>
-            <button className="fw-current" aria-expanded={switcher} aria-label={current[0] === 'all' ? t("Alle Freunde") : current[1]}
+          // Eigene Fensterleiste wie im Hauptfenster: ziehbar, Fensterknöpfe rechts (Windows/Linux) bzw. Ampel links (Mac)
+          <header className={`fw-bar ${FW_PLATFORM} ${FW_OWN_CONTROLS ? 'own-controls' : ''}`} data-tauri-drag-region>
+            <button className="fw-current" onClick={() => setSwitcher((v) => !v)} aria-expanded={switcher} aria-label={current[0] === 'all' ? t("Alle Freunde") : current[1]}
               title={current[0] === 'all' ? t("Alle Freunde") : current[1]}>
               <span className="fw-icon">{current[2] ? <LauncherLogo provider={current[2]} /> : <UsersIcon />}</span>
             </button>
-            <div className="head-actions" onClick={(e) => e.stopPropagation()}>
+            <div className="fw-drag" data-tauri-drag-region />
+            <div className="head-actions">
               <button className={`hub-btn ${hub.status === 'signedIn' ? 'on' : ''}`} onClick={() => setHubOpen(true)}
                 title={t("Dein Ludora-Konto: Freunde mit Ludora erkennen deine Konten automatisch")}>
                 {hub.status === 'signedIn' ? (hub.user?.display_name || t("Ludora-Konto")) : t("Ludora-Konto")}
               </button>
             </div>
+            {FW_OWN_CONTROLS && <WindowControls />}
             {switcherShown && (
               <div className={`fw-switcher ${switcherClosing ? 'closing' : ''}`} role="menu" onClick={(e) => e.stopPropagation()}>
                 {lists.map(([id, name, prov], i) => (

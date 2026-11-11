@@ -789,16 +789,24 @@ svg.star.filled { fill: currentColor; }
 /* ---------- Eigenes Freundefenster ---------- */
 .friends-window-root { height: 100%; background: var(--panel); }
 .friends-window { height: 100%; display: flex; flex-direction: column; background: var(--panel); position: relative; }
-.fw-bar { position: relative; padding: 12px 14px; cursor: pointer; user-select: none; }
+.fw-bar {
+  --fw-pad: 12px;
+  position: relative; height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 var(--fw-pad);
+  background: var(--panel); border-bottom: 1px solid rgba(38,43,55,.55); user-select: none; z-index: 40;
+}
+.fw-bar.darwin { --fw-pad: 84px; } /* Mac: links sitzen die Ampel-Knöpfe */
+.fw-bar.own-controls { padding-right: 0; }
+.fw-bar .fw-drag { flex: 1; align-self: stretch; }
+.fw-bar .head-actions { display: flex; align-items: center; gap: 8px; }
 .fw-current { display: flex; align-items: center; padding: 0; border-radius: 50%; }
 .fw-current:hover .fw-icon, .fw-current[aria-expanded="true"] .fw-icon { border-color: var(--accent); }
-.fw-icon { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line); transition: border-color .12s; }
+.fw-icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line); transition: border-color .12s; }
 .fw-icon .launcher-logo, .fw-icon .launcher-badge, .fw-icon svg { width: 28px; height: 28px; }
 .fw-icon .launcher-badge { font-size: 15px; }
 /* Auswahl klappt unter der Leiste von oben nach unten auf */
 .fw-switcher {
-  /* Spalte genau unter dem Symbol oben links: Mitte = 14px Rand + 24px (halbes Symbol), minus 1px Rahmen + 8px Innenabstand + 24px halber Knopf */
-  position: absolute; top: calc(100% + 6px); left: calc(14px + 24px - 33px); z-index: 40; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  /* Spalte genau unter dem Symbol oben links: Mitte = Rand + 22px (halbes Symbol), minus 1px Rahmen + 8px Innenabstand + 24px halber Knopf */
+  position: absolute; top: calc(100% + 6px); left: calc(var(--fw-pad) + 22px - 33px); z-index: 40; display: flex; flex-direction: column; align-items: center; gap: 8px;
   padding: 8px; border-radius: 32px; background: rgba(21,24,32,.96); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.5);
 }
 .fw-switcher .round-pick { animation-name: dial-down; }
