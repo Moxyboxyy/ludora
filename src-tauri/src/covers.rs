@@ -706,9 +706,23 @@ fn file_response(p: Option<PathBuf>) -> Option<tauri::http::Response<Vec<u8>>> {
 /// ghimg://<quelle>/<pfad> (macOS/Linux) bzw. http://ghimg.localhost/<quelle>/<pfad> (Windows)
 pub fn split_ghimg(uri: &str) -> Option<(String, String)> {
     let rest = uri.strip_prefix("ghimg://").or_else(|| uri.strip_prefix("http://ghimg.localhost/")).or_else(|| uri.strip_prefix("https://ghimg.localhost/"))?;
-    let rest = rest.split(['?', '#']).next().unwrap_or("");
+    let mut rest = rest.split(['?', '#']).next().unwrap_or("");
+    // Windows (WebView2): Tauri reicht http://ghimg.localhost/x als ghimg://localhost/x weiter
+    if let Some(r) = rest.strip_prefix("localhost/") {
+        rest = r;
+    }
     let (host, path) = rest.split_once('/').unwrap_or((rest, ""));
     Some((host.to_string(), path.to_string()))
+}
+
+#[cfg(test)]
+mod ghimg_tests {
+    #[test]
+    fn all_url_forms() {
+        for u in ["ghimg://steam/10/tall", "http://ghimg.localhost/steam/10/tall", "ghimg://localhost/steam/10/tall", "https://ghimg.localhost/steam/10/tall?x=1"] {
+            assert_eq!(super::split_ghimg(u), Some(("steam".to_string(), "10/tall".to_string())), "{u}");
+        }
+    }
 }
 
 /// Bilder für das ghimg-Protokoll ausliefern
