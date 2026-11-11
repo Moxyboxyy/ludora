@@ -9,6 +9,11 @@ on:
     paths: ['package.json', '.github/release-notes.md']
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      allow_partial:
+        description: 'Auch veröffentlichen, wenn ein System nicht gebaut werden konnte'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -108,12 +113,12 @@ jobs:
           path: out/*
           if-no-files-found: error
 
-  # Veröffentlichen, auch wenn ein System (z. B. Mac – dort gibt es bei GitHub manchmal keine freien Rechner)
-  # ausfällt; dessen Installer fehlt dann im Release und kann später nachgereicht werden.
+  # Veröffentlicht wird nur, wenn ALLE Systeme gebaut wurden (sonst den fehlgeschlagenen Teil neu starten:
+  # „Re-run failed jobs“). Nur bei manuellem Start mit allow_partial auch mit fehlendem System.
   # Versionen mit Bindestrich (z. B. 0.8.0-beta.1) werden Vorabversionen: der Updater bietet sie nicht an.
   release:
     needs: build
-    if: ${{ always() && !cancelled() }}
+    if: ${{ !cancelled() && (needs.build.result == 'success' || inputs.allow_partial == true) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
