@@ -508,7 +508,10 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
   const pickList = (id) => { setTab(id); setSwitcher(false); };
 
   const body = (
-      <aside className={windowMode ? 'friends-window friends' : 'drawer friends'} ref={panelRef} onMouseDown={(e) => e.stopPropagation()}>
+      <aside className={windowMode ? 'friends-window friends' : 'drawer friends'} ref={panelRef}
+        // Nur im Hauptfenster: Klicks im Seitenfenster schließen es nicht. Im Freundefenster würde das Anhalten
+        // des Ereignisses Tauris Fenster-Ziehen (Listener am Dokument) blockieren.
+        onMouseDown={windowMode ? undefined : (e) => e.stopPropagation()}>
         {windowMode ? (
           // Eigene Fensterleiste wie im Hauptfenster: ziehbar, Fensterknöpfe rechts (Windows/Linux) bzw. Ampel links (Mac)
           <header className={`fw-bar ${FW_PLATFORM} ${FW_OWN_CONTROLS ? 'own-controls' : ''}`} data-tauri-drag-region>
