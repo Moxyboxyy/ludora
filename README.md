@@ -10,7 +10,7 @@ search every store for games and deals – while the individual launchers stay q
 > **Note:** Ludora is a private open-source project and is **not** affiliated with, endorsed or reviewed by Valve,
 > Epic Games, GOG, Electronic Arts, Ubisoft, Blizzard Entertainment, Riot Games, Rockstar Games or Amazon.
 > All names, logos and trademarks belong to their respective owners. Purchases always happen directly in the
-> respective store. See [Legal & risks](#legal--risks).
+> respective store. See [Legal & risks](#legal).
 
 ## Contents
 
@@ -19,7 +19,7 @@ search every store for games and deals – while the individual launchers stay q
 - [Getting started – client tutorial](#getting-started--client-tutorial)
 - [Supported launchers](#supported-launchers)
 - [Privacy](#privacy)
-- [Legal & risks](#legal--risks)
+- [Legal & risks](#legal)
 - [For developers](#for-developers)
 - [License](#license)
 
@@ -156,25 +156,24 @@ store. An (optional) Ludora account stores only your Ludora name, a password has
 link, your Ludora friendships and an end-to-end encrypted block of your sign-ins (readable only with your password).
 Details: [PRIVACY.md](PRIVACY.md).
 
+<a id="legal"></a>
+
 ## Legal & risks
 
-Besides official interfaces (e.g. the Steam Web API) Ludora also uses **unofficial, undocumented** interfaces of the
-launchers – like other open-source launchers such as Heroic, Legendary or Playnite. Providers may change or block them
-at any time. Use at your own risk.
+Ludora works with the launchers installed on your computer and the accounts you sign in to. Some of this relies on
+interfaces the providers don't officially document. They can change at any time, so individual features may stop
+working temporarily. Use at your own risk.
 
-- **Steam:** friends/chat via Steam's web chat interface ([steam-user](https://github.com/DoctorMcKay/node-steam-user)), store search via the store website.
-- **Epic Games / GOG:** sign-in, friends and store via the interfaces of the official launchers.
-- **Riot Games:** only the local interface of the running Riot Client (friends, updates).
-  *Ludora isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially
+- Ludora does not modify game clients, never stores passwords and gives no advantage in games.
+- Purchases always happen directly in the respective store. Prices for EA, Ubisoft and Battle.net come from
+  [CheapShark](https://www.cheapshark.com).
+- Store images and icons are loaded from the stores at runtime and are not part of this repository.
+- *Ludora isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially
   involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks
   or registered trademarks of Riot Games, Inc.*
-- **Battle.net:** Ludora reads local files and changes one setting in `Battle.net.config` to start updates. The
-  complete library via account sign-in is **off by default** (Settings → Advanced) because it uses an unofficial
-  interface that, according to Blizzard, may violate their terms of use.
-- **Store:** prices from Steam, Epic Games and GOG; EA, Ubisoft and Battle.net via [CheapShark](https://www.cheapshark.com).
-  Store images and icons are loaded from the stores at runtime and are not part of this repository.
 
-Ludora does not modify game clients and gives no advantage in games.
+Do you represent one of the providers and have concerns about a feature? Please open an
+[issue](https://github.com/Moxyboxyy/ludora/issues) – we'll take care of it quickly.
 
 ## For developers
 

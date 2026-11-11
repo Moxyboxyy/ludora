@@ -11,7 +11,7 @@ Hintergrund bleiben.
 > **Hinweis:** Ludora ist ein privates Open-Source-Projekt und **nicht** mit Valve, Epic Games, GOG, Electronic Arts,
 > Ubisoft, Blizzard Entertainment, Riot Games, Rockstar Games oder Amazon verbunden, von ihnen unterstützt oder
 > geprüft. Alle Namen, Logos und Marken gehören ihren jeweiligen Inhabern. Gekauft wird immer direkt im jeweiligen
-> Store. Siehe [Rechtliches & Risiken](#rechtliches--risiken).
+> Store. Siehe [Rechtliches & Risiken](#rechtliches).
 
 ## Inhalt
 
@@ -20,7 +20,7 @@ Hintergrund bleiben.
 - [Erste Schritte – Client-Anleitung](#erste-schritte--client-anleitung)
 - [Unterstützte Launcher](#unterstützte-launcher)
 - [Datenschutz](#datenschutz)
-- [Rechtliches & Risiken](#rechtliches--risiken)
+- [Rechtliches & Risiken](#rechtliches)
 - [Für Entwickler](#für-entwickler)
 - [Lizenz](#lizenz)
 
@@ -161,25 +161,24 @@ verschlüsselt. Ein (optionales) Ludora-Konto speichert nur deinen Ludora-Namen,
 Launcher-Konten, die du verknüpfst, deine Ludora-Freundschaften und einen Ende-zu-Ende-verschlüsselten Block deiner
 Anmeldungen (nur mit deinem Passwort lesbar). Details: [PRIVACY.de.md](PRIVACY.de.md).
 
+<a id="rechtliches"></a>
+
 ## Rechtliches & Risiken
 
-Neben offiziellen Schnittstellen (z. B. Steam Web API) nutzt Ludora auch **inoffizielle, nicht dokumentierte**
-Schnittstellen der Launcher – wie andere Open-Source-Launcher (z. B. Heroic, Legendary, Playnite) auch. Die Anbieter
-können diese jederzeit ändern oder sperren. Nutzung auf eigenes Risiko.
+Ludora arbeitet mit den Launchern auf deinem Rechner und den Konten, bei denen du dich anmeldest. Dafür nutzt es
+teilweise Schnittstellen, die die Anbieter nicht offiziell dokumentieren. Diese können sich jederzeit ändern, dann
+fallen einzelne Funktionen vorübergehend aus. Nutzung auf eigenes Risiko.
 
-- **Steam:** Freunde/Chat über Steams Web-Chat-Schnittstelle ([steam-user](https://github.com/DoctorMcKay/node-steam-user)), Shop-Suche über die Store-Seite.
-- **Epic Games / GOG:** Anmeldung, Freunde und Shop über die Schnittstellen der offiziellen Launcher.
-- **Riot Games:** nur die lokale Schnittstelle des laufenden Riot Clients (Freunde, Updates).
-  *Ludora isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially
+- Ludora verändert keine Spiel-Clients, speichert keine Passwörter und verschafft keine Vorteile in Spielen.
+- Gekauft wird immer direkt im jeweiligen Store. Preise für EA, Ubisoft und Battle.net kommen von
+  [CheapShark](https://www.cheapshark.com).
+- Store-Bilder und -Symbole werden zur Laufzeit von den Stores geladen und sind nicht Teil dieses Repositorys.
+- *Ludora isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially
   involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks
   or registered trademarks of Riot Games, Inc.*
-- **Battle.net:** Ludora liest lokale Dateien und setzt für Updates eine Einstellung in `Battle.net.config`. Die
-  komplette Bibliothek über die Kontoanmeldung ist **standardmäßig aus** (Einstellungen → Erweitert), weil sie eine
-  inoffizielle Schnittstelle nutzt, die laut Blizzard gegen die Nutzungsbedingungen verstoßen kann.
-- **Shop:** Preise von Steam, Epic Games und GOG; EA, Ubisoft und Battle.net über [CheapShark](https://www.cheapshark.com).
-  Store-Bilder und -Symbole werden zur Laufzeit von den Stores geladen und sind nicht Teil dieses Repositorys.
 
-Ludora verändert keine Spiel-Clients und verschafft keine Vorteile in Spielen.
+Du vertrittst einen der Anbieter und hast Bedenken zu einer Funktion? Bitte öffne ein
+[Issue](https://github.com/Moxyboxyy/ludora/issues) – wir kümmern uns schnell darum.
 
 ## Für Entwickler
 
