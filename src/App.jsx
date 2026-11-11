@@ -143,7 +143,8 @@ export default function App() {
   // Laufende Spiele: alle 5 s (statt "Spielen" steht dann "Läuft")
   const [runningIds, setRunningIds] = useState(() => new Set());
   const [uninstalling, setUninstalling] = useState(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => loadPref('sidebarCollapsed', '0') === '1');
+  // Seitenleiste: beim ersten Start eingeklappt; danach bleibt, wie man sie zuletzt hatte (gespeichert bei jedem Umschalten)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => loadPref('sidebarCollapsed', '1') === '1');
 
   // Favoriten (Spiel-IDs, launcherübergreifend)
   const [favorites, setFavorites] = useState(() => new Set());
