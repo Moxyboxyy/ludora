@@ -61,9 +61,17 @@ jobs:
           key: ${{ matrix.name }}
       - name: Linux-Pakete für WebKitGTK
         if: runner.os == 'Linux'
+        timeout-minutes: 15
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libdbus-1-dev xdg-utils
+          # Hängende Ubuntu-Spiegel nicht ewig abwarten: Zeitlimits, Wiederholungen und notfalls der Hauptserver
+          APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=25 -o Acquire::https::Timeout=25 -o DPkg::Lock::Timeout=120"
+          PKGS="libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libdbus-1-dev xdg-utils"
+          install() { timeout 420 sudo apt-get $APT update && timeout 420 sudo apt-get $APT install -y --no-install-recommends $PKGS; }
+          if ! install; then
+            echo "Spiegelserver hakt – weiter mit archive.ubuntu.com"
+            sudo sed -i 's#http://azure.archive.ubuntu.com#http://archive.ubuntu.com#g' /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+            install
+          fi
       - run: npm ci
       - run: npm run test:js
         if: runner.os == 'Linux'
