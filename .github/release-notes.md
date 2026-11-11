@@ -1,10 +1,13 @@
 **Ludora - the Client for all Game Clients** · Release 0.8.2
 
 ### What's new
-- **Cleaner start:** when Ludora opens, only the animated logo appears – floating on its own, without a window around it. Once the animation is done and everything is loaded, the full app appears. The start sound plays along (turn it off in **Settings → Startup sound**).
-- No logo animation or sound when Ludora starts hidden in the tray (autostart).
-- **Windows:** no more console windows flashing up while an update is being installed.
-- **Linux (.deb):** after updating from an older Ludora, the app now restarts on its own.
+- **Cleaner start:** when Ludora opens, only the animated logo appears – floating on its own, without a window around it. Once everything is loaded, the full app appears. The start sound plays along (turn it off in **Settings → Startup sound**). No animation or sound when Ludora starts hidden in the tray.
+- **Reload button** next to "Sort" (also F5 / Ctrl+R): reloads Ludora and rescans the library, with the logo animation inside the window. The browser right-click menu is gone.
+- **Friends, new style:** the friends button shows **unread messages** instead of the online count. Click it and round launcher buttons fold out upwards (Steam, Riot, Epic, GOG, Ludora, all) – each opens that list in its own **friends window**. In the friends window, click the icon at the top to switch lists.
+- **Launcher icons** instead of colored dots (more reliable on Windows; on Linux taken from your system icons). "All games" now has a controller icon.
+- **Settings button** (gear) next to your Ludora name in the title bar.
+- **Covers:** more games get real covers – Epic Store is a new source (e.g. Riot games), and covers some image servers rejected are now accepted. Store pages for Battle.net, Riot and Rockstar now show covers too.
+- **Windows:** no more console windows flashing up while an update is being installed. **Linux (.deb):** after updating from an older Ludora, the app restarts on its own.
 
 ### Updating
 Just click the update button as usual. Settings, sign-ins and covers stay.
@@ -23,6 +26,6 @@ The files are not code-signed: on Windows click **More info → Run anyway**, on
 
 ---
 
-**Deutsch:** Beim Öffnen erscheint jetzt nur das animierte Logo – frei schwebend, ohne Fenster drumherum. Ist die Animation durch und alles geladen, erscheint die komplette App. Der Startsound läuft mit (abschaltbar unter **Einstellungen → Startsound**). Beim Autostart in den Tray gibt es weder Animation noch Ton. Unter Windows blitzen beim Update keine Konsolenfenster mehr auf; unter Linux (.deb) startet Ludora nach einem Update von einer älteren Version wieder von selbst.
+**Deutsch:** Beim Öffnen erscheint nur das animierte Logo – frei schwebend –, danach die komplette App (Startsound abschaltbar unter **Einstellungen → Startsound**). Neuer **Neu-laden-Knopf** neben „Sortieren“ (auch F5/Strg+R). Der **Freunde-Knopf** zeigt ungelesene Nachrichten und klappt runde Launcher-Knöpfe auf; jeder öffnet die Liste im eigenen **Freundefenster**, dort wechselst du die Liste per Klick aufs Symbol oben. **Launcher-Symbole** statt Farbpunkten, Controller bei „Alle Spiele“, **Zahnrad** für die Einstellungen neben deinem Ludora-Namen. Mehr echte **Cover** (neue Quelle Epic Store, auch im Shop für Battle.net, Riot und Rockstar). Unter Windows keine aufblitzenden Konsolenfenster mehr beim Update.
 
 Ludora is not affiliated with Valve, Epic Games, GOG, EA, Ubisoft, Blizzard, Riot Games, Rockstar Games or Amazon.
