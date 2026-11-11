@@ -105,11 +105,12 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
   useEffect(() => savePref('friendsTab', tab), [tab]);
   useEffect(() => {
     if (!switcher) return undefined;
-    const close = () => setSwitcher(false);
-    const key = (e) => { if (e.key === 'Escape') close(); };
-    window.addEventListener('click', close);
-    window.addEventListener('keydown', key);
-    return () => { window.removeEventListener('click', close); window.removeEventListener('keydown', key); };
+    // Klicks außerhalb der Leiste schließen die Auswahl. Erst im nächsten Durchlauf anmelden: React führt diesen Effekt
+    // noch während des Klicks aus, der die Auswahl geöffnet hat – sonst schlösse genau dieser Klick sie gleich wieder.
+    const close = (e) => { if (!(e.target instanceof Element && e.target.closest('.fw-bar'))) setSwitcher(false); };
+    const key = (e) => { if (e.key === 'Escape') setSwitcher(false); };
+    const timer = setTimeout(() => { window.addEventListener('click', close); window.addEventListener('keydown', key); }, 0);
+    return () => { clearTimeout(timer); window.removeEventListener('click', close); window.removeEventListener('keydown', key); };
   }, [switcher]);
 
   // Alle Konten aller Launcher im gleichen Format
