@@ -194,6 +194,20 @@ fn mark_sale(items: &mut [Value]) {
 }
 
 async fn steam(o: &Opts) -> anyhow::Result<List> {
+    steam_with(o, None).await
+}
+
+/// EA-Spiele: CheapShark führt EA nicht mehr – darum EA-Titel aus dem Steam-Store (Herausgeber Electronic Arts)
+async fn ea_from_steam(o: &Opts) -> anyhow::Result<List> {
+    let mut l = steam_with(o, Some("Electronic Arts")).await?;
+    for it in &mut l.items {
+        it["store"]["launcher"] = json!("ea");
+        it["store"]["uri"] = Value::Null; // Klick öffnet die Steam-Seite im Browser
+    }
+    Ok(l)
+}
+
+async fn steam_with(o: &Opts, publisher: Option<&str>) -> anyhow::Result<List> {
     let mut p: Vec<(&str, String)> = vec![("term", o.q.clone()), ("start", (o.page * PAGE).to_string()), ("count", PAGE.to_string()), ("infinite", "1".into()), ("cc", "DE".into()), ("l", "german".into()), ("category1", "998".into())];
     match o.sort.as_str() {
         "price_asc" => p.push(("sort_by", "Price_ASC".into())),
@@ -204,6 +218,12 @@ async fn steam(o: &Opts) -> anyhow::Result<List> {
     }
     if o.deals {
         p.push(("specials", "1".into()));
+    }
+    if let Some(pb) = publisher {
+        p.push(("publisher", pb.into()));
+        if o.q.is_empty() && o.sort.is_empty() {
+            p.retain(|(k, _)| *k != "filter"); // Bestseller-Filter + Herausgeber liefert bei Steam fast nichts
+        }
     }
     let j = get_json(&format!("https://store.steampowered.com/search/results/?{}", crate::net::form(&p)), None).await?;
     let html = j["results_html"].as_str().unwrap_or("");
@@ -662,7 +682,7 @@ pub async fn query(opts: &Value) -> Value {
     }
     let o = Opts { q: q.clone(), page, deals, sort: sort.clone() };
     let names: Vec<&str> = match st.as_deref() {
-        None if deals => vec!["steam", "epic", "gog", "ea", "ubisoft", "battlenet"],
+        None if deals => vec!["steam", "epic", "gog", "ubisoft", "battlenet"],
         None => vec!["steam", "epic", "gog", "cheapshark"],
         Some(s @ ("steam" | "epic" | "gog")) => vec![s],
         Some(s @ ("ea" | "ubisoft" | "battlenet")) => vec![s],
@@ -676,6 +696,7 @@ pub async fn query(opts: &Value) -> Value {
                 "epic" => epic(o).await,
                 "gog" => gog(o).await,
                 "cheapshark" => cheapshark(o).await,
+                "ea" => ea_from_steam(o).await,
                 l => cheapshark_store(l, o).await,
             }
         }
