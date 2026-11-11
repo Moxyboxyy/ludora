@@ -63,7 +63,71 @@ Var LudoraOldDir
   SetOutPath $INSTDIR
 !macroend
 
+; Reste der Electron-Version aufräumen, falls ihr eigener Deinstaller nicht lief (gleicher Ordner)
+!macro LUDORA_DROP_ELECTRON_KEYS ROOT
+  StrCpy $R0 0
+  ${Do}
+    EnumRegKey $R1 ${ROOT} "Software\Microsoft\Windows\CurrentVersion\Uninstall" $R0
+    ${If} $R1 == ""
+      ${Break}
+    ${EndIf}
+    ; Eintrag der Electron-Version: gleicher Ordner wie die neue App, aber nicht deren eigener Schlüssel
+    ReadRegStr $R2 ${ROOT} "Software\Microsoft\Windows\CurrentVersion\Uninstall\$R1" "InstallLocation"
+    ReadRegStr $R3 ${ROOT} "Software\Microsoft\Windows\CurrentVersion\Uninstall\$R1" "DisplayName"
+    StrCpy $R3 $R3 6
+    ${If} $R1 != "${PRODUCTNAME}"
+    ${AndIf} $R3 == "Ludora"
+    ${AndIf} $R2 != ""
+    ${AndIf} ${FileExists} "$R2\Ludora.exe"
+    ${AndIfNot} ${FileExists} "$R2\Uninstall Ludora.exe"
+      DeleteRegKey ${ROOT} "Software\Microsoft\Windows\CurrentVersion\Uninstall\$R1"
+    ${Else}
+      IntOp $R0 $R0 + 1
+    ${EndIf}
+  ${Loop}
+!macroend
+
 !macro NSIS_HOOK_POSTINSTALL
+  ${If} ${FileExists} "$INSTDIR\LICENSE.electron.txt"
+    DetailPrint "Reste der alten Electron-Version werden entfernt"
+    Delete "$INSTDIR\LICENSE.electron.txt"
+    Delete "$INSTDIR\LICENSES.chromium.html"
+    Delete "$INSTDIR\Uninstall Ludora.exe"
+    Delete "$INSTDIR\uninstallerIcon.ico"
+    Delete "$INSTDIR\chrome_100_percent.pak"
+    Delete "$INSTDIR\chrome_200_percent.pak"
+    Delete "$INSTDIR\resources.pak"
+    Delete "$INSTDIR\icudtl.dat"
+    Delete "$INSTDIR\snapshot_blob.bin"
+    Delete "$INSTDIR\v8_context_snapshot.bin"
+    Delete "$INSTDIR\d3dcompiler_47.dll"
+    Delete "$INSTDIR\dxcompiler.dll"
+    Delete "$INSTDIR\dxil.dll"
+    Delete "$INSTDIR\electron_wer.dll"
+    Delete "$INSTDIR\ffmpeg.dll"
+    Delete "$INSTDIR\libEGL.dll"
+    Delete "$INSTDIR\libGLESv2.dll"
+    Delete "$INSTDIR\vk_swiftshader.dll"
+    Delete "$INSTDIR\vk_swiftshader_icd.json"
+    Delete "$INSTDIR\vulkan-1.dll"
+    RMDir /r "$INSTDIR\locales"
+    RMDir /r "$INSTDIR\resources"
+    ; alter Eintrag unter „Apps & Features“ (Electron-Deinstaller), beide Registry-Ansichten
+    Push $R0
+    Push $R1
+    Push $R2
+    Push $R3
+    !insertmacro LUDORA_DROP_ELECTRON_KEYS HKLM
+    !insertmacro LUDORA_DROP_ELECTRON_KEYS HKCU
+    SetRegView 32
+    !insertmacro LUDORA_DROP_ELECTRON_KEYS HKLM
+    !insertmacro LUDORA_DROP_ELECTRON_KEYS HKCU
+    SetRegView 64
+    Pop $R3
+    Pop $R2
+    Pop $R1
+    Pop $R0
+  ${EndIf}
   ; War Autostart in der alten Version an: für die neue App eintragen (gleicher Name wie die App selbst)
   ${If} $LudoraAutostart != ""
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Ludora" '"$INSTDIR\Ludora.exe" --hidden'
