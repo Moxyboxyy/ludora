@@ -349,7 +349,11 @@ pub async fn repair(g: &Value) -> Option<Value> {
                 wides.push(u);
             }
         }
-        if let Some(good) = to_images(&json!({ "covers": covers, "wides": wides })) {
+        if let Some(mut good) = to_images(&json!({ "covers": covers, "wides": wides })) {
+            // Kein Hochformat zu finden: lieber das Querformat (zugeschnitten) als nur Initialen
+            if good.0.is_empty() {
+                good.0 = good.1.clone();
+            }
             let mut c = CACHE.lock();
             let mut e = imgs_json(&good);
             e["repaired"] = json!(true);
@@ -439,15 +443,18 @@ pub async fn check_all(games: Vec<Value>, on_update: Arc<dyn Fn(String, Value) +
                 let Some(mut g) = q.lock().pop() else { break };
                 let id = g["id"].as_str().unwrap_or("").to_string();
                 let urls: Vec<String> = strs(&g["covers"]).into_iter().chain(strs(&g["wides"])).collect();
-                let key = urls.join("|");
+                // v2: das Hochformat-Cover muss selbst laden – ein funktionierendes Querformat reicht nicht
+                // (sonst bleiben z. B. Steam-Spiele ohne alte CDN-Grafik beim Platzhalter)
+                let key = format!("v2|{}", urls.join("|"));
                 if let Some(prev) = st.get(&id) {
                     if prev["key"] == key.as_str() && t - prev["at"].as_i64().unwrap_or(0) < TTL {
                         res.lock().insert(id, (prev["result"].as_str().unwrap_or("ok").to_string(), key));
                         continue;
                     }
                 }
+                let tall = strs(&g["covers"]);
                 let mut ok = false;
-                for u in &urls {
+                for u in if tall.is_empty() { &urls } else { &tall } {
                     if cover_url_ok(u).await {
                         ok = true;
                         break;
@@ -466,7 +473,7 @@ pub async fn check_all(games: Vec<Value>, on_update: Arc<dyn Fn(String, Value) +
                     "none"
                 };
                 let k2: Vec<String> = strs(&g["covers"]).into_iter().chain(strs(&g["wides"])).collect();
-                res.lock().insert(id, (r.to_string(), k2.join("|")));
+                res.lock().insert(id, (r.to_string(), format!("v2|{}", k2.join("|"))));
             }
         }));
     }

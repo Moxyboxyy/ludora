@@ -248,6 +248,12 @@ async fn ensure_access() -> anyhow::Result<String> {
     Ok(access)
 }
 
+/// Cookie-Kopf für steamcommunity.com (für den Web-Chat-Token)
+pub async fn community_cookie() -> anyhow::Result<String> {
+    ensure_access().await?;
+    S.lock().cookie_header.as_ref().map(|c| c.0.clone()).ok_or_else(|| anyhow::anyhow!(t("Nicht mit Steam verbunden")))
+}
+
 /// JSON lesen, große Ganzzahlen (64-Bit-IDs) als Text behalten
 pub fn parse_json_big(text: &str) -> Value {
     let re = regex::Regex::new(r"([:\[,]\s*)(-?\d{16,})(\s*[,\]}])").unwrap();
@@ -436,6 +442,7 @@ async fn connect_inner(token: String, first_access: Option<String>) {
 }
 
 pub fn logout() {
+    tauri::async_runtime::spawn(crate::steamcm::stop());
     {
         let mut s = S.lock();
         s.gen += 1;
@@ -762,22 +769,17 @@ pub async fn send(steamid: &str, text: &str) -> anyhow::Result<Value> {
     if msg.trim().is_empty() {
         return Ok(Value::Null);
     }
-    let r = call(
-        "IFriendMessagesService",
-        "SendMessage",
-        &[("steamid", steamid.to_string()), ("chat_entry_type", "1".into()), ("message", msg.clone()), ("contains_bbcode", "false".into()), ("echo_to_sender", "false".into())],
-        true,
-        20_000,
-    )
-    .await
-    .map_err(|e| anyhow::anyhow!(t_args("Senden fehlgeschlagen ({0}). Notfalls den Chat in Steam öffnen (Symbol oben rechts).", &[&e.to_string()])))?;
-    let ts = r["server_timestamp"].as_i64().map(|x| x * 1000).unwrap_or_else(now_ms);
+    // Senden geht nur über die CM-Verbindung (die Web-API kennt SendMessage nicht -> 404)
+    let (server_ts, ordinal) = crate::steamcm::send_message(steamid, &msg)
+        .await
+        .map_err(|e| anyhow::anyhow!(t_args("Senden fehlgeschlagen ({0}). Notfalls den Chat in Steam öffnen (Symbol oben rechts).", &[&e.to_string()])))?;
+    let ts = if server_ts > 0 { server_ts * 1000 } else { now_ms() };
     {
         let mut s = S.lock();
         let k = s.last_msg.get(steamid).copied().unwrap_or(0);
         s.last_msg.insert(steamid.to_string(), k.max(ts / 1000));
     }
-    let ev = json!({ "type": "message", "steamid": steamid, "fromMe": true, "text": msg, "ts": ts, "ordinal": r["ordinal"].as_i64().unwrap_or(0) });
+    let ev = json!({ "type": "message", "steamid": steamid, "fromMe": true, "text": msg, "ts": ts, "ordinal": ordinal });
     emit_chat(ev.clone());
     Ok(ev)
 }
@@ -788,7 +790,7 @@ pub fn typing(steamid: &str) {
     }
     let id = steamid.to_string();
     tauri::async_runtime::spawn(async move {
-        let _ = call("IFriendMessagesService", "SendMessage", &[("steamid", id), ("chat_entry_type", "2".into()), ("message", String::new())], true, 10_000).await;
+        crate::steamcm::typing(&id).await;
     });
 }
 
@@ -796,7 +798,9 @@ pub fn mark_read(steamid: &str) {
     if is_connected() {
         let id = steamid.to_string();
         tauri::async_runtime::spawn(async move {
-            let _ = call("IFriendMessagesService", "AckMessage", &[("steamid_partner", id), ("timestamp", (now_ms() / 1000).to_string())], true, 10_000).await;
+            let ts = (now_ms() / 1000) as u64;
+            crate::steamcm::ack(&id, ts).await;
+            let _ = call("IFriendMessagesService", "AckMessage", &[("steamid_partner", id), ("timestamp", ts.to_string())], true, 10_000).await;
         });
     }
     S.lock().unread.remove(steamid);

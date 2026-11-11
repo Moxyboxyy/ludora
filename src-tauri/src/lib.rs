@@ -29,6 +29,7 @@ pub mod settings;
 pub mod shop;
 pub mod sqlite;
 pub mod steam;
+pub mod steamcm;
 pub mod streams;
 pub mod tray;
 pub mod uninstall;
