@@ -5,13 +5,13 @@ import GameCard from './components/GameCard.jsx';
 import GameRow from './components/GameRow.jsx';
 import AddGameDialog from './components/AddGameDialog.jsx';
 import DownloadsPanel from './components/DownloadsPanel.jsx';
-import FriendsPanel from './components/FriendsPanel.jsx';
 import SettingsDialog from './components/SettingsDialog.jsx';
 import ShopView from './components/ShopView.jsx';
 import TitleBar from './components/TitleBar.jsx';
 import { OpenIcon, StoreIcon, UsersIcon, LauncherLogo } from './components/bits.jsx';
 import { reloadApp } from './reload.js';
 import { useExit } from './useExit.js';
+import { useFriendsUnread } from './useFriendsUnread.js';
 
 // Listen im Freunde-Knopf (von oben nach unten)
 const FRIEND_LISTS = [['all', t("Alle Freunde")], ['hub', 'Ludora'], ['steam', 'Steam'], ['riot', 'Riot'], ['epic', 'Epic'], ['gog', 'GOG']];
@@ -52,8 +52,8 @@ export default function App() {
   const [streams, setStreams] = useState({}); // "steam:<appid>" -> ["DESKTOP-PC"]
   const [toast, setToast] = useState(null);
   const [launching, setLaunching] = useState(null);
-  const [dialog, setDialog] = useState(null); // 'add' | 'settings' | 'downloads' | 'friends' | null
-  const [unread, setUnread] = useState({ total: 0 });
+  const [dialog, setDialog] = useState(null); // 'add' | 'settings' | 'downloads' | null (Freunde: eigenes Fenster)
+  const unread = useFriendsUnread();
   const [friendsDial, setFriendsDial] = useState(false); // Freunde-Knopf: runde Launcher-Knöpfe nach oben
   const [dialShown, dialClosing] = useExit(friendsDial, 300);
 
@@ -526,17 +526,6 @@ export default function App() {
             }}
           />
         )}
-        {/* Freundesliste läuft hier unsichtbar mit – nur für die Zahl ungelesener Nachrichten am Freunde-Knopf.
-            Angezeigt wird sie im eigenen Freundefenster. */}
-        <FriendsPanel
-          open={false}
-          onClose={() => {}}
-          games={data.games}
-          onLaunchGame={play}
-          notify={notify}
-          onUnread={setUnread}
-          providerById={providerById}
-        />
 
         {/* Freunde: schwebender Knopf unten rechts – Zahl = ungelesene Nachrichten. Klick klappt runde Launcher-Knöpfe
             nach oben auf (bleiben offen, nochmal klicken schließt); jeder öffnet die passende Liste im Freundefenster. */}

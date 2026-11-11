@@ -77,7 +77,8 @@ function Freshness({ at, label }) {
   return <span className={`muted small freshness ${sec !== null && sec > 90 ? 'stale' : ''}`}>{label}{age ? ` · ${t("aktualisiert {0}", [age])}` : ''}</span>;
 }
 
-export default function FriendsPanel({ open, onClose, games, onLaunchGame, notify, onOnlineCount = () => {}, onUnread = () => {}, providerById = {}, hubRequest = 0, windowMode = false, initialTab = null }) {
+/** Freundesliste im eigenen Freundefenster (#friends=<liste>, siehe FriendsWindow.jsx) */
+export default function FriendsPanel({ games, onLaunchGame, notify, providerById = {}, hubRequest = 0, initialTab = null }) {
   const [steam, setSteam] = useState({ status: 'disconnected', friends: [] });
   const [others, setOthers] = useState({});
   const [people, setPeople] = useState([]);
@@ -85,7 +86,7 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
   const [switcher, setSwitcher] = useState(false); // Freundefenster: Auswahl der Liste (Klick auf die Leiste)
   const [switcherShown, switcherClosing] = useExit(switcher, 300);
   // Freundefenster: Hauptfenster hat eine andere Liste gewählt
-  useEffect(() => (windowMode && api.friendsWindow?.onTab ? api.friendsWindow.onTab((id) => { setTab(id); setSwitcher(false); }) : undefined), [windowMode]);
+  useEffect(() => api.friendsWindow?.onTab?.((id) => { setTab(id); setSwitcher(false); }), []);
   const [query, setQuery] = useState('');
   const [menu, setMenu] = useState(null);      // { a, person, x, y }
   const [assign, setAssign] = useState(null);  // Konto, das einer Person zugeordnet wird
@@ -108,7 +109,11 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
     return () => { offSteam(); offOthers(); offHub(); };
   }, []);
 
-  useEffect(() => { const on = open || windowMode; api.friends.fast(on); api.friends2.fast(on); }, [open, windowMode]);
+  // Solange das Freundefenster offen ist, öfter aktualisieren
+  useEffect(() => {
+    api.friends.fast(true); api.friends2.fast(true);
+    return () => { api.friends.fast(false); api.friends2.fast(false); };
+  }, []);
   useEffect(() => savePref('friendsTab', tab), [tab]);
   useEffect(() => {
     if (!switcher) return undefined;
@@ -174,16 +179,12 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
     return m;
   }, [hubFriends]);
 
-  const onlineCount = accounts.filter((a) => a.state !== 'offline').length;
-  useEffect(() => { onOnlineCount(onlineCount); }, [onlineCount, onOnlineCount]);
   // Ungelesene Nachrichten je Launcher (für den Freunde-Knopf unten rechts)
   const unreadBy = useMemo(() => {
     const m = { total: 0 };
     for (const a of accounts) if (a.unread > 0) { m[a.launcher] = (m[a.launcher] || 0) + a.unread; m.total += a.unread; }
     return m;
   }, [accounts]);
-  const unreadKey = JSON.stringify(unreadBy);
-  useEffect(() => { onUnread(unreadBy); }, [unreadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Steam-Spiele aus der eigenen Bibliothek (für "Spiel starten")
   const ownedSteam = useMemo(() => {
@@ -215,7 +216,6 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
     return () => { window.removeEventListener('click', close); window.removeEventListener('blur', close); };
   }, [menu]);
 
-  if (!open && !windowMode) return null;
 
   // ---------- Personen speichern ----------
   async function savePeople(list) {
@@ -492,7 +492,6 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
   }
 
   const connectedOf = (id) => (id === 'steam' ? steam.status === 'connected' : others[id]?.status === 'connected');
-  const onlineOf = (id) => accounts.filter((a) => a.launcher === id && a.state !== 'offline').length;
   const incoming = hub.status === 'signedIn' ? (hub.friends || []).filter((f) => f.relation === 'incoming') : [];
   const outgoing = hub.status === 'signedIn' ? (hub.friends || []).filter((f) => f.relation === 'outgoing') : [];
   const showList = tab === 'all' ? accounts.length > 0 || people.length > 0 || hubFriends.length > 0
@@ -507,12 +506,8 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
   const current = lists.find((l) => l[0] === tab) || lists[0];
   const pickList = (id) => { setTab(id); setSwitcher(false); };
 
-  const body = (
-      <aside className={windowMode ? 'friends-window friends' : 'drawer friends'} ref={panelRef}
-        // Nur im Hauptfenster: Klicks im Seitenfenster schließen es nicht. Im Freundefenster würde das Anhalten
-        // des Ereignisses Tauris Fenster-Ziehen (Listener am Dokument) blockieren.
-        onMouseDown={windowMode ? undefined : (e) => e.stopPropagation()}>
-        {windowMode ? (
+  return (
+      <aside className="friends-window friends" ref={panelRef}>
           // Eigene Fensterleiste wie im Hauptfenster: ziehbar, Fensterknöpfe rechts (Windows/Linux) bzw. Ampel links (Mac)
           <header className={`fw-bar ${FW_PLATFORM} ${FW_OWN_CONTROLS ? 'own-controls' : ''}`} data-tauri-drag-region>
             <button className="fw-current" onClick={() => setSwitcher((v) => !v)} aria-expanded={switcher} aria-label={current[0] === 'all' ? t("Alle Freunde") : current[1]}
@@ -539,35 +534,6 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
               </div>
             )}
           </header>
-        ) : (
-        <header className="drawer-head">
-          <h2><UsersIcon /> {t("Freunde")}</h2>
-          <div className="head-actions">
-            <button className={`hub-btn ${hub.status === 'signedIn' ? 'on' : ''}`} onClick={() => setHubOpen(true)}
-              title={t("Dein Ludora-Konto: Freunde mit Ludora erkennen deine Konten automatisch")}>
-              {hub.status === 'signedIn' ? (hub.user?.display_name || t("Ludora-Konto")) : t("Ludora-Konto")}
-            </button>
-            <button className="ghost" onClick={onClose} title={t("Schließen")}>✕</button>
-          </div>
-        </header>
-        )}
-
-        {!windowMode && <div className="friends-tabs" role="tablist">
-          <button role="tab" aria-selected={tab === 'all'} className={tab === 'all' ? 'on' : ''} onClick={() => setTab('all')}>{t("Alle")} {onlineCount > 0 && <span className="tab-count">{onlineCount}</span>}
-          </button>
-          <button role="tab" aria-selected={tab === 'hub'} aria-label={t("Ludora-Freunde")} className={`icon-tab ${tab === 'hub' ? 'on' : ''}`} onClick={() => setTab('hub')} title={t("Ludora-Freunde")}>
-            <LauncherLogo provider={{ id: 'manual' }} />
-            {incoming.length > 0 ? <span className="tab-count req">{incoming.length}</span>
-              : hubFriends.filter((f) => f.online).length > 0 && <span className="tab-count">{hubFriends.filter((f) => f.online).length}</span>}
-          </button>
-          {LAUNCHERS.map(([id, name]) => (
-            <button key={id} role="tab" aria-selected={tab === id} aria-label={name} className={`icon-tab ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}
-              title={connectedOf(id) ? name : t("{0} – nicht verbunden", [name])}>
-              {providerById[id]?.logo ? <LauncherLogo provider={providerById[id]} dim={!connectedOf(id)} /> : <span className={connectedOf(id) ? '' : 'tab-off'}>{name}</span>}
-              {connectedOf(id) && onlineOf(id) > 0 && <span className="tab-count">{onlineOf(id)}</span>}
-            </button>
-          ))}
-        </div>}
 
         {tab !== 'all' && tab !== 'hub' && <LauncherState id={tab} />}
         {tab === 'hub' && (hub.status !== 'signedIn' ? (
@@ -698,8 +664,6 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
         )}
       </aside>
   );
-  if (windowMode) return body;
-  return <div className="drawer-backdrop" onMouseDown={onClose}>{body}</div>;
 }
 
 /** Steam: Anmeldung per QR-Code (wie bisher) */

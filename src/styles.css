@@ -52,12 +52,9 @@ svg.fill { fill: currentColor; stroke: none; }
 .nav-item .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .badge { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .warn { color: var(--warn); font-weight: 700; }
-.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .launcher-logo { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
 .launcher-logo.small { width: 14px; height: 14px; }
 .launcher-logo.dim { opacity: .4; filter: grayscale(1); }
-.dot.small { width: 7px; height: 7px; }
-.dot.all { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
 .nav-row { position: relative; display: flex; align-items: center; }
 .nav-row .nav-item { padding-right: 34px; }
 .nav-open {
@@ -77,7 +74,7 @@ svg.fill { fill: currentColor; stroke: none; }
 .launcher-list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .launcher-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-top: 1px solid var(--line); min-height: 48px; }
 .launcher-row:first-child { border-top: 0; }
-.launcher-row.off .account-info, .launcher-row.off .dot { opacity: .4; }
+.launcher-row.off .account-info, .launcher-row.off .launcher-logo, .launcher-row.off .launcher-badge { opacity: .4; }
 .switch { position: relative; width: 34px; height: 20px; flex-shrink: 0; margin: 0 !important; cursor: pointer; }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 .switch span { position: absolute; inset: 0; background: #2a3142; border-radius: 99px; transition: background .15s; }
@@ -118,7 +115,6 @@ svg.fill { fill: currentColor; stroke: none; }
 .segmented button.on { background: #2a3142; color: var(--text); }
 .icon-btn { padding: 9px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); display: flex; }
 .icon-btn:hover:not(:disabled) { border-color: var(--accent); }
-.spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .banner { margin: 14px 28px 0; padding: 10px 14px; border-radius: 10px; background: #1d2333; color: var(--muted); font-size: 13px; }
@@ -176,7 +172,6 @@ svg.fill { fill: currentColor; stroke: none; }
 .advanced { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
 .advanced summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 .advanced[open] summary { margin-bottom: 4px; }
-.steps { margin: 0 0 4px; padding-left: 20px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .link { color: var(--accent); padding: 0; text-decoration: underline; text-underline-offset: 2px; }
 code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 .cover-fallback {
@@ -210,7 +205,6 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 .meta { padding: 0 2px; }
 .meta .name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .meta .source { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 3px; }
-.meta .dot { width: 7px; height: 7px; }
 
 .pill { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px; white-space: nowrap; }
 .pill.floating { position: absolute; top: 8px; left: 8px; }
@@ -304,7 +298,6 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 @keyframes slide { from { transform: translateX(30px); opacity: 0; } }
 .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); }
 .drawer-head h2 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; }
-.drawer-head .sub { font-size: 12px; font-weight: 500; color: var(--muted); padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; }
 .drawer-empty { padding: 30px 22px; color: var(--muted); font-size: 14px; text-align: center; }
 .drawer-foot { padding: 12px 20px; margin-top: auto; border-top: 1px solid var(--line); }
 .dl-group { padding: 12px 20px 4px; overflow-y: auto; }
@@ -456,24 +449,13 @@ svg.star.filled { fill: currentColor; }
 .sidebar.collapsed .nav-icon { width: 22px; height: 22px; }
 .sidebar.collapsed .nav-icon .launcher-logo { width: 22px; height: 22px; }
 .sidebar.collapsed .nav-icon svg.star { width: 19px; height: 19px; }
-.sidebar.collapsed .nav-icon .dot.all { width: 12px; height: 12px; }
 .sidebar.collapsed .nav-item.active { box-shadow: inset 3px 0 0 var(--accent); }
 .sidebar.collapsed .tool-badge { position: absolute; top: 2px; right: 6px; padding: 1px 5px; font-size: 10px; }
 .sidebar.collapsed .sidebar-actions { flex-direction: column; align-items: center; gap: 6px; }
 .sidebar.collapsed .add-btn { width: 40px; height: 36px; padding: 0; justify-content: center; flex: none; }
 
 /* ---------- Freunde: Reiter, Personen, Zuordnen ---------- */
-.friends-tabs { display: flex; gap: 4px; padding: 10px 14px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
-.friends-tabs button { display: flex; align-items: center; gap: 6px; padding: 8px 10px; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
-.friends-tabs button:hover { color: var(--text); }
-.friends-tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
-.tab-count { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; background: rgba(107,227,161,.16); color: var(--ok); }
-.tab-off { color: var(--muted); opacity: .6; }
 /* Reiter nur mit Logo (Name als Tooltip) */
-.friends-tabs button.icon-tab { padding: 6px 10px; gap: 4px; }
-.friends-tabs button.icon-tab .launcher-logo { width: 20px; height: 20px; opacity: .7; transition: opacity .15s ease; }
-.friends-tabs button.icon-tab:hover .launcher-logo, .friends-tabs button.icon-tab.on .launcher-logo { opacity: 1; }
-.friends-tabs button.icon-tab .launcher-logo.dim { opacity: .35; }
 .suggestions { margin: 6px 20px 4px; display: flex; flex-direction: column; gap: 6px; }
 .suggestion { display: flex; align-items: center; gap: 10px; justify-content: space-between; font-size: 12px; color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 .suggestion b { color: var(--text); font-weight: 600; }
@@ -489,7 +471,6 @@ svg.star.filled { fill: currentColor; }
 .friend.nested { padding: 5px 8px; }
 .acc-logo { display: inline-flex; width: 24px; justify-content: center; }
 .acc-logo.small { width: auto; opacity: .8; }
-.acc-launcher { font-size: 11px; font-weight: 600; color: var(--muted); margin-right: 6px; text-transform: uppercase; letter-spacing: .04em; }
 .friends-login .small, .muted.small { font-size: 12px; color: var(--muted); }
 .assign-backdrop { position: absolute; inset: 0; background: rgba(5,6,10,.55); display: grid; place-items: center; z-index: 5; }
 .assign { width: min(380px, calc(100% - 32px)); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
@@ -499,7 +480,6 @@ svg.star.filled { fill: currentColor; }
 .assign-item:hover { background: #2a3142; }
 .assign-new { display: flex; gap: 8px; }
 .assign-new input { flex: 1; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; outline: none; }
-.drawer.friends { position: relative; }
 
 /* ---------- Ludora-Konto ---------- */
 .head-actions { display: flex; align-items: center; gap: 8px; }
@@ -525,7 +505,6 @@ svg.star.filled { fill: currentColor; }
 .hub-actions { display: flex; justify-content: space-between; align-items: center; }
 
 /* ---------- Ludora-Freunde ---------- */
-.tab-count.req { background: var(--accent); color: #0d1020; }
 .hub-requests { padding: 12px 20px 4px; display: flex; flex-direction: column; gap: 10px; }
 .hub-add { display: flex; gap: 8px; }
 .hub-add input { flex: 1; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; outline: none; }
@@ -640,8 +619,6 @@ svg.star.filled { fill: currentColor; }
 .tb-nav button:hover { color: var(--text); background: rgba(255,255,255,.04); }
 .tb-nav button.on { color: var(--text); }
 .tb-nav button.on::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -6px; height: 2px; border-radius: 2px; background: var(--accent); }
-.tb-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; background: var(--panel-2); color: var(--text); letter-spacing: 0; }
-.tb-badge.online { background: rgba(107,227,161,.18); color: var(--ok); }
 .tb-drag { flex: 1; align-self: stretch; }
 /* Einstellungen: Zahnrad links neben dem Ludora-Namen (zusätzlich zum Eintrag im Ludora-Menü) */
 .tb-settings { width: 30px; height: 30px; margin-right: 4px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); }

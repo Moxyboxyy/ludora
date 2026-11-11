@@ -29,7 +29,7 @@ export default function FriendsWindow({ tab, openHub = false }) {
 
   return (
     <div className="friends-window-root">
-      <FriendsPanel windowMode initialTab={tab} open games={lib.games} onLaunchGame={launch} notify={notify} providerById={providerById} hubRequest={hubRequest} onClose={() => window.close()} />
+      <FriendsPanel initialTab={tab} games={lib.games} onLaunchGame={launch} notify={notify} providerById={providerById} hubRequest={hubRequest} />
       {toast && <div key={toast.key} className={`toast ${toast.kind}`}>{toast.text}</div>}
     </div>
   );
