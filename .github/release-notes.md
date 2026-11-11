@@ -1,25 +1,31 @@
-**Ludora - the Client for all Game Clients** · Release 0.7.10
+**Ludora - the Client for all Game Clients** · Release 0.8.0
 
-### What's new
-- **Ludora restarts reliably after its own updates:** the new version used to start while the old one was still closing – it then saw "Ludora is already running" and quit again. Now a small helper waits until the old Ludora has really exited, installs the update and only then starts Ludora again (on Windows, macOS and Linux). Takes effect from the next update after this one.
-- **Steam game updates, next round:** requests to Steam now time out after 20–30 seconds instead of hanging forever (you get a message with the reason), Steam's 64-bit device IDs are read without rounding, and Ludora recognises this PC even when Steam doesn't report its name.
-- Every step of a Steam update is now written to the log file (`%APPDATA%\Ludora\logs\main.log`), so remaining problems can be tracked down quickly.
-- Offline devices (e.g. a sleeping laptop) no longer flood the log from the Stream tab.
+### What's new: Ludora is now a Rust app
+Ludora has been rebuilt from Electron to **Rust (Tauri)**. Everything you know works the same – library, launching, updates, downloads, friends, chat, Ludora accounts and the shop – but the app is much lighter:
+- **Far less RAM and CPU:** no bundled Chromium anymore; Ludora uses the web view built into your system. Download size drops from ~130 MB to a fraction of that.
+- **Even lighter in the tray:** while the window is hidden, Ludora checks friends and accounts less often, and on Windows the web view switches to low-memory mode.
+- **Large libraries scroll smoothly:** cards outside the screen aren't drawn, and expensive blur effects are gone.
+- **Steam chat is live:** new messages (also ones you write on your phone) and "is typing …" arrive instantly; friends' status updates right away. Clicking a chat notification opens the chat (Windows).
+- **Shop:** Epic works again, and the EA tab now shows EA games (via the Steam store).
+- **Covers:** no more invisible covers after "Rescan library"; portrait covers missing on Steam's CDN are fetched from the Steam store.
+
+### Updating from 0.7.x
+Just click the update button as usual. On Windows the new version replaces the old one in the same folder (Windows asks once for admin rights), your settings, sign-ins and covers stay. If you had autostart on, it stays on.
 
 ### Downloads
 | System | File |
 |---|---|
-| Windows 10/11 | `Ludora-Setup-0.7.10.exe` |
-| macOS (Apple Silicon M1–M4) | `Ludora-0.7.10-arm64.dmg` (or `.zip`) |
-| macOS (Intel) | `Ludora-0.7.10-x64.dmg` (or `.zip`) |
-| Linux (any distribution) | `Ludora-0.7.10-x86_64.AppImage` |
-| Debian / Ubuntu | `Ludora-0.7.10-amd64.deb` |
+| Windows 10/11 | `Ludora-Setup-0.8.0.exe` |
+| macOS (Apple Silicon) | `Ludora-0.8.0-arm64.dmg` (or `.zip`) |
+| macOS (Intel) | `Ludora-0.8.0-x64.dmg` (or `.zip`) |
+| Linux (any distribution) | `Ludora-0.8.0-x86_64.AppImage` |
+| Debian / Ubuntu | `Ludora-0.8.0-amd64.deb` |
 
 The files are not code-signed: on Windows click **More info → Run anyway**, on macOS **right-click → Open** on the first start.
 [Installation](https://github.com/Moxyboxyy/ludora#installation) · [Anleitung auf Deutsch](https://github.com/Moxyboxyy/ludora/blob/main/README.de.md#installation)
 
 ---
 
-**Deutsch:** Ludora startet nach eigenen Updates jetzt zuverlässig neu: Ein Hilfsskript wartet, bis das alte Ludora wirklich beendet ist, installiert dann und startet Ludora erst danach (wirkt ab dem nächsten Update). Steam-Spiel-Updates, nächste Runde: Anfragen an Steam brechen nach 20–30 Sekunden mit einer Meldung ab, statt endlos zu hängen; Steams Geräte-IDs werden nicht mehr gerundet, und Ludora erkennt diesen PC auch ohne Gerätenamen. Jeder Schritt landet in der Protokolldatei (`%APPDATA%\Ludora\logs\main.log`).
+**Deutsch:** Ludora ist jetzt eine Rust-App (Tauri) statt Electron. Alles funktioniert wie gewohnt, braucht aber deutlich weniger Arbeitsspeicher und CPU; der Download ist viel kleiner. Im Tray fragt Ludora seltener nach, große Bibliotheken scrollen flüssiger. Steam-Chat kommt jetzt live an (auch „schreibt gerade …“), ein Klick auf die Benachrichtigung öffnet den Chat. Im Shop gehen Epic und EA wieder, und Cover verschwinden nach „Bibliothek neu einlesen“ nicht mehr. Update wie gewohnt über den Update-Knopf: Unter Windows ersetzt die neue Version die alte im selben Ordner (einmal Admin-Rechte bestätigen); Einstellungen, Anmeldungen und Autostart bleiben.
 
 Ludora is not affiliated with Valve, Epic Games, GOG, EA, Ubisoft, Blizzard, Riot Games, Rockstar Games or Amazon.
