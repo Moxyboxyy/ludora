@@ -112,12 +112,64 @@ pub fn on_chat_event(app: &AppHandle, ev: Value) {
         if !focused {
             let title = chat::chat_name(&id).unwrap_or_else(|| util::t("Neue Nachricht"));
             let body: String = ev["text"].as_str().unwrap_or("").chars().take(200).collect();
-            notify(app, &title, &body);
+            notify_with(app, &title, &body, Click::OpenChat(id));
         }
     }
 }
 
 pub fn notify(app: &AppHandle, title: &str, body: &str) {
+    notify_with(app, title, body, Click::ShowMain);
+}
+
+/// Was ein Klick auf die Benachrichtigung tut
+#[derive(Clone)]
+pub enum Click {
+    ShowMain,
+    OpenChat(String),
+    OpenUpdate,
+}
+
+#[cfg_attr(not(windows), allow(dead_code))]
+fn on_click(app: &AppHandle, c: Click) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        match c {
+            Click::ShowMain => show_main(&app),
+            Click::OpenChat(id) => {
+                chat::open(&app, &id);
+            }
+            Click::OpenUpdate => {
+                show_main(&app);
+                let _ = app.emit_to("main", "update:open", Value::Null);
+            }
+        }
+    });
+}
+
+/// Benachrichtigung; unter Windows führt ein Klick darauf zur passenden Stelle (Chat, Update)
+pub fn notify_with(app: &AppHandle, title: &str, body: &str, click: Click) {
+    #[cfg(windows)]
+    {
+        use tauri_winrt_notification::Toast;
+        // Eigene App-ID nur in der installierten App (sonst zeigt Windows nichts an)
+        let exe_dir = std::env::current_exe().ok().and_then(|e| e.parent().map(|p| p.to_string_lossy().to_lowercase())).unwrap_or_default();
+        let dev = exe_dir.ends_with("\\target\\debug") || exe_dir.ends_with("\\target\\release");
+        let id = if dev { Toast::POWERSHELL_APP_ID.to_string() } else { app.config().identifier.clone() };
+        let app2 = app.clone();
+        let res = Toast::new(&id)
+            .title(title)
+            .text1(body)
+            .on_activated(move |_| {
+                on_click(&app2, click.clone());
+                Ok(())
+            })
+            .show();
+        if res.is_ok() {
+            return;
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = click;
     use tauri_plugin_notification::NotificationExt;
     let _ = app.notification().builder().title(title).body(body).show();
 }

@@ -11,19 +11,16 @@
   "homepage": "https://github.com/Moxyboxyy/ludora",
   "license": "MIT",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
+    "dev": "tauri dev",
     "build": "vite build",
-    "start": "vite build && electron .",
-    "dist": "vite build && electron-builder --win",
-    "test": "node --test",
-    "dist:mac": "vite build && electron-builder --mac",
-    "dist:linux": "vite build && electron-builder --linux",
-    "dist:all": "vite build && electron-builder --win --linux",
+    "test": "node --test && cargo test --manifest-path src-tauri/Cargo.toml",
+    "dist": "tauri build",
     "dev:web": "vite",
     "tauri": "tauri",
-    "dev:rust": "tauri dev",
-    "dist:rust": "tauri build",
-    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml"
+    "test:js": "node --test",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "dev:electron": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
+    "dist:electron": "vite build && electron-builder --win"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.4",

@@ -183,7 +183,8 @@ Ludora verändert keine Spiel-Clients und verschafft keine Vorteile in Spielen.
 
 ## Für Entwickler
 
-Voraussetzung: [Node.js](https://nodejs.org) (LTS).
+Voraussetzungen: [Node.js](https://nodejs.org) (LTS) und [Rust](https://rustup.rs) (unter Windows mit den Visual Studio
+C++ Build Tools, unter Linux die [Tauri-Voraussetzungen](https://v2.tauri.app/start/prerequisites/)). Seit 0.8.0 ist Ludora eine Rust-App (Tauri).
 
 ```bash
 git clone https://github.com/Moxyboxyy/ludora.git
@@ -194,11 +195,9 @@ npm run dev
 
 | Befehl | Was passiert |
 |---|---|
-| `npm run dev` | Startet die App mit Live-Reload |
-| `npm start` | Baut die Oberfläche und startet die App ohne Dev-Server |
-| `npm test` | Führt die Tests aus |
-| `npm run dist` | Windows-Installer in `release/` |
-| `npm run dist:mac` | Mac-App (auf einem Mac) |
+| `npm run dev` | Startet die App mit Live-Reload (Datenordner `Ludora-dev`) |
+| `npm test` | Führt die Tests aus (JavaScript und Rust) |
+| `npm run dist` | Installer für das eigene System in `src-tauri/target/release/bundle/` |
 
 Projektaufbau, neue Launcher und neue Sprachen: siehe [englische README](README.md#for-developers).
 

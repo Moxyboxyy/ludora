@@ -18,6 +18,7 @@ use crate::util::t;
 const PROTO_MASK: u32 = 0x8000_0000;
 const PROTOCOL_VERSION: u64 = 65580;
 const EMSG_MULTI: u32 = 1;
+const EMSG_SERVICE_METHOD: u32 = 146;
 const EMSG_SERVICE_METHOD_RESPONSE: u32 = 147;
 const EMSG_SERVICE_METHOD_CALL: u32 = 151;
 const EMSG_CLIENT_HEARTBEAT: u32 = 703;
@@ -243,6 +244,12 @@ async fn connect() -> anyhow::Result<Arc<Session>> {
                             let _ = j.send((er, body));
                         }
                     }
+                    EMSG_SERVICE_METHOD => {
+                        let h = protobuf::decode(&hdr).unwrap_or_default();
+                        if protobuf::string(&h, 12).as_deref() == Some("FriendMessagesClient.IncomingMessage#1") {
+                            handle_incoming(&body);
+                        }
+                    }
                     EMSG_CLIENT_LOGGED_OFF => {
                         alive_r.store(false, Ordering::SeqCst);
                     }
@@ -257,6 +264,57 @@ async fn connect() -> anyhow::Result<Arc<Session>> {
     });
     crate::log::info("[chat] Steam-Chat verbunden");
     Ok(sess)
+}
+
+/// CFriendMessages_IncomingMessage_Notification
+fn handle_incoming(body: &[u8]) {
+    let Some(f) = protobuf::decode(body) else { return };
+    let fixed64 = |n: u64| f.iter().find(|x| x.field == n && x.wire == 1).and_then(|x| x.bytes.try_into().ok()).map(u64::from_le_bytes);
+    let fixed32 = |n: u64| f.iter().find(|x| x.field == n && x.wire == 5).and_then(|x| x.bytes.try_into().ok()).map(u32::from_le_bytes);
+    let Some(sid) = fixed64(1) else { return };
+    let entry = protobuf::int(&f, 2).unwrap_or(0);
+    let text = protobuf::string(&f, 8).filter(|t| !t.is_empty()).or_else(|| protobuf::string(&f, 4)).unwrap_or_default();
+    let ts = fixed32(5).map(|x| x as i64).or_else(|| protobuf::int(&f, 5).map(|x| x as i64)).unwrap_or(0);
+    let ordinal = protobuf::int(&f, 6).unwrap_or(0) as i64;
+    let echo = protobuf::int(&f, 7).unwrap_or(0) != 0;
+    crate::steam::on_cm_message(sid.to_string(), entry, text, ts, ordinal, echo);
+}
+
+static KEEP_GEN: AtomicU64 = AtomicU64::new(0);
+
+/// Verbindung halten, solange die Steam-Anmeldung (Generation `my`) gilt; bei Abbruch neu verbinden
+pub fn keep_alive(my: u64, current: fn() -> u64) {
+    KEEP_GEN.store(my, Ordering::SeqCst);
+    tauri::async_runtime::spawn(async move {
+        let mut wait = 5u64;
+        loop {
+            if current() != my || KEEP_GEN.load(Ordering::SeqCst) != my {
+                return;
+            }
+            let ok = match session().await {
+                Ok(s) => {
+                    wait = 5;
+                    // warten, bis die Verbindung abbricht
+                    while s.alive.load(Ordering::SeqCst) && current() == my {
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                    }
+                    true
+                }
+                Err(e) => {
+                    crate::log::warn(&format!("[chat] Steam-Chat-Verbindung: {e}"));
+                    false
+                }
+            };
+            if current() != my {
+                stop().await;
+                return;
+            }
+            tokio::time::sleep(Duration::from_secs(if ok { 3 } else { wait })).await;
+            if !ok {
+                wait = (wait * 2).min(300);
+            }
+        }
+    });
 }
 
 async fn session() -> anyhow::Result<Arc<Session>> {
@@ -304,7 +362,7 @@ async fn call(method: &str, body: Vec<u8>, reply: bool) -> anyhow::Result<Vec<u8
 pub async fn send_message(steamid: &str, text: &str) -> anyhow::Result<(i64, i64)> {
     let id: u64 = steamid.parse()?;
     let mut w = Writer::default();
-    w.fixed64(1, id).uint(2, 1).string(3, text).uint(4, 0).uint(5, 1);
+    w.fixed64(1, id).uint(2, 1).string(3, text).uint(4, 0).uint(5, 0); // kein Echo an diese Sitzung (sonst doppelt)
     let r = match call("FriendMessages.SendMessage#1", w.buf.clone(), true).await {
         Ok(r) => r,
         Err(_) => {
@@ -346,6 +404,16 @@ mod tests {
         let h = protobuf::decode(&h).unwrap();
         assert_eq!(protobuf::int(&h, 2), Some(5));
         assert_eq!(protobuf::string(&h, 12).as_deref(), Some("A.B#1"));
+    }
+    #[test]
+    fn incoming_message_decoded() {
+        let mut w = Writer::default();
+        w.fixed64(1, 76561198000000001).uint(2, 1).string(4, "[b]hi[/b]").string(8, "hi").uint(6, 3).uint(7, 0);
+        w.buf.extend_from_slice(&[(5 << 3) | 5]);
+        w.buf.extend_from_slice(&1700000000u32.to_le_bytes());
+        let f = protobuf::decode(&w.buf).unwrap();
+        assert_eq!(protobuf::string(&f, 8).as_deref(), Some("hi"));
+        assert_eq!(f.iter().find(|x| x.field == 5).unwrap().bytes, &1700000000u32.to_le_bytes());
     }
     #[test]
     fn multi_gzip() {

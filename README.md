@@ -178,7 +178,8 @@ Ludora does not modify game clients and gives no advantage in games.
 
 ## For developers
 
-Requirements: [Node.js](https://nodejs.org) (LTS).
+Requirements: [Node.js](https://nodejs.org) (LTS) and [Rust](https://rustup.rs) (on Windows with the Visual Studio C++ build tools,
+on Linux the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)). Ludora is a Rust app (Tauri) since 0.8.0.
 
 ```bash
 git clone https://github.com/Moxyboxyy/ludora.git
@@ -189,14 +190,19 @@ npm run dev
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Starts the app with live reload |
-| `npm start` | Builds the UI and starts the app without the dev server |
-| `npm test` | Runs the tests |
-| `npm run dist` | Windows installer in `release/` |
-| `npm run dist:mac` | Mac app (on a Mac) |
+| `npm run dev` | Starts the app with live reload (data folder `Ludora-dev`) |
+| `npm test` | Runs the tests (JavaScript and Rust) |
+| `npm run dist` | Installer for the current system in `src-tauri/target/release/bundle/` |
 
 ```
-electron/
+src-tauri/
+  src/lib.rs         app start, window, tray, notifications
+  src/ipc.rs         all channels of the UI (same names as before)
+  src/providers/     one module per launcher
+  src/friends/       Riot, Epic, GOG friends; steam.rs + steamcm.rs for Steam
+  tauri.conf.json    window and installer settings
+src/tauriBridge.js   builds window.gamehub for the UI
+electron/            old Electron version (until 0.7.x; i18n/en.json is still used)
   main.js            window, tray, launching games, IPC
   preload.js         safe bridge to the UI
   i18n/              translations (German source texts → en.json)
@@ -207,8 +213,8 @@ supabase/            database schema and verification function for Ludora accoun
 tests/               tests
 ```
 
-- **New launcher:** create `electron/providers/<name>.js` with `{ id, name, color, accent, detect() }` and add it to
-  `electron/providers/index.js`.
+- **New launcher:** create `src-tauri/src/providers/<name>.rs` implementing the `Provider` trait and add it to
+  `all()` in `src-tauri/src/providers/mod.rs`.
 - **New language:** create `electron/i18n/<code>.json` like `en.json` and register it in `src/i18n.js` and
   `electron/lib/i18n.js`.
 

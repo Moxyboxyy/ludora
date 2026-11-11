@@ -55,6 +55,7 @@ scrypt = { version = "0.11", default-features = false }
 tokio-tungstenite = { version = "0.24", default-features = false, features = ["connect", "rustls-tls-webpki-roots", "rustls-tls-native-roots"] }
 
 [target.'cfg(windows)'.dependencies]
+tauri-winrt-notification = "0.8"
 winreg = "0.52"
 windows-sys = { version = "0.59", features = ["Win32_Security_Cryptography", "Win32_Foundation", "Win32_System_Memory", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_UI_Shell", "Win32_Graphics_Gdi", "Win32_Storage_FileSystem"] }
 

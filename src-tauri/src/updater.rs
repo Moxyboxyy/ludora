@@ -48,7 +48,7 @@ fn set(patch: Value) {
             let mut a = ANNOUNCED.lock();
             if a.as_deref() != Some(latest) {
                 *a = Some(latest.to_string());
-                crate::notify(app, &t("Update verfügbar"), &t_args("Ludora {0} ist da – oben rechts klicken zum Aktualisieren.", &[latest]));
+                crate::notify_with(app, &t("Update verfügbar"), &t_args("Ludora {0} ist da – oben rechts klicken zum Aktualisieren.", &[latest]), crate::Click::OpenUpdate);
             }
         }
     }

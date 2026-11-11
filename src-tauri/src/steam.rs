@@ -411,6 +411,8 @@ async fn connect_inner(token: String, first_access: Option<String>) {
             S.lock().retries = 0;
             emit(json!({ "status": "connected", "error": null, "me": { "steamid": steamid } }));
             schedule_poll(my, 100);
+            // Live-Chat (Nachrichten sofort, "schreibt gerade …") über die CM-Verbindung
+            crate::steamcm::keep_alive(my, || S.lock().gen);
         }
         Err(e) => {
             if S.lock().gen != my {
@@ -694,6 +696,32 @@ async fn check_messages(my: u64) {
         }
     }
     if changed {
+        apply_unread();
+    }
+}
+
+/// Live vom Steam-Chat (CM): Nachricht (eigene von anderen Geräten = Echo) oder "schreibt gerade"
+pub fn on_cm_message(steamid: String, entry_type: u64, text: String, ts_secs: i64, ordinal: i64, echo: bool) {
+    if entry_type == 2 {
+        if !echo {
+            emit_chat(json!({ "type": "typing", "steamid": steamid }));
+        }
+        return;
+    }
+    if entry_type != 1 || text.is_empty() {
+        return;
+    }
+    let ts = if ts_secs > 0 { ts_secs * 1000 } else { now_ms() };
+    {
+        let mut s = S.lock();
+        let k = s.last_msg.get(&steamid).copied().unwrap_or(0);
+        s.last_msg.insert(steamid.clone(), k.max(ts / 1000));
+        if !echo {
+            *s.unread.entry(steamid.clone()).or_insert(0) += 1;
+        }
+    }
+    emit_chat(json!({ "type": "message", "steamid": steamid, "fromMe": echo, "text": text, "ts": ts, "ordinal": ordinal }));
+    if !echo {
         apply_unread();
     }
 }
