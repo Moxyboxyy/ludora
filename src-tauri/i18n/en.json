@@ -516,5 +516,12 @@
   "Anmeldung läuft bereits": "Sign-in is already in progress",
   "Fenster konnte nicht geöffnet werden": "Could not open the window",
   "Startsound": "Startup sound",
-  "Kurzer Klang zur Logo-Animation beim Öffnen von Ludora.": "Short sound with the logo animation when Ludora opens."
+  "Kurzer Klang zur Logo-Animation beim Öffnen von Ludora.": "Short sound with the logo animation when Ludora opens.",
+  "Alle Freunde": "All friends",
+  "Freunde – {0} ungelesene Nachrichten": "Friends – {0} unread messages",
+  "Neu laden": "Reload",
+  "Neu laden – Bibliothek frisch einlesen": "Reload – rescan the library",
+  "Freundesliste wählen": "Choose friends list",
+  "Rechtsklick: andere Freundesliste wählen": "Right-click: choose another friends list",
+  "Ludora – Freunde": "Ludora – Friends"
 }

@@ -5,6 +5,7 @@
   "windows": [
     "main",
     "splash",
+    "friends",
     "chat-*",
     "debug"
   ],

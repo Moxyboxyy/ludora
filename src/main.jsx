@@ -1,9 +1,15 @@
 import './styles.css';
 import { isTauri, installTauriBridge } from './tauriBridge.js';
+import { installReloadGuards, hideReloadSplash } from './reload.js';
+
+installReloadGuards();
 
 // Eigene Chatfenster laden dieselbe Seite mit #chat=<steamid>
 const chatRaw = window.location.hash.match(/^#chat=(.+)$/);
 const chat = chatRaw && /^(\d{17}|(riot|epic):[A-Za-z0-9-]{8,80})$/.test(decodeURIComponent(chatRaw[1])) ? [null, decodeURIComponent(chatRaw[1])] : null;
+// Eigenes Freundefenster: #friends=<liste>
+const friendsRaw = window.location.hash.match(/^#friends=(all|hub|steam|riot|epic|gog)$/);
+const friendsTab = friendsRaw ? friendsRaw[1] : null;
 
 async function start() {
   // Rust-Version: window.gamehub erst aufbauen – api.js und i18n.js lesen es beim Laden
@@ -16,13 +22,14 @@ async function start() {
     createRoot(document.getElementById('root')).render(React.createElement(DebugWindow));
     return;
   }
-  const [{ default: React }, { createRoot }, { default: App }, { default: ChatWindow }] = await Promise.all([
-    import('react'), import('react-dom/client'), import('./App.jsx'), import('./components/ChatWindow.jsx')
-  ]);
-  createRoot(document.getElementById('root')).render(
-    chat ? React.createElement(ChatWindow, { steamid: chat[1] }) : React.createElement(App)
-  );
+  const [{ default: React }, { createRoot }] = await Promise.all([import('react'), import('react-dom/client')]);
+  let view;
+  if (chat) view = React.createElement((await import('./components/ChatWindow.jsx')).default, { steamid: chat[1] });
+  else if (friendsTab) view = React.createElement((await import('./components/FriendsWindow.jsx')).default, { tab: friendsTab });
+  else view = React.createElement((await import('./App.jsx')).default);
+  createRoot(document.getElementById('root')).render(view);
   signalReady();
+  hideReloadSplash();
 }
 
 // Rust zeigt das Hauptfenster erst, wenn die Oberfläche steht und die Logo-Animation (eigenes Fenster) durch ist
@@ -41,6 +48,7 @@ function showError(err) {
   pre.textContent = 'Ludora konnte nicht starten:\n\n' + (err && (err.stack || err.message) || String(err));
   root.appendChild(pre);
   signalReady();
+  document.getElementById('reload-splash')?.remove();
 }
 window.addEventListener('error', (e) => showError(e.error || e.message));
 window.addEventListener('unhandledrejection', (e) => showError(e.reason));

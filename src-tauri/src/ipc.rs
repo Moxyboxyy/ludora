@@ -40,6 +40,7 @@ pub async fn dispatch(app: &AppHandle, channel: &str, args: Vec<Value>) -> Resul
     let a0 = s(&args, 0);
     Ok(match channel {
         // ---------- App ----------
+        "friends:window" => crate::chat::open_friends(app, &a0),
         "app:ready" => {
             crate::splash::ui_ready(app);
             json!(true)

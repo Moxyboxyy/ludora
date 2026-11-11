@@ -9,7 +9,11 @@ import FriendsPanel from './components/FriendsPanel.jsx';
 import SettingsDialog from './components/SettingsDialog.jsx';
 import ShopView from './components/ShopView.jsx';
 import TitleBar from './components/TitleBar.jsx';
-import { OpenIcon, StoreIcon, UsersIcon } from './components/bits.jsx';
+import { OpenIcon, StoreIcon, UsersIcon, LauncherLogo } from './components/bits.jsx';
+import { reloadApp } from './reload.js';
+
+// Listen im Freunde-Knopf (von oben nach unten)
+const FRIEND_LISTS = [['all', t("Alle Freunde")], ['hub', 'Ludora'], ['steam', 'Steam'], ['riot', 'Riot'], ['epic', 'Epic'], ['gog', 'GOG']];
 import { t } from './i18n.js';
 
 function loadPref(key, fallback) {
@@ -49,7 +53,8 @@ export default function App() {
   const [launching, setLaunching] = useState(null);
   const [dialog, setDialog] = useState(null); // 'add' | 'settings' | 'downloads' | 'friends' | null
   const [hubRequest, setHubRequest] = useState(0); // Konto-Knopf oben -> Ludora-Konto-Fenster öffnen
-  const [friendsOnline, setFriendsOnline] = useState(0);
+  const [unread, setUnread] = useState({ total: 0 });
+  const [friendsDial, setFriendsDial] = useState(false); // Freunde-Knopf: runde Launcher-Knöpfe nach oben
 
   const notify = useCallback((text, kind = 'info') => {
     setToast({ text, kind, key: Date.now() });
@@ -445,6 +450,9 @@ export default function App() {
               {t("Läuft auf {0}", [OS_NAME])}
               {osOnly && hiddenOs > 0 && <span className="os-hidden">−{hiddenOs}</span>}
             </button>
+            <button className="reload-btn" onClick={reloadApp} title={t("Neu laden – Bibliothek frisch einlesen")} aria-label={t("Neu laden")}>
+              <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66" /><path d="M20 4v5h-5" /></svg>
+            </button>
             <label className="sort">{t("Sortieren:")}<select value={sort} onChange={(e) => changeSort(e.target.value)}>
                 {SORT_OPTIONS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
               </select>
@@ -486,6 +494,7 @@ export default function App() {
         )}
         {dialog === 'settings' && (
           <SettingsDialog
+            providerById={providerById}
             onClose={() => setDialog(null)}
             onSaved={() => { setDialog(null); notify(t("Gespeichert – Bibliothek wird neu geladen …")); refresh(); }}
           />
@@ -520,17 +529,29 @@ export default function App() {
           games={data.games}
           onLaunchGame={play}
           notify={notify}
-          onOnlineCount={setFriendsOnline}
+          onUnread={setUnread}
           providerById={providerById}
           hubRequest={hubRequest}
         />
 
-        {/* Freunde: schwebender Knopf unten rechts */}
-        {!dialog && <button className="friends-fab" onClick={() => setDialog('friends')}
-          title={friendsOnline ? t("Freunde – {0} online", [friendsOnline]) : t("Freunde")} aria-label={t("Freunde")}>
-          <UsersIcon />
-          {friendsOnline > 0 && <span className="fab-badge">{friendsOnline}</span>}
-        </button>}
+        {/* Freunde: schwebender Knopf unten rechts – Zahl = ungelesene Nachrichten. Klick klappt runde Launcher-Knöpfe
+            nach oben auf; jeder öffnet die passende Freundesliste im eigenen Freundefenster. */}
+        {!dialog && (
+          <div className={`friends-dial ${friendsDial ? 'open' : ''}`} onMouseLeave={() => setFriendsDial(false)}>
+            {friendsDial && FRIEND_LISTS.map(([id, name], i) => (
+              <button key={id} className="round-pick" style={{ '--i': FRIEND_LISTS.length - 1 - i }} title={name} aria-label={name}
+                onClick={() => { setFriendsDial(false); api.friendsWindow?.open(id); }}>
+                {id === 'all' ? <UsersIcon /> : <LauncherLogo provider={id === 'hub' ? { id: 'manual' } : { id, name, ...(providerById[id] || {}) }} />}
+                {(id === 'all' ? unread.total : unread[id]) > 0 && <span className="fab-badge">{id === 'all' ? unread.total : unread[id]}</span>}
+              </button>
+            ))}
+            <button className="friends-fab" onClick={() => setFriendsDial((v) => !v)} aria-expanded={friendsDial}
+              title={unread.total ? t("Freunde – {0} ungelesene Nachrichten", [unread.total]) : t("Freunde")} aria-label={t("Freunde")}>
+              <UsersIcon />
+              {unread.total > 0 && <span className="fab-badge">{unread.total}</span>}
+            </button>
+          </div>
+        )}
 
         {toast && <div key={toast.key} className={`toast ${toast.kind}`}>{toast.text}</div>}
       </div>

@@ -22,11 +22,20 @@ fn file_icon_png(file: &Path) -> Option<Vec<u8>> {
     use windows_sys::Win32::Graphics::Gdi::*;
     use windows_sys::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON};
     use windows_sys::Win32::UI::WindowsAndMessaging::{DestroyIcon, GetIconInfo, ICONINFO};
+    use windows_sys::Win32::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED};
+    use windows_sys::Win32::UI::Shell::ExtractIconExW;
     unsafe {
+        // SHGetFileInfo braucht COM im aufrufenden Thread (sonst liefert es auf manchen Rechnern kein Symbol)
+        let _ = CoInitializeEx(std::ptr::null(), COINIT_APARTMENTTHREADED as u32);
         let wide: Vec<u16> = file.as_os_str().encode_wide().chain(Some(0)).collect();
         let mut info: SHFILEINFOW = std::mem::zeroed();
         if SHGetFileInfoW(wide.as_ptr(), 0, &mut info, std::mem::size_of::<SHFILEINFOW>() as u32, SHGFI_ICON | SHGFI_LARGEICON) == 0 || info.hIcon.is_null() {
-            return None;
+            // Ersatz: Symbol direkt aus der .exe lesen
+            let mut large: windows_sys::Win32::UI::WindowsAndMessaging::HICON = std::ptr::null_mut();
+            if ExtractIconExW(wide.as_ptr(), 0, &mut large, std::ptr::null_mut(), 1) == 0 || large.is_null() {
+                return None;
+            }
+            info.hIcon = large;
         }
         let mut ii: ICONINFO = std::mem::zeroed();
         let ok = GetIconInfo(info.hIcon, &mut ii) != 0;
@@ -106,7 +115,30 @@ fn file_icon_png(file: &Path) -> Option<Vec<u8>> {
 }
 
 #[cfg(all(not(windows), not(target_os = "macos")))]
-fn file_icon_png(_file: &Path) -> Option<Vec<u8>> {
+fn file_icon_png(file: &Path) -> Option<Vec<u8>> {
+    // Linux: Programme haben kein eingebettetes Symbol – im Icon-Theme nach dem Programmnamen suchen
+    let name = file.file_stem()?.to_string_lossy().to_lowercase();
+    linux_theme_icon(&[name.as_str()])
+}
+
+/// PNG aus dem Icon-Theme (hicolor), größte vorhandene Größe zuerst
+#[cfg(all(not(windows), not(target_os = "macos")))]
+pub fn linux_theme_icon(names: &[&str]) -> Option<Vec<u8>> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let bases = [format!("{home}/.local/share/icons/hicolor"), "/usr/share/icons/hicolor".into(), format!("{home}/.local/share/flatpak/exports/share/icons/hicolor"), "/var/lib/flatpak/exports/share/icons/hicolor".into()];
+    for n in names {
+        for b in &bases {
+            for size in ["256x256", "128x128", "96x96", "64x64", "48x48", "32x32"] {
+                let f = Path::new(b).join(size).join("apps").join(format!("{n}.png"));
+                if let Ok(d) = std::fs::read(&f) {
+                    return Some(d);
+                }
+            }
+        }
+        if let Ok(d) = std::fs::read(format!("/usr/share/pixmaps/{n}.png")) {
+            return Some(d);
+        }
+    }
     None
 }
 
@@ -201,6 +233,17 @@ pub async fn launcher_icon(id: &str) -> Option<Vec<u8>> {
         }
         _ => None,
     };
+    // Linux: Launcher, die per Flatpak/Paket installiert sind, über ihren üblichen Symbolnamen finden
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    let png = png.or_else(|| {
+        let names: &[&str] = match id {
+            "steam" => &["steam", "com.valvesoftware.Steam"],
+            "epic" | "gog" | "amazon" => &["heroic", "com.heroicgameslauncher.hgl"],
+            "lutris" => &["lutris", "net.lutris.Lutris"],
+            _ => &[],
+        };
+        linux_theme_icon(names)
+    });
     LAUNCHER_ICONS.lock().insert(id.to_string(), png.clone());
     png
 }

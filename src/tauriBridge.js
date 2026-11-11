@@ -59,6 +59,10 @@ export async function installTauriBridge() {
       action: call('friends:action'),
       onUpdate: on('friends:update')
     },
+    friendsWindow: {
+      open: call('friends:window'),
+      onTab: on('friends:tab')
+    },
     chat: {
       open: call('chat:open'),
       history: call('chat:history'),

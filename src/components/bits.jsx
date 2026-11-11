@@ -20,8 +20,27 @@ export function LauncherLogo({ provider, dim = false, small = false }) {
       />
     );
   }
-  return <span className={`dot ${small ? 'small' : ''}`} style={{ background: provider?.accent, opacity: dim ? 0.35 : 1 }} />;
+  // Kein Programm-Symbol (Launcher nicht installiert, Linux …): runde Plakette mit Anfangsbuchstaben in Launcher-Farbe
+  const name = provider?.name || provider?.id || '?';
+  return (
+    <span className={`launcher-badge ${small ? 'small' : ''} ${dim ? 'dim' : ''}`} style={{ '--lc': provider?.accent || 'var(--accent)' }} aria-hidden="true">
+      {String(name).replace(/[^A-Za-z0-9]/g, '').slice(0, 1).toUpperCase() || '?'}
+    </span>
+  );
 }
+
+/** Controller im Ludora-Farbverlauf (für „Alle Spiele“) */
+export const ControllerIcon = ({ size = 18 }) => (
+  <svg className="controller-icon" viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+    <defs>
+      <linearGradient id="ctrl-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#8fb0ff" /><stop offset="1" stopColor="#b08cff" /></linearGradient>
+    </defs>
+    <path fill="url(#ctrl-grad)" d="M7.2 6.5h9.6c2.4 0 4.1 1.6 4.6 4l.9 4.8c.4 2.1-1.1 3.9-3.1 3.9-1.1 0-2.1-.6-2.7-1.5l-1.2-1.9H8.7l-1.2 1.9c-.6.9-1.6 1.5-2.7 1.5-2 0-3.5-1.8-3.1-3.9l.9-4.8c.5-2.4 2.2-4 4.6-4z" />
+    <path fill="#0f1115" d="M7.5 9.3h1.3v1.6h1.6v1.3H8.8v1.6H7.5v-1.6H5.9v-1.3h1.6z" />
+    <circle cx="15.6" cy="10.4" r="1" fill="#0f1115" />
+    <circle cx="17.6" cy="12.4" r="1" fill="#0f1115" />
+  </svg>
+);
 
 export const ImageIcon = () => (
   <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="m21 16-5-5-9 9" /></svg>

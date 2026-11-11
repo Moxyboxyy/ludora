@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { t, DEC, LANGUAGES } from '../i18n.js';
+import { LauncherLogo } from './bits.jsx';
 
 function formatBytes(b) {
   if (b < 1024 * 1024) return `${Math.round(b / 1024)} KB`;
   return `${(b / 1024 / 1024).toFixed(1).replace('.', DEC)} MB`;
 }
 
-export default function SettingsDialog({ onClose, onSaved }) {
+export default function SettingsDialog({ onClose, onSaved, providerById = {} }) {
   const [form, setForm] = useState(null);
   const [showKey, setShowKey] = useState(false);
   const [busy, setBusy] = useState(null);
@@ -159,7 +160,7 @@ export default function SettingsDialog({ onClose, onSaved }) {
                   <input type="checkbox" checked={on} onChange={() => toggle(l.id)} />
                   <span />
                 </label>
-                <span className="dot" style={{ background: l.accent }} />
+                <LauncherLogo provider={{ ...l, ...(providerById[l.id] || {}) }} />
                 <div className="account-info">
                   <b>{l.name}</b>
                   {l.account && (

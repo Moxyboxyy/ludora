@@ -193,6 +193,8 @@ export const TESTS = [
     run: async () => { const r = await call('friends:qr'); return r?.qr || r?.ok ? ok('QR-Code erzeugt – in der Freundesliste scannen') : fail(r?.error || 'kein QR-Code'); } },
   { id: 'steamLogout', group: 'Steam', name: 'Bei Steam abmelden', channels: ['friends:logout'], kind: 'manual', danger: true,
     run: async () => { await call('friends:logout'); return ok('abgemeldet'); } },
+  { id: 'friendsWindow', group: 'Freunde', name: 'Freundefenster öffnen', channels: ['friends:window'], kind: 'manual',
+    run: async () => { okRes(await call('friends:window', 'all'), 'Freundefenster'); return ok('Fenster offen'); } },
   { id: 'chatOpen', group: 'Steam', name: 'Chatfenster öffnen', channels: ['chat:open'], kind: 'manual', needs: 'friend',
     run: async (ctx, p) => { okRes(await call('chat:open', p.friend), 'Chat'); return ok('Fenster offen'); } },
   { id: 'chatSend', group: 'Steam', name: 'Nachricht senden', channels: ['chat:send'], kind: 'manual', needs: 'friend+text',
@@ -322,7 +324,7 @@ export const TESTS = [
 ];
 
 /** Ereignisse, die die App schickt – der Debug-Bereich zählt mit */
-export const EVENTS = ['friends:update', 'friends2:update', 'hub:update', 'chat:event', 'library:cover', 'library:compat',
+export const EVENTS = ['friends:update', 'friends:tab', 'friends2:update', 'hub:update', 'chat:event', 'library:cover', 'library:compat',
   'library:streams', 'update:state', 'update:open', 'app:navigate'];
 
 /** Einen Test ausführen (mit Zeitlimit) */

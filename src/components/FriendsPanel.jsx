@@ -71,11 +71,14 @@ function Freshness({ at, label }) {
   return <span className={`muted small freshness ${sec !== null && sec > 90 ? 'stale' : ''}`}>{label}{age ? ` · ${t("aktualisiert {0}", [age])}` : ''}</span>;
 }
 
-export default function FriendsPanel({ open, onClose, games, onLaunchGame, notify, onOnlineCount, providerById = {}, hubRequest = 0 }) {
+export default function FriendsPanel({ open, onClose, games, onLaunchGame, notify, onOnlineCount = () => {}, onUnread = () => {}, providerById = {}, hubRequest = 0, windowMode = false, initialTab = null }) {
   const [steam, setSteam] = useState({ status: 'disconnected', friends: [] });
   const [others, setOthers] = useState({});
   const [people, setPeople] = useState([]);
-  const [tab, setTab] = useState(() => loadPref('friendsTab', 'all'));
+  const [tab, setTab] = useState(() => initialTab || loadPref('friendsTab', 'all'));
+  const [switcher, setSwitcher] = useState(false); // Freundefenster: Auswahl der Liste (Rechtsklick auf die Leiste)
+  // Freundefenster: Hauptfenster hat eine andere Liste gewählt
+  useEffect(() => (windowMode && api.friendsWindow?.onTab ? api.friendsWindow.onTab((id) => { setTab(id); setSwitcher(false); }) : undefined), [windowMode]);
   const [query, setQuery] = useState('');
   const [menu, setMenu] = useState(null);      // { a, person, x, y }
   const [assign, setAssign] = useState(null);  // Konto, das einer Person zugeordnet wird
@@ -98,8 +101,16 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
     return () => { offSteam(); offOthers(); offHub(); };
   }, []);
 
-  useEffect(() => { api.friends.fast(open); api.friends2.fast(open); }, [open]);
+  useEffect(() => { const on = open || windowMode; api.friends.fast(on); api.friends2.fast(on); }, [open, windowMode]);
   useEffect(() => savePref('friendsTab', tab), [tab]);
+  useEffect(() => {
+    if (!switcher) return undefined;
+    const close = () => setSwitcher(false);
+    const key = (e) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('click', close);
+    window.addEventListener('keydown', key);
+    return () => { window.removeEventListener('click', close); window.removeEventListener('keydown', key); };
+  }, [switcher]);
 
   // Alle Konten aller Launcher im gleichen Format
   const accounts = useMemo(() => {
@@ -157,6 +168,14 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
 
   const onlineCount = accounts.filter((a) => a.state !== 'offline').length;
   useEffect(() => { onOnlineCount(onlineCount); }, [onlineCount, onOnlineCount]);
+  // Ungelesene Nachrichten je Launcher (für den Freunde-Knopf unten rechts)
+  const unreadBy = useMemo(() => {
+    const m = { total: 0 };
+    for (const a of accounts) if (a.unread > 0) { m[a.launcher] = (m[a.launcher] || 0) + a.unread; m.total += a.unread; }
+    return m;
+  }, [accounts]);
+  const unreadKey = JSON.stringify(unreadBy);
+  useEffect(() => { onUnread(unreadBy); }, [unreadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Steam-Spiele aus der eigenen Bibliothek (für "Spiel starten")
   const ownedSteam = useMemo(() => {
@@ -188,7 +207,7 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
     return () => { window.removeEventListener('click', close); window.removeEventListener('blur', close); };
   }, [menu]);
 
-  if (!open) return null;
+  if (!open && !windowMode) return null;
 
   // ---------- Personen speichern ----------
   async function savePeople(list) {
@@ -471,9 +490,44 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
   const showList = tab === 'all' ? accounts.length > 0 || people.length > 0 || hubFriends.length > 0
     : tab === 'hub' ? hub.status === 'signedIn' : connectedOf(tab);
 
-  return (
-    (<div className="drawer-backdrop" onMouseDown={onClose}>
-      <aside className="drawer friends" ref={panelRef} onMouseDown={(e) => e.stopPropagation()}>
+  // Listen zum Umschalten (Freunde-Knopf im Hauptfenster und Leiste im Freundefenster)
+  const lists = [
+    ['all', t("Alle"), null],
+    ['hub', t("Ludora"), { id: 'manual' }],
+    ...LAUNCHERS.map(([id, name]) => [id, name, { id, name, ...(providerById[id] || {}) }])
+  ];
+  const current = lists.find((l) => l[0] === tab) || lists[0];
+  const pickList = (id) => { setTab(id); setSwitcher(false); };
+
+  const body = (
+      <aside className={windowMode ? 'friends-window friends' : 'drawer friends'} ref={panelRef} onMouseDown={(e) => e.stopPropagation()}>
+        {windowMode ? (
+          <header className="drawer-head fw-bar" onContextMenu={(e) => { e.preventDefault(); setSwitcher((v) => !v); }}
+            title={t("Rechtsklick: andere Freundesliste wählen")}>
+            <button className="fw-current" onClick={() => setSwitcher((v) => !v)} aria-expanded={switcher} aria-label={t("Freundesliste wählen")}>
+              <span className="fw-icon">{current[2] ? <LauncherLogo provider={current[2]} /> : <UsersIcon />}</span>
+              <h2>{current[0] === 'all' ? t("Alle Freunde") : current[1]}</h2>
+              <span className="chev">{switcher ? '▴' : '▾'}</span>
+            </button>
+            <div className="head-actions">
+              <button className={`hub-btn ${hub.status === 'signedIn' ? 'on' : ''}`} onClick={() => setHubOpen(true)}
+                title={t("Dein Ludora-Konto: Freunde mit Ludora erkennen deine Konten automatisch")}>
+                {hub.status === 'signedIn' ? (hub.user?.display_name || t("Ludora-Konto")) : t("Ludora-Konto")}
+              </button>
+            </div>
+            {switcher && (
+              <div className="fw-switcher" role="menu" onClick={(e) => e.stopPropagation()}>
+                {lists.map(([id, name, prov], i) => (
+                  <button key={id} role="menuitem" className={`round-pick ${tab === id ? 'on' : ''}`} style={{ '--i': i }}
+                    onClick={() => pickList(id)} title={name} aria-label={name}>
+                    {prov ? <LauncherLogo provider={prov} dim={id !== 'all' && id !== 'hub' && !connectedOf(id)} /> : <UsersIcon />}
+                    {(unreadBy[id] || (id === 'all' && unreadBy.total)) > 0 && <span className="fab-badge">{id === 'all' ? unreadBy.total : unreadBy[id]}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </header>
+        ) : (
         <header className="drawer-head">
           <h2><UsersIcon /> {t("Freunde")}</h2>
           <div className="head-actions">
@@ -484,8 +538,9 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
             <button className="ghost" onClick={onClose} title={t("Schließen")}>✕</button>
           </div>
         </header>
+        )}
 
-        <div className="friends-tabs" role="tablist">
+        {!windowMode && <div className="friends-tabs" role="tablist">
           <button role="tab" aria-selected={tab === 'all'} className={tab === 'all' ? 'on' : ''} onClick={() => setTab('all')}>{t("Alle")} {onlineCount > 0 && <span className="tab-count">{onlineCount}</span>}
           </button>
           <button role="tab" aria-selected={tab === 'hub'} aria-label={t("Ludora-Freunde")} className={`icon-tab ${tab === 'hub' ? 'on' : ''}`} onClick={() => setTab('hub')} title={t("Ludora-Freunde")}>
@@ -500,7 +555,7 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
               {connectedOf(id) && onlineOf(id) > 0 && <span className="tab-count">{onlineOf(id)}</span>}
             </button>
           ))}
-        </div>
+        </div>}
 
         {tab !== 'all' && tab !== 'hub' && <LauncherState id={tab} />}
         {tab === 'hub' && (hub.status !== 'signedIn' ? (
@@ -630,8 +685,9 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
           <AssignDialog a={assign} people={people} onCancel={() => setAssign(null)} onPick={(pid, name) => addToPerson(assign, pid, name)} />
         )}
       </aside>
-    </div>)
   );
+  if (windowMode) return body;
+  return <div className="drawer-backdrop" onMouseDown={onClose}>{body}</div>;
 }
 
 /** Steam: Anmeldung per QR-Code (wie bisher) */

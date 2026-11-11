@@ -740,3 +740,63 @@ svg.star.filled { fill: currentColor; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+/* ---------- Launcher-Symbole ---------- */
+/* Ersatz, wenn kein Programm-Symbol da ist: runde Plakette mit Anfangsbuchstaben in Launcher-Farbe */
+.launcher-badge {
+  width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; display: inline-grid; place-items: center;
+  font-size: 10.5px; font-weight: 800; line-height: 1; color: #fff;
+  background: color-mix(in srgb, var(--lc) 78%, #0f1115); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+}
+.launcher-badge.small { width: 14px; height: 14px; font-size: 8.5px; }
+.launcher-badge.dim { opacity: .4; filter: grayscale(1); }
+.sidebar.collapsed .nav-icon .launcher-badge { width: 22px; height: 22px; font-size: 12px; }
+.controller-icon { stroke: none; width: 18px; height: 18px; }
+.sidebar.collapsed .nav-icon .controller-icon { width: 22px; height: 22px; }
+
+/* ---------- Neu laden (links neben „Sortieren“) ---------- */
+.reload-btn {
+  margin-left: auto; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center;
+  color: var(--muted); border: 1px solid var(--line); transition: color .12s, border-color .12s;
+}
+.reload-btn:hover { color: var(--text); border-color: var(--accent); }
+.reload-btn:active svg { transform: rotate(-90deg); }
+.reload-btn svg { width: 16px; height: 16px; transition: transform .2s; }
+.reload-btn + .sort { margin-left: 8px; }
+
+/* ---------- Freunde-Knopf: runde Launcher-Knöpfe klappen nach oben auf ---------- */
+.friends-dial { position: fixed; right: 22px; bottom: 22px; z-index: 30; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.friends-dial .friends-fab { position: relative; right: auto; bottom: auto; }
+.friends-dial.open .friends-fab { border-color: var(--accent); color: var(--accent); }
+.round-pick {
+  position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  background: linear-gradient(135deg, #222838, #1a1e28); border: 1px solid var(--line); color: var(--text);
+  box-shadow: 0 6px 18px rgba(0,0,0,.4); transition: transform .12s, border-color .12s;
+  animation: dial-in .18s calc(var(--i, 0) * 35ms) cubic-bezier(.2,.9,.3,1.2) both;
+}
+.round-pick:hover { transform: scale(1.08); border-color: var(--accent); }
+.round-pick.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(124,156,255,.35), 0 6px 18px rgba(0,0,0,.4); }
+.round-pick .launcher-logo, .round-pick .launcher-badge, .round-pick svg { width: 22px; height: 22px; }
+.round-pick .launcher-badge { font-size: 12px; }
+.round-pick .fab-badge { top: -4px; right: -4px; }
+@keyframes dial-in { from { opacity: 0; transform: translateY(14px) scale(.6); } }
+
+/* ---------- Eigenes Freundefenster ---------- */
+.friends-window-root { height: 100%; background: var(--panel); }
+.friends-window { height: 100%; display: flex; flex-direction: column; background: var(--panel); position: relative; }
+.fw-bar { position: relative; padding: 12px 14px; cursor: context-menu; user-select: none; }
+.fw-current { display: flex; align-items: center; gap: 10px; padding: 4px 8px 4px 4px; border-radius: 10px; min-width: 0; }
+.fw-current:hover { background: var(--panel-2); }
+.fw-current h2 { margin: 0; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fw-current .chev { color: var(--muted); font-size: 12px; }
+.fw-icon { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line); }
+.fw-icon .launcher-logo, .fw-icon .launcher-badge, .fw-icon svg { width: 18px; height: 18px; }
+/* Auswahl klappt unter der Leiste von oben nach unten auf */
+.fw-switcher {
+  position: absolute; top: calc(100% + 6px); left: 14px; z-index: 40; display: flex; flex-direction: column; gap: 8px;
+  padding: 8px; border-radius: 26px; background: rgba(21,24,32,.96); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.5);
+}
+.fw-switcher .round-pick { animation-name: dial-down; }
+@keyframes dial-down { from { opacity: 0; transform: translateY(-14px) scale(.6); } }
+.friends-window-root .toast { bottom: 18px; }
+@media (prefers-reduced-motion: reduce) { .round-pick, .fw-switcher .round-pick { animation: none; } }

@@ -2,7 +2,7 @@
 //! Chat-IDs: Steam = SteamID64, andere Launcher = "<launcher>:<id>"
 
 use serde_json::{json, Value};
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 
 
@@ -118,3 +118,29 @@ pub fn read(id: &str) {
     }
 }
 
+
+/// Eigenes Freundefenster (statt der Liste im Hauptfenster). Ist es schon offen, wechselt es nur die Liste.
+pub fn open_friends(app: &AppHandle, tab: &str) -> Value {
+    const TABS: [&str; 6] = ["all", "hub", "steam", "riot", "epic", "gog"];
+    let tab = if TABS.contains(&tab) { tab } else { "all" };
+    if let Some(w) = app.get_webview_window("friends") {
+        let _ = w.emit_to("friends", "friends:tab", tab);
+        let _ = w.unminimize();
+        let _ = w.show();
+        let _ = w.set_focus();
+        return json!({ "ok": true });
+    }
+    // Gleiche Seite wie das Hauptfenster, aber mit #friends=<liste> (siehe src/main.jsx)
+    let script = format!("if (!/^#friends=/.test(window.location.hash)) window.location.hash = {};", serde_json::to_string(&format!("friends={tab}")).unwrap());
+    let built = WebviewWindowBuilder::new(app, "friends", WebviewUrl::App("index.html".into()))
+        .title("Ludora – Freunde")
+        .inner_size(400.0, 680.0)
+        .min_inner_size(320.0, 420.0)
+        .background_color(tauri::window::Color(15, 17, 21, 255))
+        .initialization_script(&script)
+        .build();
+    match built {
+        Ok(_) => json!({ "ok": true }),
+        Err(e) => json!({ "ok": false, "error": e.to_string() }),
+    }
+}

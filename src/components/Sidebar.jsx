@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { OpenIcon, LauncherLogo, DownloadIcon, StarIcon } from './bits.jsx';
+import { ControllerIcon, OpenIcon, LauncherLogo, DownloadIcon, StarIcon } from './bits.jsx';
 import { t } from '../i18n.js';
 
 function loadPref(key, fallback) {
@@ -63,7 +63,7 @@ export default function Sidebar({
       </div>
       <nav>
         <button className={`nav-item ${active === 'all' ? 'active' : ''}`} onClick={() => onSelect('all')} title={tip(t("Alle Spiele"), counts.all)}>
-          <span className="nav-icon"><span className="dot all" /></span>
+          <span className="nav-icon"><ControllerIcon /></span>
           <span className="label">{t("Alle Spiele")}</span>
           <span className="badge">{counts.all || 0}</span>
         </button>
