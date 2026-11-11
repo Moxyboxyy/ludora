@@ -535,12 +535,12 @@ export default function App() {
         />
 
         {/* Freunde: schwebender Knopf unten rechts – Zahl = ungelesene Nachrichten. Klick klappt runde Launcher-Knöpfe
-            nach oben auf; jeder öffnet die passende Freundesliste im eigenen Freundefenster. */}
+            nach oben auf (bleiben offen, nochmal klicken schließt); jeder öffnet die passende Liste im Freundefenster. */}
         {!dialog && (
-          <div className={`friends-dial ${friendsDial ? 'open' : ''}`} onMouseLeave={() => setFriendsDial(false)}>
+          <div className={`friends-dial ${friendsDial ? 'open' : ''}`}>
             {friendsDial && FRIEND_LISTS.map(([id, name], i) => (
               <button key={id} className="round-pick" style={{ '--i': FRIEND_LISTS.length - 1 - i }} title={name} aria-label={name}
-                onClick={() => { setFriendsDial(false); api.friendsWindow?.open(id); }}>
+                onClick={() => api.friendsWindow?.open(id)}>
                 {id === 'all' ? <UsersIcon /> : <LauncherLogo provider={id === 'hub' ? { id: 'manual' } : { id, name, ...(providerById[id] || {}) }} />}
                 {(id === 'all' ? unread.total : unread[id]) > 0 && <span className="fab-badge">{id === 'all' ? unread.total : unread[id]}</span>}
               </button>
