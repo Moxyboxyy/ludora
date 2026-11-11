@@ -503,12 +503,10 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
   const body = (
       <aside className={windowMode ? 'friends-window friends' : 'drawer friends'} ref={panelRef} onMouseDown={(e) => e.stopPropagation()}>
         {windowMode ? (
-          <header className="drawer-head fw-bar" onClick={() => setSwitcher((v) => !v)}
-            title={t("Klicken: andere Freundesliste wählen")}>
-            <button className="fw-current" aria-expanded={switcher} aria-label={t("Freundesliste wählen")}>
+          <header className="drawer-head fw-bar" onClick={() => setSwitcher((v) => !v)}>
+            <button className="fw-current" aria-expanded={switcher} aria-label={current[0] === 'all' ? t("Alle Freunde") : current[1]}
+              title={current[0] === 'all' ? t("Alle Freunde") : current[1]}>
               <span className="fw-icon">{current[2] ? <LauncherLogo provider={current[2]} /> : <UsersIcon />}</span>
-              <h2>{current[0] === 'all' ? t("Alle Freunde") : current[1]}</h2>
-              <span className="chev">{switcher ? '▴' : '▾'}</span>
             </button>
             <div className="head-actions" onClick={(e) => e.stopPropagation()}>
               <button className={`hub-btn ${hub.status === 'signedIn' ? 'on' : ''}`} onClick={() => setHubOpen(true)}
