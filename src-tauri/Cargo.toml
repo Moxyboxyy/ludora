@@ -1,6 +1,6 @@
 [package]
 name = "ludora"
-version = "0.8.0"
+version = "0.8.1"
 description = "Ludora – the Client for all Game Clients"
 authors = ["Moxyboxyy"]
 license = "MIT"
