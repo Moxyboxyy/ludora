@@ -654,15 +654,15 @@ svg.star.filled { fill: currentColor; }
 
 /* Freunde: schwebender Knopf unten rechts */
 .friends-fab {
-  position: fixed; right: 22px; bottom: 22px; z-index: 30; width: 48px; height: 48px; border-radius: 50%;
+  position: fixed; right: 22px; bottom: 22px; z-index: 30; width: 56px; height: 56px; border-radius: 50%;
   display: grid; place-items: center; color: var(--text);
   background: linear-gradient(135deg, #222838, #1a1e28); border: 1px solid var(--line);
   box-shadow: 0 8px 24px rgba(0,0,0,.45); transition: transform .12s, border-color .12s;
 }
 .friends-fab:hover { transform: translateY(-2px); border-color: var(--accent); }
 .friends-fab.on { border-color: var(--accent); color: var(--accent); }
-.friends-fab svg { width: 22px; height: 22px; }
-.fab-badge { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--ok); color: #0b1a12; font-size: 11px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg); }
+.friends-fab svg { width: 26px; height: 26px; }
+.fab-badge { position: absolute; top: -3px; right: -3px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px; background: var(--ok); color: #0b1a12; font-size: 11.5px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg); }
 .shop-credit { margin: 0 24px 26px; font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.5; }
 .hint.legal { line-height: 1.55; }
 .link.danger { color: var(--danger); align-self: flex-start; margin-top: 4px; }
@@ -769,15 +769,15 @@ svg.star.filled { fill: currentColor; }
 .friends-dial .friends-fab { position: relative; right: auto; bottom: auto; }
 .friends-dial.open .friends-fab { border-color: var(--accent); color: var(--accent); }
 .round-pick {
-  position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  position: relative; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center;
   background: linear-gradient(135deg, #222838, #1a1e28); border: 1px solid var(--line); color: var(--text);
   box-shadow: 0 6px 18px rgba(0,0,0,.4); transition: transform .12s, border-color .12s;
   animation: dial-in .18s calc(var(--i, 0) * 35ms) cubic-bezier(.2,.9,.3,1.2) both;
 }
 .round-pick:hover { transform: scale(1.08); border-color: var(--accent); }
 .round-pick.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(124,156,255,.35), 0 6px 18px rgba(0,0,0,.4); }
-.round-pick .launcher-logo, .round-pick .launcher-badge, .round-pick svg { width: 22px; height: 22px; }
-.round-pick .launcher-badge { font-size: 12px; }
+.round-pick .launcher-logo, .round-pick .launcher-badge, .round-pick svg { width: 28px; height: 28px; }
+.round-pick .launcher-badge { font-size: 15px; }
 .round-pick .fab-badge { top: -4px; right: -4px; }
 @keyframes dial-in { from { opacity: 0; transform: translateY(14px) scale(.6); } }
 
@@ -787,14 +787,14 @@ svg.star.filled { fill: currentColor; }
 .fw-bar { position: relative; padding: 12px 14px; cursor: pointer; user-select: none; }
 .fw-current { display: flex; align-items: center; padding: 0; border-radius: 50%; }
 .fw-current:hover .fw-icon, .fw-current[aria-expanded="true"] .fw-icon { border-color: var(--accent); }
-.fw-icon { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line); transition: border-color .12s; }
-.fw-icon .launcher-logo, .fw-icon .launcher-badge, .fw-icon svg { width: 22px; height: 22px; }
-.fw-icon .launcher-badge { font-size: 12px; }
+.fw-icon { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line); transition: border-color .12s; }
+.fw-icon .launcher-logo, .fw-icon .launcher-badge, .fw-icon svg { width: 28px; height: 28px; }
+.fw-icon .launcher-badge { font-size: 15px; }
 /* Auswahl klappt unter der Leiste von oben nach unten auf */
 .fw-switcher {
-  /* Spalte genau unter dem Symbol oben links: Mitte = 14px Rand + 19px (halbes Symbol), minus 1px Rahmen + 8px Innenabstand + 20px halber Knopf */
-  position: absolute; top: calc(100% + 6px); left: calc(14px + 19px - 29px); z-index: 40; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 8px; border-radius: 26px; background: rgba(21,24,32,.96); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.5);
+  /* Spalte genau unter dem Symbol oben links: Mitte = 14px Rand + 24px (halbes Symbol), minus 1px Rahmen + 8px Innenabstand + 24px halber Knopf */
+  position: absolute; top: calc(100% + 6px); left: calc(14px + 24px - 33px); z-index: 40; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 8px; border-radius: 32px; background: rgba(21,24,32,.96); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.5);
 }
 .fw-switcher .round-pick { animation-name: dial-down; }
 @keyframes dial-down { from { opacity: 0; transform: translateY(-14px) scale(.6); } }
