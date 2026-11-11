@@ -11,6 +11,7 @@ import ShopView from './components/ShopView.jsx';
 import TitleBar from './components/TitleBar.jsx';
 import { OpenIcon, StoreIcon, UsersIcon, LauncherLogo } from './components/bits.jsx';
 import { reloadApp } from './reload.js';
+import { useExit } from './useExit.js';
 
 // Listen im Freunde-Knopf (von oben nach unten)
 const FRIEND_LISTS = [['all', t("Alle Freunde")], ['hub', 'Ludora'], ['steam', 'Steam'], ['riot', 'Riot'], ['epic', 'Epic'], ['gog', 'GOG']];
@@ -55,6 +56,7 @@ export default function App() {
   const [hubRequest, setHubRequest] = useState(0); // Konto-Knopf oben -> Ludora-Konto-Fenster öffnen
   const [unread, setUnread] = useState({ total: 0 });
   const [friendsDial, setFriendsDial] = useState(false); // Freunde-Knopf: runde Launcher-Knöpfe nach oben
+  const [dialShown, dialClosing] = useExit(friendsDial, 300);
 
   const notify = useCallback((text, kind = 'info') => {
     setToast({ text, kind, key: Date.now() });
@@ -537,8 +539,8 @@ export default function App() {
         {/* Freunde: schwebender Knopf unten rechts – Zahl = ungelesene Nachrichten. Klick klappt runde Launcher-Knöpfe
             nach oben auf (bleiben offen, nochmal klicken schließt); jeder öffnet die passende Liste im Freundefenster. */}
         {!dialog && (
-          <div className={`friends-dial ${friendsDial ? 'open' : ''}`}>
-            {friendsDial && FRIEND_LISTS.map(([id, name], i) => (
+          <div className={`friends-dial ${friendsDial ? 'open' : ''} ${dialClosing ? 'closing' : ''}`}>
+            {dialShown && FRIEND_LISTS.map(([id, name], i) => (
               <button key={id} className="round-pick" style={{ '--i': FRIEND_LISTS.length - 1 - i }} title={name} aria-label={name}
                 onClick={() => api.friendsWindow?.open(id)}>
                 {id === 'all' ? <UsersIcon /> : <LauncherLogo provider={id === 'hub' ? { id: 'manual' } : { id, name, ...(providerById[id] || {}) }} />}

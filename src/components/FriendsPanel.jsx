@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { UsersIcon, PlayIcon, LauncherLogo, UserAddIcon, UserCopyIcon } from './bits.jsx';
 import { t } from '../i18n.js';
+import { useExit } from '../useExit.js';
 
 const STATE_LABEL = { online: t("Online"), away: t("Abwesend"), snooze: t("Abwesend"), busy: t("Beschäftigt"), offline: t("Offline") };
 const LAUNCHERS = [
@@ -76,7 +77,8 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
   const [others, setOthers] = useState({});
   const [people, setPeople] = useState([]);
   const [tab, setTab] = useState(() => initialTab || loadPref('friendsTab', 'all'));
-  const [switcher, setSwitcher] = useState(false); // Freundefenster: Auswahl der Liste (Rechtsklick auf die Leiste)
+  const [switcher, setSwitcher] = useState(false); // Freundefenster: Auswahl der Liste (Klick auf die Leiste)
+  const [switcherShown, switcherClosing] = useExit(switcher, 300);
   // Freundefenster: Hauptfenster hat eine andere Liste gewählt
   useEffect(() => (windowMode && api.friendsWindow?.onTab ? api.friendsWindow.onTab((id) => { setTab(id); setSwitcher(false); }) : undefined), [windowMode]);
   const [query, setQuery] = useState('');
@@ -514,8 +516,8 @@ export default function FriendsPanel({ open, onClose, games, onLaunchGame, notif
                 {hub.status === 'signedIn' ? (hub.user?.display_name || t("Ludora-Konto")) : t("Ludora-Konto")}
               </button>
             </div>
-            {switcher && (
-              <div className="fw-switcher" role="menu" onClick={(e) => e.stopPropagation()}>
+            {switcherShown && (
+              <div className={`fw-switcher ${switcherClosing ? 'closing' : ''}`} role="menu" onClick={(e) => e.stopPropagation()}>
                 {lists.map(([id, name, prov], i) => (
                   <button key={id} role="menuitem" className={`round-pick ${tab === id ? 'on' : ''}`} style={{ '--i': i }}
                     onClick={() => pickList(id)} title={name} aria-label={name}>

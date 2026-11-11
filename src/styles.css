@@ -803,5 +803,12 @@ svg.star.filled { fill: currentColor; }
 }
 .fw-switcher .round-pick { animation-name: dial-down; }
 @keyframes dial-down { from { opacity: 0; transform: translateY(-14px) scale(.6); } }
+/* Einklappen: Knöpfe fliegen in umgekehrter Reihenfolge zurück */
+.friends-dial.closing .round-pick { animation: dial-in-out .16s calc((5 - var(--i, 0)) * 25ms) ease-in both; pointer-events: none; }
+@keyframes dial-in-out { to { opacity: 0; transform: translateY(14px) scale(.6); } }
+.fw-switcher { transition: opacity .2s ease, transform .2s ease; transform-origin: top center; }
+.fw-switcher.closing { opacity: 0; transform: translateY(-6px) scaleY(.9); pointer-events: none; }
+.fw-switcher.closing .round-pick { animation: dial-down-out .16s calc((5 - var(--i, 0)) * 25ms) ease-in both; }
+@keyframes dial-down-out { to { opacity: 0; transform: translateY(-14px) scale(.6); } }
 .friends-window-root .toast { bottom: 18px; }
-@media (prefers-reduced-motion: reduce) { .round-pick, .fw-switcher .round-pick { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .round-pick, .fw-switcher .round-pick, .friends-dial.closing .round-pick, .fw-switcher.closing .round-pick { animation: none; } .fw-switcher { transition: none; } }
