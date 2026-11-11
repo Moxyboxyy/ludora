@@ -13,6 +13,8 @@ export default function SettingsDialog({ onClose, onSaved }) {
   const [busy, setBusy] = useState(null);
   const [accountMsg, setAccountMsg] = useState('');
   const [cache, setCache] = useState(null);
+  // Startsound wird schon vor React in index.html gelesen, darum liegt er in localStorage statt in den Einstellungen
+  const [startSound, setStartSound] = useState(() => { try { return localStorage.getItem('ludora.startSound') !== '0'; } catch { return true; } });
 
   useEffect(() => {
     api.getSettings().then((s) => setForm(s));
@@ -34,6 +36,7 @@ export default function SettingsDialog({ onClose, onSaved }) {
       bnetAccountLibrary: form.bnetAccountLibrary,
       autostart: form.autostart
     });
+    try { localStorage.setItem('ludora.startSound', startSound ? '1' : '0'); } catch { /* egal */ }
     onSaved();
   }
 
@@ -107,6 +110,16 @@ export default function SettingsDialog({ onClose, onSaved }) {
             <div className="account-info">
               <b>{t("Mit dem System starten")}</b>
               <small>{form.autostartAvailable ? t("Startet beim Anmelden unsichtbar im Hintergrund.") : t("Nur in der installierten App verfügbar.")}</small>
+            </div>
+          </div>
+          <div className="launcher-row">
+            <label className="switch">
+              <input type="checkbox" checked={startSound} onChange={(e) => setStartSound(e.target.checked)} />
+              <span />
+            </label>
+            <div className="account-info">
+              <b>{t("Startsound")}</b>
+              <small>{t("Kurzer Klang zur Logo-Animation beim Öffnen von Ludora.")}</small>
             </div>
           </div>
         </div>

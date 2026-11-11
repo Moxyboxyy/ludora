@@ -514,5 +514,7 @@
   "Verkleinern": "Restore",
   "Steam hat kein Zugriffs-Token geliefert": "Steam did not return an access token",
   "Anmeldung läuft bereits": "Sign-in is already in progress",
-  "Fenster konnte nicht geöffnet werden": "Could not open the window"
+  "Fenster konnte nicht geöffnet werden": "Could not open the window",
+  "Startsound": "Startup sound",
+  "Kurzer Klang zur Logo-Animation beim Öffnen von Ludora.": "Short sound with the logo animation when Ludora opens."
 }

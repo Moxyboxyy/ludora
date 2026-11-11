@@ -70,6 +70,70 @@
       // Chat- und Debugfenster sowie ein versteckter Start (Autostart in den Tray) brauchen keine Startanimation
       window.__splashT = performance.now();
       if (location.hash || document.visibilityState === 'hidden') document.getElementById('splash').remove();
+      else {
+        // Startsound passend zur Animation, live erzeugt (keine Audiodatei): dunkler Swell während der Drehung,
+        // vier warme Plucks für die Kacheln, gedämpfter Kino-Einschlag + ruhiger Pad, wenn der Hub aufspringt. Abschaltbar in den Einstellungen.
+        try {
+          if (localStorage.getItem('ludora.startSound') !== '0') {
+            const ac = new (window.AudioContext || window.webkitAudioContext)();
+            const play = () => {
+              const t0 = ac.currentTime + 0.03, sr = ac.sampleRate;
+              const P = 0.75; // Grundton: eine Quarte tiefer (A-Dur statt D-Dur)
+              // Summe: Kompressor + kurzer Hall (berechnete Hallfahne), damit es glatt und „teuer“ klingt
+              const comp = ac.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4; comp.connect(ac.destination);
+              const out = ac.createGain(); out.gain.value = 0.6; out.connect(comp);
+              const ir = ac.createBuffer(2, sr * 1.6, sr);
+              for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+              const verb = ac.createConvolver(); verb.buffer = ir;
+              const wet = ac.createGain(); wet.gain.value = 0.35; verb.connect(wet).connect(out);
+              const env = (g, at, peak, attack, dur) => {
+                g.gain.setValueAtTime(0.0001, t0 + at);
+                g.gain.exponentialRampToValueAtTime(peak, t0 + at + attack);
+                g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
+              };
+              const osc = (type, f, at, dur, dest, detune = 0) => {
+                const o = ac.createOscillator(); o.type = type; o.frequency.value = f; o.detune.value = detune;
+                o.connect(dest); o.start(t0 + at); o.stop(t0 + at + dur + 0.05); return o;
+              };
+              const noise = (dur) => {
+                const b = ac.createBuffer(1, Math.ceil(sr * dur), sr), d = b.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+                const n = ac.createBufferSource(); n.buffer = b; return n;
+              };
+              const bus = (pan, send) => { const p = ac.createStereoPanner(); p.pan.value = pan; p.connect(out); const s = ac.createGain(); s.gain.value = send; p.connect(s).connect(verb); return p; };
+              // 1) Dunkler Swell während der Drehung: gefiltertes Rauschen + tiefer Pad-Ton schwellen an (wie rückwärts abgespielt)
+              const sw = noise(1.1), swf = ac.createBiquadFilter(); swf.type = 'lowpass'; swf.Q.value = 1.5;
+              swf.frequency.setValueAtTime(150, t0); swf.frequency.exponentialRampToValueAtTime(1600, t0 + 1.02);
+              const swg = ac.createGain(); swg.gain.setValueAtTime(0.0001, t0); swg.gain.exponentialRampToValueAtTime(0.07, t0 + 1.0); swg.gain.linearRampToValueAtTime(0.0001, t0 + 1.06);
+              sw.connect(swf).connect(swg).connect(bus(0, 0.5)); sw.start(t0); sw.stop(t0 + 1.1);
+              const pad = ac.createGain(); pad.gain.setValueAtTime(0.0001, t0); pad.gain.exponentialRampToValueAtTime(0.07, t0 + 1.0); pad.gain.linearRampToValueAtTime(0.0001, t0 + 1.06);
+              const padf = ac.createBiquadFilter(); padf.type = 'lowpass'; padf.frequency.setValueAtTime(300, t0); padf.frequency.exponentialRampToValueAtTime(1100, t0 + 1.0); padf.connect(pad).connect(bus(0, 0.6));
+              [293.66, 440, 554.37].map((f) => f * P / 2).forEach((f) => { osc('sawtooth', f, 0, 1.06, padf, -10); osc('sawtooth', f, 0, 1.06, padf, 10); });
+              // 2) Vier Kacheln: warme FM-Plucks (A-Dur 9), abwechselnd links/rechts, mit Hall
+              [[587.33, 0.15, -0.35], [659.25, 0.35, 0.35], [739.99, 0.55, -0.2], [880, 0.75, 0.2]].forEach(([f0, at, pan]) => {
+                const f = f0 * P / 2; // Plucks eine Oktave tiefer, weicher Anschlag
+                const g = ac.createGain(); env(g, at, 0.26, 0.006, 0.45); g.connect(bus(pan, 0.7));
+                const car = osc('sine', f, at, 0.45, g);
+                const mod = ac.createOscillator(), mg = ac.createGain(); mod.frequency.value = f * 2;
+                mg.gain.setValueAtTime(f * 0.7, t0 + at); mg.gain.exponentialRampToValueAtTime(1, t0 + at + 0.25);
+                mod.connect(mg).connect(car.frequency); mod.start(t0 + at); mod.stop(t0 + at + 0.5);
+              });
+              // 3) Hub springt auf – „Impact“: gedämpfter Kino-Einschlag (dumpfer Boom + abfallendes Rauschen) und ein ruhiger Pad
+              const kg = ac.createGain(); env(kg, 1.05, 0.55, 0.008, 1.1); kg.connect(out);
+              const k = osc('sine', 70, 1.05, 1.1, kg); k.frequency.exponentialRampToValueAtTime(38, t0 + 1.8);
+              const hn = noise(1.2), hf = ac.createBiquadFilter(); hf.type = 'lowpass'; hf.Q.value = 2;
+              hf.frequency.setValueAtTime(1400, t0 + 1.05); hf.frequency.exponentialRampToValueAtTime(120, t0 + 2.1);
+              const hg = ac.createGain(); env(hg, 1.05, 0.16, 0.01, 1.1); hn.connect(hf).connect(hg).connect(bus(0, 0.8)); hn.start(t0 + 1.05); hn.stop(t0 + 2.2);
+              const cf = ac.createBiquadFilter(); cf.type = 'lowpass'; cf.frequency.value = 900;
+              const cg = ac.createGain(); env(cg, 1.1, 0.06, 0.25, 1.6); cf.connect(cg).connect(bus(0, 0.7));
+              [110, 164.81, 220, 277.18].forEach((f) => [-7, 7].forEach((dt) => osc('sawtooth', f, 1.1, 1.6, cf, dt)));
+            };
+            setTimeout(() => ac.close().catch(() => {}), 3500);
+            if (ac.state === 'running') play();
+            else ac.resume().then(() => { if (performance.now() - window.__splashT < 400) play(); else ac.close(); }).catch(() => {});
+          }
+        } catch (e) { /* kein Ton möglich – Animation läuft trotzdem */ }
+      }
     </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
