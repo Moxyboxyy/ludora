@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 // Zeigt das erste Cover, das lädt. Gibt es keins, wird ein
 // Platzhalter in der Farbe des Launchers mit den Initialen gezeichnet.
 export default function Cover({ game, provider, wide = false }) {
   const urls = game.covers || [];
   const urlKey = urls.join('|');
-  const [idx, setIdx] = useState(0);
-  const [loaded, setLoaded] = useState(false);
+  // Zustand hängt an der Cover-Liste: kommen neue Cover (Neu einlesen, nachgeladene Bilder), wird von vorne
+  // probiert. Ohne Effekt, der zurücksetzt – der kam bei schnell geladenen Bildern erst nach onLoad und
+  // ließ alle Cover unsichtbar.
+  const [fail, setFail] = useState({ key: urlKey, idx: 0 });
+  const idx = fail.key === urlKey ? fail.idx : 0;
+  const imgKey = `${urlKey}#${idx}`;
+  const [loadedKey, setLoadedKey] = useState(null);
+  const loaded = loadedKey === imgKey;
   const [iconOk, setIconOk] = useState(true);
-
-  // Neue Cover nachgeliefert -> von vorne probieren
-  useEffect(() => { setIdx(0); setLoaded(false); }, [urlKey]);
 
   const src = urls[idx];
 
@@ -40,14 +43,14 @@ export default function Cover({ game, provider, wide = false }) {
     {!loaded && fallback}
     {src && (
       <img
-        key={src}
+        key={imgKey}
         className={`cover-img ${loaded ? 'in' : 'loading'} ${wide ? 'wide' : ''}`}
         src={src}
         alt=""
         loading="lazy"
         draggable={false}
-        onLoad={() => setLoaded(true)}
-        onError={() => { setLoaded(false); setIdx((i) => i + 1); }}
+        onLoad={() => setLoadedKey(imgKey)}
+        onError={() => setFail({ key: urlKey, idx: idx + 1 })}
       />
     )}
   </>);
