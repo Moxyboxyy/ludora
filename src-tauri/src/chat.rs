@@ -120,18 +120,21 @@ pub fn read(id: &str) {
 
 
 /// Eigenes Freundefenster (statt der Liste im Hauptfenster). Ist es schon offen, wechselt es nur die Liste.
-pub fn open_friends(app: &AppHandle, tab: &str) -> Value {
+pub fn open_friends(app: &AppHandle, tab: &str, hub: bool) -> Value {
     const TABS: [&str; 6] = ["all", "hub", "steam", "riot", "epic", "gog"];
     let tab = if TABS.contains(&tab) { tab } else { "all" };
     if let Some(w) = app.get_webview_window("friends") {
         let _ = w.emit_to("friends", "friends:tab", tab);
+        if hub {
+            let _ = w.emit_to("friends", "friends:hub", true);
+        }
         let _ = w.unminimize();
         let _ = w.show();
         let _ = w.set_focus();
         return json!({ "ok": true });
     }
     // Gleiche Seite wie das Hauptfenster, aber mit #friends=<liste> (siehe src/main.jsx)
-    let script = format!("if (!/^#friends=/.test(window.location.hash)) window.location.hash = {};", serde_json::to_string(&format!("friends={tab}")).unwrap());
+    let script = format!("if (!/^#friends=/.test(window.location.hash)) window.location.hash = {};", serde_json::to_string(&format!("friends={tab}{}", if hub { "&hub" } else { "" })).unwrap());
     let b = WebviewWindowBuilder::new(app, "friends", WebviewUrl::App("index.html".into()))
         .title("Ludora – Freunde")
         .inner_size(400.0, 680.0)

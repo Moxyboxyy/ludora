@@ -324,7 +324,7 @@ export const TESTS = [
 ];
 
 /** Ereignisse, die die App schickt – der Debug-Bereich zählt mit */
-export const EVENTS = ['friends:update', 'friends:tab', 'friends2:update', 'hub:update', 'chat:event', 'library:cover', 'library:compat',
+export const EVENTS = ['friends:update', 'friends:tab', 'friends:hub', 'friends2:update', 'hub:update', 'chat:event', 'library:cover', 'library:compat',
   'library:streams', 'update:state', 'update:open', 'app:navigate'];
 
 /** Einen Test ausführen (mit Zeitlimit) */

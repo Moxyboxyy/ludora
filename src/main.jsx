@@ -8,8 +8,9 @@ installReloadGuards();
 const chatRaw = window.location.hash.match(/^#chat=(.+)$/);
 const chat = chatRaw && /^(\d{17}|(riot|epic):[A-Za-z0-9-]{8,80})$/.test(decodeURIComponent(chatRaw[1])) ? [null, decodeURIComponent(chatRaw[1])] : null;
 // Eigenes Freundefenster: #friends=<liste>
-const friendsRaw = window.location.hash.match(/^#friends=(all|hub|steam|riot|epic|gog)$/);
+const friendsRaw = window.location.hash.match(/^#friends=(all|hub|steam|riot|epic|gog)(&hub)?$/);
 const friendsTab = friendsRaw ? friendsRaw[1] : null;
+const friendsHub = !!friendsRaw?.[2]; // gleich das Ludora-Konto öffnen (Klick auf den Namen oben im Hauptfenster)
 
 async function start() {
   // Rust-Version: window.gamehub erst aufbauen – api.js und i18n.js lesen es beim Laden
@@ -25,7 +26,7 @@ async function start() {
   const [{ default: React }, { createRoot }] = await Promise.all([import('react'), import('react-dom/client')]);
   let view;
   if (chat) view = React.createElement((await import('./components/ChatWindow.jsx')).default, { steamid: chat[1] });
-  else if (friendsTab) view = React.createElement((await import('./components/FriendsWindow.jsx')).default, { tab: friendsTab });
+  else if (friendsTab) view = React.createElement((await import('./components/FriendsWindow.jsx')).default, { tab: friendsTab, openHub: friendsHub });
   else view = React.createElement((await import('./App.jsx')).default);
   createRoot(document.getElementById('root')).render(view);
   signalReady();

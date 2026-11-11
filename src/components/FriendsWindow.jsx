@@ -4,8 +4,11 @@ import { t } from '../i18n.js';
 import FriendsPanel from './FriendsPanel.jsx';
 
 /** Eigenes Freundefenster (#friends=<liste>): dieselbe Freundesliste wie früher im Hauptfenster */
-export default function FriendsWindow({ tab }) {
+export default function FriendsWindow({ tab, openHub = false }) {
   const [lib, setLib] = useState({ games: [], providers: [] });
+  // Ludora-Konto öffnen: beim Start (#friends=…&hub) oder wenn im Hauptfenster auf den Namen geklickt wird
+  const [hubRequest, setHubRequest] = useState(openHub ? 1 : 0);
+  useEffect(() => api.friendsWindow?.onHub?.(() => setHubRequest((n) => n + 1)), []);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -26,7 +29,7 @@ export default function FriendsWindow({ tab }) {
 
   return (
     <div className="friends-window-root">
-      <FriendsPanel windowMode initialTab={tab} open games={lib.games} onLaunchGame={launch} notify={notify} providerById={providerById} onClose={() => window.close()} />
+      <FriendsPanel windowMode initialTab={tab} open games={lib.games} onLaunchGame={launch} notify={notify} providerById={providerById} hubRequest={hubRequest} onClose={() => window.close()} />
       {toast && <div key={toast.key} className={`toast ${toast.kind}`}>{toast.text}</div>}
     </div>
   );

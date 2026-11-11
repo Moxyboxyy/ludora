@@ -47,6 +47,10 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         match id.as_str() {
             "show" => crate::show_main(app),
             "quit" => crate::quit(app),
+            // Freunde öffnen das eigene Freundefenster
+            "nav:friends" => {
+                crate::chat::open_friends(app, "all", false);
+            }
             x if x.starts_with("nav:") => crate::navigate(app, &x[4..]),
             x if x.starts_with("play:") => {
                 let gid = x[5..].to_string();

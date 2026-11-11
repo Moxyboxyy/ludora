@@ -53,7 +53,6 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [launching, setLaunching] = useState(null);
   const [dialog, setDialog] = useState(null); // 'add' | 'settings' | 'downloads' | 'friends' | null
-  const [hubRequest, setHubRequest] = useState(0); // Konto-Knopf oben -> Ludora-Konto-Fenster öffnen
   const [unread, setUnread] = useState({ total: 0 });
   const [friendsDial, setFriendsDial] = useState(false); // Freunde-Knopf: runde Launcher-Knöpfe nach oben
   const [dialShown, dialClosing] = useExit(friendsDial, 300);
@@ -86,7 +85,8 @@ export default function App() {
   useEffect(() => api.app?.onNavigate?.((page) => {
     if (page === 'library') { setFilter((f) => (f === 'shop' ? 'all' : f)); setDialog(null); }
     else if (page === 'shop') { setFilter('shop'); setDialog(null); }
-    else if (['downloads', 'friends', 'settings'].includes(page)) setDialog(page);
+    else if (page === 'friends') api.friendsWindow?.open('all');
+    else if (['downloads', 'settings'].includes(page)) setDialog(page);
   }), []);
 
   // Start: zuerst die gespeicherte Bibliothek (sofort da), dann im Hintergrund neu einlesen
@@ -371,7 +371,7 @@ export default function App() {
         onShop={() => setFilter('shop')}
         onSettings={() => setDialog('settings')}
         onRefresh={refresh}
-        onAccount={() => { setDialog('friends'); setHubRequest((n) => n + 1); }}
+        onAccount={() => api.friendsWindow?.open('all', true)}
         notify={notify}
       />
       <div className={`app ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -526,15 +526,16 @@ export default function App() {
             }}
           />
         )}
+        {/* Freundesliste läuft hier unsichtbar mit – nur für die Zahl ungelesener Nachrichten am Freunde-Knopf.
+            Angezeigt wird sie im eigenen Freundefenster. */}
         <FriendsPanel
-          open={dialog === 'friends'}
-          onClose={() => setDialog(null)}
+          open={false}
+          onClose={() => {}}
           games={data.games}
           onLaunchGame={play}
           notify={notify}
           onUnread={setUnread}
           providerById={providerById}
-          hubRequest={hubRequest}
         />
 
         {/* Freunde: schwebender Knopf unten rechts – Zahl = ungelesene Nachrichten. Klick klappt runde Launcher-Knöpfe
