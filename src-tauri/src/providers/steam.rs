@@ -1,4 +1,4 @@
-//! Steam (entspricht electron/providers/steam.js)
+//! Steam
 //! Installiert: libraryfolders.vdf + appmanifest_*.acf; Bibliothek: lokaler Cache (appinfo.vdf,
 //! librarycache, localconfig.vdf) oder – mit API-Key – die Steam Web API.
 
@@ -17,7 +17,7 @@ use crate::vdf::{self, get_ci, get_str};
 const IGNORED_APPIDS: [&str; 8] = ["228980", "1070560", "1391110", "1628350", "250820", "1493710", "2180100", "2348590"];
 static IGNORED_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)^(Steamworks|Proton|Steam Linux Runtime|SteamVR)").unwrap());
 static TEST_APP: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?i)(public test|test server|\bpts\b|playtest|\bbeta\b|unstable|experimental|dedicated server)").unwrap()
+    crate::re!(r"(?i)(public test|test server|\bpts\b|playtest|\bbeta\b|unstable|experimental|dedicated server)").clone()
 });
 pub const STEAMID64_BASE: u64 = 76561197960265728;
 
@@ -160,7 +160,7 @@ async fn read_local_config(steam: &Path, steam_id: &str) -> Map<String, Value> {
 
 async fn owned_from_local_cache(steam: &Path, local_apps: &Map<String, Value>) -> anyhow::Result<Vec<(String, String, Option<u64>, Option<u64>)>> {
     let mut ids: HashSet<String> = HashSet::new();
-    let re = Regex::new(r"^(\d+)(?:_|$)").unwrap();
+    let re = crate::re!(r"^(\d+)(?:_|$)");
     for e in list_dir(steam.join("appcache").join("librarycache")).await {
         if let Some(c) = re.captures(&e) {
             ids.insert(c[1].to_string());
@@ -259,7 +259,7 @@ pub fn update_state(state: &Value) -> Value {
 
 pub async fn read_manifests(steam: &Path) -> Vec<(PathBuf, Value)> {
     let mut out = Vec::new();
-    let re = Regex::new(r"(?i)^appmanifest_\d+\.acf$").unwrap();
+    let re = crate::re!(r"(?i)^appmanifest_\d+\.acf$");
     for lib in library_folders(steam).await {
         for f in list_dir(&lib).await.into_iter().filter(|f| re.is_match(f)) {
             let Some(text) = read_text(lib.join(&f)).await else { continue };
@@ -392,7 +392,7 @@ pub fn parse_content_log(text: &str, now: i64) -> LogInfo {
     }
     // Nie rückwärts
     if let Some(si) = start_idx {
-        let key = format!("{}@{}", info.appid.clone().unwrap_or_default(), &lines[si].chars().take(21).collect::<String>());
+        let key = format!("{}@{}", info.appid.clone().unwrap_or_default(), lines[si].chars().take(21).collect::<String>());
         let mut memo = PROGRESS_MEMO.lock();
         if let Some((_, v)) = memo.iter().find(|(k, _)| *k == key) {
             done = done.max(*v);
@@ -446,7 +446,7 @@ pub async fn updates() -> Vec<Value> {
         return vec![];
     }
     let log = steam_log_info(&steam).await;
-    let fully_installed_only = Regex::new(r"^Fully Installed,?\s*$").unwrap();
+    let fully_installed_only = crate::re!(r"^Fully Installed,?\s*$");
     let mut list: Vec<(String, Value)> = Vec::new();
     for (id, mut u) in raw {
         if let Some(st) = log.states.get(&id) {

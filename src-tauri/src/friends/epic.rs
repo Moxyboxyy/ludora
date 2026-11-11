@@ -4,7 +4,6 @@
 use futures::{SinkExt, StreamExt};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
-use regex::Regex;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -195,7 +194,7 @@ fn app_label(app: &str) -> Option<String> {
 }
 
 fn build_list(s: &S) -> Vec<Value> {
-    let launcher = Regex::new(r"(?i)launcher").unwrap();
+    let launcher = crate::re!(r"(?i)launcher");
     s.friend_ids
         .iter()
         .map(|id| {
@@ -204,7 +203,7 @@ fn build_list(s: &S) -> Vec<Value> {
             if let Some(res) = s.presence.get(id) {
                 for (resource, p) in res {
                     let app = resource.split(':').nth(1).unwrap_or("").to_string();
-                    let playing = p.status.as_ref().map_or(false, |st| st["bIsPlaying"] == true);
+                    let playing = p.status.as_ref().is_some_and(|st| st["bIsPlaying"] == true);
                     let sc = (if playing { 4 } else { 0 }) + (if p.show.is_some() { 1 } else { 2 }) + (if launcher.is_match(&app) { 0 } else { 1 });
                     if best.as_ref().map_or(true, |b| sc > b.0) {
                         best = Some((sc, p, app));
@@ -220,7 +219,7 @@ fn build_list(s: &S) -> Vec<Value> {
                         _ => "online",
                     };
                     let name = app_label(app);
-                    let playing = p.status.as_ref().map_or(false, |st| st["bIsPlaying"] == true);
+                    let playing = p.status.as_ref().is_some_and(|st| st["bIsPlaying"] == true);
                     let game = if playing || (name.is_some() && !launcher.is_match(app)) { name } else { None };
                     let rich = p.status.as_ref().and_then(|st| st["Status"].as_str()).filter(|x| !x.is_empty()).map(String::from);
                     (state, game, rich)
@@ -249,23 +248,29 @@ fn schedule_publish() {
 // ---------- XMPP ----------
 
 fn attr(head: &str, name: &str) -> Option<String> {
-    Regex::new(&format!(r#"{name}=["']([^"']+)["']"#)).unwrap().captures(head).map(|c| c[1].to_string())
+    let re = match name {
+        "from" => crate::re!(r#"from=["']([^"']+)["']"#),
+        "type" => crate::re!(r#"type=["']([^"']+)["']"#),
+        "id" => crate::re!(r#"id=["']([^"']+)["']"#),
+        _ => return None,
+    };
+    re.captures(head).map(|c| c[1].to_string())
 }
 
 /// Eingehende Chatnachricht -> (from, text)
 pub fn parse_message(xml: &str) -> Option<(String, String)> {
-    let head = Regex::new(r"^<message\b[^>]*>").unwrap().find(xml)?.as_str().to_string();
-    if !Regex::new(r#"type=["']chat["']"#).unwrap().is_match(&head) {
+    let head = crate::re!(r"^<message\b[^>]*>").find(xml)?.as_str().to_string();
+    if !crate::re!(r#"type=["']chat["']"#).is_match(&head) {
         return None;
     }
-    let from = Regex::new(r#"from=["']([^"'@]+)@"#).unwrap().captures(&head)?[1].to_string();
-    let body = Regex::new(r"(?s)<body>(.*?)</body>").unwrap().captures(xml)?[1].to_string();
+    let from = crate::re!(r#"from=["']([^"'@]+)@"#).captures(&head)?[1].to_string();
+    let body = crate::re!(r"(?s)<body>(.*?)</body>").captures(xml)?[1].to_string();
     Some((from, unescape_xml(&body)))
 }
 
 /// <presence …/> und <presence …>…</presence> aus einer Nachricht lösen
 pub fn split_presences(msg: &str) -> Vec<String> {
-    let re = Regex::new(r"<presence\b[^>]*?(/?)>").unwrap();
+    let re = crate::re!(r"<presence\b[^>]*?(/?)>");
     let mut out = vec![];
     let mut pos = 0;
     while let Some(c) = re.captures_at(msg, pos) {
@@ -291,7 +296,7 @@ pub fn split_presences(msg: &str) -> Vec<String> {
 }
 
 fn handle_presence(s: &mut S, xml: &str) -> bool {
-    let head = Regex::new(r"^<presence\b[^>]*>").unwrap().find(xml).map(|m| m.as_str()).unwrap_or(xml).to_string();
+    let head = crate::re!(r"^<presence\b[^>]*>").find(xml).map(|m| m.as_str()).unwrap_or(xml).to_string();
     let Some(from) = attr(&head, "from") else { return false };
     let (bare, resource) = from.split_once('/').unwrap_or((&from, ""));
     let id = bare.split('@').next().unwrap_or("").to_string();
@@ -303,8 +308,8 @@ fn handle_presence(s: &mut S, xml: &str) -> bool {
     if ty.as_deref() == Some("unavailable") {
         map.remove(resource);
     } else {
-        let show = Regex::new(r"<show>([^<]*)</show>").unwrap().captures(xml).map(|c| c[1].to_string());
-        let status = Regex::new(r"(?s)<status>(.*?)</status>").unwrap().captures(xml).map(|c| parse_status(&c[1]));
+        let show = crate::re!(r"<show>([^<]*)</show>").captures(xml).map(|c| c[1].to_string());
+        let status = crate::re!(r"(?s)<status>(.*?)</status>").captures(xml).map(|c| parse_status(&c[1]));
         map.insert(resource.to_string(), Pres { show, status });
     }
     true
@@ -384,7 +389,7 @@ async fn run_xmpp(my: u64, a: Auth) -> anyhow::Result<()> {
             let _ = tx.send(format!("<presence><show>away</show><status>{status}</status></presence>"));
             ST.lock().sender = Some(tx.clone());
         } else if step == "ready" {
-            let ping_re = Regex::new(r#"<iq[^>]*type=["']get["'][^>]*>\s*<ping[^>]*/>\s*</iq>"#).unwrap();
+            let ping_re = crate::re!(r#"<iq[^>]*type=["']get["'][^>]*>\s*<ping[^>]*/>\s*</iq>"#);
             for p in ping_re.find_iter(&msg) {
                 let id = attr(p.as_str(), "id");
                 let from = attr(p.as_str(), "from");
@@ -394,7 +399,7 @@ async fn run_xmpp(my: u64, a: Auth) -> anyhow::Result<()> {
                     from.map(|f| format!(r#" to="{}""#, escape_xml(&f))).unwrap_or_default()
                 ));
             }
-            for m in Regex::new(r"(?s)<message\b.*?</message>").unwrap().find_iter(&msg) {
+            for m in crate::re!(r"(?s)<message\b.*?</message>").find_iter(&msg) {
                 receive(m.as_str());
             }
             let mut changed = false;
@@ -453,7 +458,7 @@ async fn refresh_once(my: u64) {
         Ok(()) => publish(),
         Err(e) => {
             let msg = e.to_string();
-            if status_of(&e) == 401 || Regex::new(r"(?i)Nicht angemeldet|Not signed in|invalid_grant|refresh").unwrap().is_match(&msg) {
+            if status_of(&e) == 401 || crate::re!(r"(?i)Nicht angemeldet|Not signed in|invalid_grant|refresh").is_match(&msg) {
                 STORE.set(json!({ "status": "disconnected", "needsLogin": true, "error": t("Epic-Anmeldung abgelaufen – bitte neu anmelden.") }));
                 return;
             }
@@ -515,7 +520,7 @@ pub fn init() {
 
 pub fn restore() {
     let Some(a) = load_saved() else { return };
-    if ST.lock().auth.as_ref().map_or(false, |x| x.refresh_token == a.refresh_token) {
+    if ST.lock().auth.as_ref().is_some_and(|x| x.refresh_token == a.refresh_token) {
         return;
     }
     ST.lock().auth = Some(a);

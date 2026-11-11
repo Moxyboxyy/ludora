@@ -1,5 +1,5 @@
 //! Shop: Spiele in allen Stores suchen und Preise vergleichen (Steam, Epic, GOG direkt;
-//! EA/Ubisoft/Battle.net über CheapShark). Entspricht electron/lib/shop.js.
+//! Ubisoft/Battle.net über CheapShark, EA über den Steam-Store).
 
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
@@ -115,8 +115,8 @@ async fn get_json(url: &str, post: Option<Value>) -> anyhow::Result<Value> {
 pub fn norm_title(s: &str) -> String {
     let s: String = s.chars().filter(|c| !matches!(c, '\u{2122}' | '\u{00ae}' | '\u{00a9}')).collect();
     let s: String = s.nfkd().filter(|c| !('\u{0300}'..='\u{036f}').contains(c)).collect::<String>().to_lowercase().replace('&', " and ");
-    let s = Regex::new(r"\b(standard|base) edition\b").unwrap().replace_all(&s, " ");
-    Regex::new(r"[^a-z0-9]+").unwrap().replace_all(&s, " ").trim().to_string()
+    let s = crate::re!(r"\b(standard|base) edition\b").replace_all(&s, " ");
+    crate::re!(r"[^a-z0-9]+").replace_all(&s, " ").trim().to_string()
 }
 
 pub fn parse_price(text: &str) -> Option<f64> {
@@ -124,11 +124,11 @@ pub fn parse_price(text: &str) -> Option<f64> {
     if s.is_empty() {
         return None;
     }
-    if Regex::new(r"(?i)kostenlos|free|gratis").unwrap().is_match(s) {
+    if crate::re!(r"(?i)kostenlos|free|gratis").is_match(s) {
         return Some(0.0);
     }
     let compact: String = s.chars().filter(|c| !c.is_whitespace()).collect();
-    let c = Regex::new(r"(\d{1,3}(?:[.,]\d{3})*|\d+)(?:[.,](\d{2}))?").unwrap().captures(&compact)?;
+    let c = crate::re!(r"(\d{1,3}(?:[.,]\d{3})*|\d+)(?:[.,](\d{2}))?").captures(&compact)?;
     let whole: f64 = c[1].replace(['.', ','], "").parse().ok()?;
     Some(whole + c.get(2).map_or(0.0, |m| m.as_str().parse::<f64>().unwrap_or(0.0) / 100.0))
 }
@@ -154,9 +154,9 @@ fn cap(re: &str, s: &str) -> Option<String> {
 
 pub fn parse_steam_results(html: &str) -> Vec<Value> {
     let mut out = vec![];
-    for block in Regex::new(r#"<a\s+href=""#).unwrap().split(html).skip(1) {
+    for block in crate::re!(r#"<a\s+href=""#).split(html).skip(1) {
         let head = &block[..block.find('>').unwrap_or(block.len())];
-        if Regex::new(r"data-ds-(bundleid|packageid)=").unwrap().is_match(head) {
+        if crate::re!(r"data-ds-(bundleid|packageid)=").is_match(head) {
             continue;
         }
         let Some(id) = cap(r#"data-ds-appid="(\d+)""#, head) else { continue };
@@ -234,7 +234,7 @@ async fn steam_with(o: &Opts, publisher: Option<&str>) -> anyhow::Result<List> {
     let total = j["total_count"].as_f64();
     let more = match total {
         Some(t) => ((o.page + 1) * PAGE) as f64 > 0.0 && (((o.page + 1) * PAGE) as f64) < t,
-        None => Regex::new(r"data-ds-appid|data-ds-bundleid|data-ds-packageid").unwrap().is_match(html),
+        None => crate::re!(r"data-ds-appid|data-ds-bundleid|data-ds-packageid").is_match(html),
     };
     Ok(List { items, more: Some(more), total })
 }
@@ -246,7 +246,7 @@ pub fn from_gog(products: &[Value]) -> Vec<Value> {
         .map(|x| {
             let pr = &x["price"];
             let amount = pr["finalMoney"]["amount"].as_str().and_then(|s| s.parse::<f64>().ok()).or(pr["finalMoney"]["amount"].as_f64()).or_else(|| parse_price(pr["final"].as_str().unwrap_or("")));
-            let discount = pr["discount"].as_str().and_then(|s| Regex::new(r"-?\d+").unwrap().find(s).and_then(|m| m.as_str().parse::<i64>().ok())).or(pr["discount"].as_i64()).unwrap_or(0).abs();
+            let discount = pr["discount"].as_str().and_then(|s| crate::re!(r"-?\d+").find(s).and_then(|m| m.as_str().parse::<i64>().ok())).or(pr["discount"].as_i64()).unwrap_or(0).abs();
             let has_discount = match &pr["discount"] {
                 Value::String(s) => !s.is_empty(),
                 Value::Null => false,
@@ -322,7 +322,7 @@ pub fn from_epic(elements: &[Value]) -> Vec<Value> {
             let tp = &e["price"]["totalPrice"];
             let cents = tp["discountPrice"].as_f64();
             let orig = tp["originalPrice"].as_f64().unwrap_or(0.0);
-            let reduced = cents.map_or(false, |c| orig > c);
+            let reduced = cents.is_some_and(|c| orig > c);
             Some(json!({
                 "title": title,
                 "image": img,
@@ -403,7 +403,7 @@ async fn epic_window(app: &tauri::AppHandle) -> anyhow::Result<tauri::WebviewWin
     // Seite (und ggf. Cloudflare-Prüfung) laden lassen
     for _ in 0..40 {
         tokio::time::sleep(Duration::from_millis(250)).await;
-        if w.url().map_or(false, |u| u.host_str() == Some("store.epicgames.com")) {
+        if w.url().is_ok_and(|u| u.host_str() == Some("store.epicgames.com")) {
             break;
         }
     }
@@ -737,7 +737,7 @@ pub async fn query(opts: &Value) -> Value {
     let mut games = merge(&raw, &q);
     let best = |g: &Value| g["stores"].as_array().map_or(0, |s| s.iter().map(|x| x["discount"].as_i64().unwrap_or(0)).max().unwrap_or(0).max(0));
     if deals {
-        games.retain(|g| best(g) > 0 || g["stores"].as_array().map_or(false, |s| s.iter().any(|x| x["onSale"] == true)));
+        games.retain(|g| best(g) > 0 || g["stores"].as_array().is_some_and(|s| s.iter().any(|x| x["onSale"] == true)));
         if q.is_empty() && sort.is_empty() {
             games.sort_by(|a, b| best(b).cmp(&best(a)));
         }
@@ -823,11 +823,11 @@ pub async fn more(titles: &Value) -> Value {
 pub fn is_allowed_url(u: &str) -> bool {
     let Ok(x) = reqwest::Url::parse(u) else { return false };
     x.scheme() == "https"
-        && Regex::new(r"(?i)(^|\.)(steampowered\.com|gog\.com|epicgames\.com|ea\.com|ubisoft\.com|ubi\.com|blizzard\.com|battle\.net|playwarcraft3\.com|leagueoflegends\.com|playvalorant\.com|playruneterra\.com|riotgames\.com|rockstargames\.com|cheapshark\.com)$").unwrap().is_match(x.host_str().unwrap_or(""))
+        && crate::re!(r"(?i)(^|\.)(steampowered\.com|gog\.com|epicgames\.com|ea\.com|ubisoft\.com|ubi\.com|blizzard\.com|battle\.net|playwarcraft3\.com|leagueoflegends\.com|playvalorant\.com|playruneterra\.com|riotgames\.com|rockstargames\.com|cheapshark\.com)$").is_match(x.host_str().unwrap_or(""))
 }
 
 pub fn is_allowed_uri(u: &str) -> bool {
-    Regex::new(r"^(steam://store/\d+|com\.epicgames\.launcher://store/p/[\w-]+|battlenet://\w+)$").unwrap().is_match(u)
+    crate::re!(r"^(steam://store/\d+|com\.epicgames\.launcher://store/p/[\w-]+|battlenet://\w+)$").is_match(u)
 }
 
 #[cfg(test)]

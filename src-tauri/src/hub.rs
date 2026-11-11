@@ -1,5 +1,5 @@
 //! Ludora-Konto (Supabase): Anmeldung, verknüpfte Launcher-Konten, Ludora-Freunde, Herzschlag.
-//! Entspricht electron/lib/hubAccount.js (gleiche Server-Aufrufe, gleiche gespeicherte Sitzung "hubSession").
+//! Gespeicherte Sitzung: "hubSession" in logins.json.
 
 use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
@@ -276,7 +276,7 @@ async fn unlock_vault(password: &str, username: &str) -> Vec<String> {
         Err(e) => {
             let m = e.to_string();
             crate::log::warn(&format!("[vault] {m}"));
-            let missing = regex::Regex::new(r"vaults|PGRST205|42P01|404").unwrap().is_match(&m);
+            let missing = crate::re!(r"vaults|PGRST205|42P01|404").is_match(&m);
             set(json!({ "vaultError": if missing { Value::String(t("Auf dem Ludora-Server fehlt noch supabase/04_vault.sql (im SQL Editor ausführen).")) } else { Value::Null } }));
             vec![]
         }
@@ -321,7 +321,7 @@ pub async fn link(launcher: &str, token: &str, claim: Value) -> Value {
         }
     }
     let mut last: Option<anyhow::Error> = None;
-    let nf = regex::Regex::new(r"(?i)Requested function was not found|NOT_FOUND").unwrap();
+    let nf = crate::re!(r"(?i)Requested function was not found|NOT_FOUND");
     for name in names {
         let body = json!({ "launcher": launcher, "token": token, "claim": if claim.is_object() { claim.clone() } else { json!({}) } });
         match request("POST", &format!("/functions/v1/{}", crate::net::enc(&name)), Some(body), true, &[]).await {
@@ -446,7 +446,7 @@ async fn load_friends() -> anyhow::Result<()> {
                 "username": r["username"],
                 "displayName": if r["display_name"].as_str().map_or(true, |s| s.is_empty()) { r["username"].clone() } else { r["display_name"].clone() },
                 "relation": r["relation"],
-                "online": seen.map_or(false, |s| n - s < 75_000),
+                "online": seen.is_some_and(|s| n - s < 75_000),
                 "lastSeen": seen,
                 "accounts": if r["accounts"].is_array() { r["accounts"].clone() } else { json!([]) }
             })
@@ -459,7 +459,7 @@ async fn load_friends() -> anyhow::Result<()> {
 pub async fn refresh_friends() -> Value {
     if let Err(e) = load_friends().await {
         let m = e.to_string();
-        let missing = regex::Regex::new(r"my_friends|404|PGRST202").unwrap().is_match(&m);
+        let missing = crate::re!(r"my_friends|404|PGRST202").is_match(&m);
         set(json!({ "friendsError": if missing {
             t("Auf dem Ludora-Server fehlt noch supabase/02_friends.sql (im SQL Editor ausführen).")
         } else { t_args("Ludora-Freunde: {0}", &[&friendly(&e)]) } }));
@@ -485,7 +485,7 @@ fn start_loops() {
         while LOOP_GEN.load(Ordering::SeqCst) == my {
             refresh_friends().await;
             let mut waited = 0;
-            let limit = if FAST.load(Ordering::SeqCst) { 5000 } else { 15000 };
+            let limit = if FAST.load(Ordering::SeqCst) { 5000 } else { crate::idle_ms(15000) };
             while waited < limit && LOOP_GEN.load(Ordering::SeqCst) == my {
                 tokio::time::sleep(Duration::from_millis(500)).await;
                 waited += 500;

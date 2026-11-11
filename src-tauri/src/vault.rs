@@ -1,5 +1,5 @@
 //! Tresor: Anmeldungen (Epic, GOG) verschlüsselt im Ludora-Konto, damit sie auf anderen Geräten
-//! mitkommen. Schlüssel per scrypt aus dem Passwort (gleiches Format wie electron/lib/vault.js).
+//! mitkommen. Schlüssel per scrypt aus dem Passwort (gleiches Format wie die frühere Electron-Version).
 
 use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
@@ -106,7 +106,7 @@ pub async fn sync() -> anyhow::Result<Vec<String>> {
         if !SYNCED.contains(&name.as_str()) {
             continue;
         }
-        if local.get(name).and_then(|l| l["at"].as_i64()).map_or(false, |l| l >= at) {
+        if local.get(name).and_then(|l| l["at"].as_i64()).is_some_and(|l| l >= at) {
             continue;
         }
         crate::secrets::set_with(name, r["value"].clone(), Some(at), true);

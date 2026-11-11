@@ -1,7 +1,6 @@
-//! Eigene Spiele (entspricht electron/providers/manual.js) – manual-games.json im Datenordner.
+//! Eigene Spiele – manual-games.json im Datenordner.
 
 use async_trait::async_trait;
-use regex::Regex;
 use serde_json::{json, Value};
 use std::path::Path;
 
@@ -47,7 +46,7 @@ pub fn remove(id: &str) {
 
 /// "a \"b c\" d" -> ["a", "b c", "d"]
 pub fn split_args(s: &str) -> Vec<String> {
-    let re = Regex::new(r#"(?:[^\s"]+|"[^"]*")+"#).unwrap();
+    let re = crate::re!(r#"(?:[^\s"]+|"[^"]*")+"#);
     re.find_iter(s).map(|m| m.as_str().trim_matches('"').to_string()).collect()
 }
 

@@ -1,4 +1,4 @@
-//! Epic Games (entspricht electron/providers/epic.js + lib/epicManifest.js)
+//! Epic Games
 
 use async_trait::async_trait;
 use base64::Engine;
@@ -44,7 +44,7 @@ fn images_of(item: &Value) -> (Vec<String>, Vec<String>) {
 }
 
 fn is_game(item: &Value) -> bool {
-    if item["mainGameItem"]["id"].as_str().map_or(false, |s| !s.is_empty()) {
+    if item["mainGameItem"]["id"].as_str().is_some_and(|s| !s.is_empty()) {
         return false;
     }
     let cats: Vec<String> = item["categories"]
@@ -81,7 +81,7 @@ pub async fn read_catalog() -> Vec<CatItem> {
     let Some(raw) = raw else { return vec![] };
     let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(raw.trim()) else { return vec![] };
     let Ok(Value::Array(items)) = serde_json::from_slice::<Value>(&bytes) else { return vec![] };
-    let clean = Regex::new(r"\?([\s:]|$)").unwrap();
+    let clean = crate::re!(r"\?([\s:]|$)");
     items
         .into_iter()
         .filter(|it| it["id"].is_string() && it["title"].is_string())
@@ -253,7 +253,7 @@ async fn tags_from_log() -> HashMap<String, HashSet<String>> {
     let mut out = HashMap::new();
     for l in logs {
         if let Some(text) = read_text(&l).await {
-            let re = Regex::new(r"CreateInstallRequest: (\S+) components=\d+ tags=\d+ \[([^\]]*)\]").unwrap();
+            let re = crate::re!(r"CreateInstallRequest: (\S+) components=\d+ tags=\d+ \[([^\]]*)\]");
             for c in re.captures_iter(&text) {
                 out.insert(c[1].to_string(), c[2].split(',').map(String::from).collect());
             }
@@ -286,7 +286,7 @@ fn download_size(m: &Value, tags: &HashMap<String, HashSet<String>>) -> Option<f
 
 /// Lag schon eine Version vor? (Während eines Updates liegt das .item nur unter Pending)
 pub fn was_installed(m: &Value) -> bool {
-    if m["CompleteVersion"].as_str().map_or(false, |v| !v.trim().is_empty()) {
+    if m["CompleteVersion"].as_str().is_some_and(|v| !v.trim().is_empty()) {
         return true;
     }
     let p = s(m, "CompleteManifestPath");
@@ -364,11 +364,11 @@ pub fn read_download_state_json(data: &Value) -> HashMap<String, Value> {
     fn num(o: &Map<String, Value>, re: &Regex) -> Option<f64> {
         o.iter().find_map(|(k, v)| if re.is_match(k) && !v.is_boolean() { v.as_f64().or_else(|| v.as_str().and_then(|s| s.parse().ok())) } else { None })
     }
-    let re_p = Regex::new(r"(?i)^(progress|percent(age)?|downloadProgress|totalProgress)$").unwrap();
-    let re_d = Regex::new(r"(?i)^(bytesDownloaded|downloadedBytes|bytesDone|currentBytes|downloaded)$").unwrap();
-    let re_t = Regex::new(r"(?i)^(bytesTotal|totalBytes|downloadSize|totalDownloadSize|bytesToDownload)$").unwrap();
-    let re_s = Regex::new(r"(?i)^(downloadSpeed|downloadRate|bytesPerSecond|speed|rate)$").unwrap();
-    let re_e = Regex::new(r"(?i)^(eta|etaSeconds|timeRemaining|remainingTime|secondsRemaining)$").unwrap();
+    let re_p = crate::re!(r"(?i)^(progress|percent(age)?|downloadProgress|totalProgress)$");
+    let re_d = crate::re!(r"(?i)^(bytesDownloaded|downloadedBytes|bytesDone|currentBytes|downloaded)$");
+    let re_t = crate::re!(r"(?i)^(bytesTotal|totalBytes|downloadSize|totalDownloadSize|bytesToDownload)$");
+    let re_s = crate::re!(r"(?i)^(downloadSpeed|downloadRate|bytesPerSecond|speed|rate)$");
+    let re_e = crate::re!(r"(?i)^(eta|etaSeconds|timeRemaining|remainingTime|secondsRemaining)$");
     fn walk(v: &Value, depth: usize, f: &mut dyn FnMut(&Map<String, Value>)) {
         if depth > 6 {
             return;
@@ -392,16 +392,16 @@ pub fn read_download_state_json(data: &Value) -> HashMap<String, Value> {
             .find_map(|k| o.get(*k).and_then(|v| v.as_str()).map(String::from))
             .or_else(|| ["AppId", "appId"].iter().find_map(|k| o.get(*k).and_then(|v| v.as_str()).map(|s| s.rsplit(':').next().unwrap_or("").to_string())));
         let Some(app) = app.filter(|a| !a.is_empty()) else { return };
-        let mut progress = num(o, &re_p);
+        let mut progress = num(o, re_p);
         if let Some(p) = progress {
             if p > 1.0 {
                 progress = Some(p / 100.0);
             }
         }
-        let done = num(o, &re_d);
-        let total = num(o, &re_t);
-        let speed = num(o, &re_s);
-        let eta = num(o, &re_e);
+        let done = num(o, re_d);
+        let total = num(o, re_t);
+        let speed = num(o, re_s);
+        let eta = num(o, re_e);
         if [progress, done, speed, eta].iter().any(|x| x.is_some()) {
             let p = progress.map(|p| p.clamp(0.0, 1.0)).or_else(|| match (total, done) {
                 (Some(t), Some(d)) if t > 0.0 => Some(d / t),
@@ -415,7 +415,7 @@ pub fn read_download_state_json(data: &Value) -> HashMap<String, Value> {
 
 async fn download_state() -> HashMap<String, Value> {
     let dir = epic_data_dir().join("DownloadManager");
-    let re = Regex::new(r"(?i)^DownloadState.*\.json$").unwrap();
+    let re = crate::re!(r"(?i)^DownloadState.*\.json$");
     let mut out = HashMap::new();
     for f in list_dir(&dir).await.into_iter().filter(|f| re.is_match(f)) {
         if let Some(j) = read_json(dir.join(&f)).await {
@@ -514,7 +514,7 @@ impl Provider for Epic {
                 }
             }
         }
-        let test = Regex::new(r"(?i)(\bbeta\b|experimental|playtest|public test|test server)").unwrap();
+        let test = crate::re!(r"(?i)(\bbeta\b|experimental|playtest|public test|test server)");
         let mut seen = HashSet::new();
         for c in &catalog {
             let Some(app) = &c.app_name else { continue };

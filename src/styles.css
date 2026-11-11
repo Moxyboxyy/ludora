@@ -130,7 +130,7 @@ svg.fill { fill: currentColor; stroke: none; }
   display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 22px 18px;
   align-content: start;
 }
-.card { display: flex; flex-direction: column; gap: 8px; }
+.card { display: flex; flex-direction: column; gap: 8px; content-visibility: auto; contain-intrinsic-size: auto 320px; }
 .cover {
   position: relative; aspect-ratio: 2 / 3; border-radius: var(--radius); overflow: hidden;
   background: var(--panel-2); box-shadow: 0 4px 18px rgba(0,0,0,.35);
@@ -212,13 +212,13 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 
 .pill { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px; white-space: nowrap; }
 .pill.floating { position: absolute; top: 8px; left: 8px; }
-.pill.updating { background: rgba(255,200,87,.18); color: var(--warn); backdrop-filter: blur(6px); }
-.pill.missing { background: rgba(255,107,107,.18); color: var(--danger); backdrop-filter: blur(6px); }
+.pill.updating { background: rgba(45,38,20,.88); color: var(--warn); }
+.pill.missing { background: rgba(48,24,26,.88); color: var(--danger); }
 .pill.ok { background: rgba(107,227,161,.12); color: var(--ok); }
 /* Von einem anderen Gerät streambar / läuft nicht auf diesem System */
-.pill.stream { display: inline-flex; align-items: center; gap: 4px; background: rgba(110,168,255,.2); color: #9cc3ff; backdrop-filter: blur(6px); max-width: calc(100% - 16px); overflow: hidden; text-overflow: ellipsis; }
+.pill.stream { display: inline-flex; align-items: center; gap: 4px; background: rgba(22,32,52,.9); color: #9cc3ff; max-width: calc(100% - 16px); overflow: hidden; text-overflow: ellipsis; }
 .pill.stream svg { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; }
-.pill.not-here { background: rgba(255,255,255,.1); color: var(--muted); backdrop-filter: blur(6px); }
+.pill.not-here { background: rgba(30,33,40,.88); color: var(--muted); }
 .play.stream { background: linear-gradient(135deg, #4b8dff, #6ea8ff); }
 .play.stream svg { fill: none; }
 /* Filter "Läuft auf …" */
@@ -230,6 +230,7 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 /* ---------- Liste ---------- */
 .list { flex: 1; overflow-y: auto; padding: 14px 28px 40px; display: flex; flex-direction: column; gap: 4px; }
 .row {
+  content-visibility: auto; contain-intrinsic-size: auto 72px;
   display: grid; grid-template-columns: 92px minmax(0, 2fr) minmax(0, 1fr) 80px 80px 140px 240px; align-items: center; gap: 16px;
   padding: 8px 12px; border-radius: 10px;
 }
@@ -290,7 +291,7 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 /* ---------- Update-Knopf ---------- */
 .play.update { background: linear-gradient(135deg, #ffc857, #ff9f43); color: #241500; }
 .play.update.running { background: #2a3142; color: var(--text); border: 1px solid #3a4459; }
-.pill.dl { background: rgba(124,156,255,.18); color: var(--accent); backdrop-filter: blur(6px); }
+.pill.dl { background: rgba(26,31,52,.9); color: var(--accent); }
 
 /* ---------- Seitliches Fenster (Downloads/Freunde) ---------- */
 .drawer-backdrop { position: fixed; inset: 44px 0 0 0; background: rgba(5,6,10,.45); z-index: 25; display: flex; justify-content: flex-end; }
@@ -399,10 +400,10 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 /* ---------- Spiel läuft ---------- */
 .play.is-running { background: rgba(107, 227, 161, .16); color: var(--ok); box-shadow: inset 0 0 0 1px rgba(107, 227, 161, .45); }
 .play.is-running:hover { background: rgba(107, 227, 161, .26); }
-.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 2px; box-shadow: 0 0 0 0 rgba(107, 227, 161, .6); animation: live 1.6s infinite; }
-@keyframes live { 0% { box-shadow: 0 0 0 0 rgba(107, 227, 161, .6); } 70% { box-shadow: 0 0 0 7px rgba(107, 227, 161, 0); } 100% { box-shadow: 0 0 0 0 rgba(107, 227, 161, 0); } }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 2px; animation: live 1.6s ease-in-out infinite; }
+@keyframes live { 50% { opacity: .35; } }
 .card.running .cover { box-shadow: 0 0 0 2px var(--ok); }
-.pill.live { display: inline-flex; align-items: center; gap: 6px; background: rgba(15,17,21,.75); color: var(--ok); backdrop-filter: blur(6px); }
+.pill.live { display: inline-flex; align-items: center; gap: 6px; background: rgba(15,17,21,.75); color: var(--ok); }
 
 .dl-meta.source { opacity: .6; font-size: 11px; }
 
@@ -415,7 +416,7 @@ svg.star.filled { fill: currentColor; }
 .mini-actions .fav-btn.on { background: rgba(255,197,61,.18); }
 .fav-btn.in-row { color: var(--muted); }
 .fav-btn.in-row.on { color: #ffc53d; }
-.fav-badge { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(15,17,21,.62); backdrop-filter: blur(6px); color: #ffc53d; z-index: 1; pointer-events: none; }
+.fav-badge { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(15,17,21,.82); color: #ffc53d; z-index: 1; pointer-events: none; }
 .fav-badge svg { width: 15px; height: 15px; }
 .row-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .row-name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -595,14 +596,13 @@ svg.star.filled { fill: currentColor; }
 .shell { display: flex; flex-direction: column; height: 100%; }
 .titlebar {
   height: 44px; flex-shrink: 0; display: flex; align-items: center; gap: 18px;
-  padding: 0 calc(140px + 8px) 0 14px; /* rechts: Platz für die Windows-Fensterknöpfe */
+  padding: 0 12px 0 14px;
   background: linear-gradient(90deg, var(--panel) 0, var(--panel) 240px, var(--bg) 520px);
   border-bottom: 1px solid rgba(38,43,55,.55);
-  -webkit-app-region: drag; user-select: none; position: relative; z-index: 40;
+  user-select: none; position: relative; z-index: 40;
 }
 .titlebar.darwin { padding-left: 84px; padding-right: 12px; } /* links sitzen die Ampel-Knöpfe */
-.titlebar.demo { padding-right: 12px; }
-.titlebar.own-controls { padding-right: 0; }
+.titlebar.own-controls { padding-right: 0; } /* Windows/Linux: eigene Fensterknöpfe ganz rechts */
 .win-controls { display: flex; align-self: stretch; margin-left: 4px; }
 .wc-btn {
   width: 46px; height: 100%; display: grid; place-items: center; border: 0; border-radius: 0;
@@ -611,7 +611,6 @@ svg.star.filled { fill: currentColor; }
 .wc-btn svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.1; }
 .wc-btn:hover { background: rgba(255,255,255,.08); color: #fff; }
 .wc-btn.close:hover { background: #e81123; color: #fff; }
-.titlebar button, .tb-dropdown { -webkit-app-region: no-drag; }
 .tb-brand { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .tb-brand img { width: 22px; height: 22px; border-radius: 6px; }
 .tb-menus { display: flex; align-items: center; }
@@ -736,3 +735,8 @@ svg.star.filled { fill: currentColor; }
 .dbg-row.fail .dbg-detail { color: #ff9a9a; }
 .dbg-row.warn .dbg-detail { color: #ffd98a; }
 .dbg-ms { opacity: .6; margin-left: 4px; }
+
+/* Sparsam: wer im System „Bewegung reduzieren“ eingestellt hat, bekommt keine Dauer-Animationen */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}

@@ -50,6 +50,47 @@ use tauri::{AppHandle, Emitter, Manager};
 /// Text für "Downloads (…)" im Tray-Menü
 pub static DOWNLOADS_LABEL: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
 static QUITTING: AtomicBool = AtomicBool::new(false);
+/// Hauptfenster versteckt (Tray)? Dann fragen alle Hintergrund-Schleifen seltener nach (spart CPU/Netz)
+static BACKGROUND: AtomicBool = AtomicBool::new(false);
+
+pub fn is_background() -> bool {
+    BACKGROUND.load(Ordering::Relaxed)
+}
+
+/// Wartezeit für Hintergrund-Schleifen: im Tray etwa viermal so lang
+pub fn idle_ms(visible_ms: u64) -> u64 {
+    if is_background() {
+        visible_ms * 4
+    } else {
+        visible_ms
+    }
+}
+
+/// Fenster ins Tray: WebView auf wenig Speicher stellen (Windows/WebView2), Schleifen verlangsamen
+pub fn set_background(app: &AppHandle, on: bool) {
+    BACKGROUND.store(on, Ordering::Relaxed);
+    if let Some(w) = app.get_webview_window("main") {
+        webview_memory(&w, on);
+    }
+}
+
+#[cfg(windows)]
+fn webview_memory(w: &tauri::WebviewWindow, low: bool) {
+    let _ = w.with_webview(move |wv| unsafe {
+        use webview2_com::Microsoft::Web::WebView2::Win32::{
+            ICoreWebView2_19, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL,
+        };
+        use windows_core::Interface;
+        if let Ok(core) = wv.controller().CoreWebView2() {
+            if let Ok(c) = core.cast::<ICoreWebView2_19>() {
+                let _ = c.SetMemoryUsageTargetLevel(if low { COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW } else { COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL });
+            }
+        }
+    });
+}
+
+#[cfg(not(windows))]
+fn webview_memory(_w: &tauri::WebviewWindow, _low: bool) {}
 
 /// Einziger Befehl für die Oberfläche: Kanal + Argumente (siehe src/tauriBridge.js)
 #[tauri::command]
@@ -73,6 +114,9 @@ pub fn broadcast(app: &AppHandle, event: &str, payload: Value) {
 }
 
 pub fn show_main(app: &AppHandle) {
+    if is_background() {
+        set_background(app, false);
+    }
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.unminimize();
         let _ = w.show();
@@ -110,7 +154,7 @@ pub fn on_chat_event(app: &AppHandle, ev: Value) {
     broadcast(app, "chat:event", ev.clone());
     if ev["type"] == "message" && ev["fromMe"] != true {
         let id = ev["steamid"].as_str().unwrap_or("").to_string();
-        let focused = app.get_webview_window(&chat::window_label(&id)).map_or(false, |w| w.is_focused().unwrap_or(false));
+        let focused = app.get_webview_window(&chat::window_label(&id)).is_some_and(|w| w.is_focused().unwrap_or(false));
         if !focused {
             let title = chat::chat_name(&id).unwrap_or_else(|| util::t("Neue Nachricht"));
             let body: String = ev["text"].as_str().unwrap_or("").chars().take(200).collect();
@@ -199,11 +243,15 @@ pub fn run() {
             if let Some(w) = app.get_webview_window("main") {
                 if start_hidden {
                     let _ = w.hide();
+                    BACKGROUND.store(true, Ordering::Relaxed);
                 }
                 let h2 = h.clone();
                 w.on_window_event(move |ev| {
                     if let tauri::WindowEvent::Focused(true) = ev {
                         updater::poke(updater::MIN_GAP);
+                        if is_background() {
+                            set_background(&h2, false);
+                        }
                     }
                     if let tauri::WindowEvent::CloseRequested { api, .. } = ev {
                         if is_quitting() || !settings::get_bool("closeToTray", true) {
@@ -213,6 +261,7 @@ pub fn run() {
                         if let Some(w) = h2.get_webview_window("main") {
                             let _ = w.hide();
                         }
+                        set_background(&h2, true);
                         if !settings::get_bool("trayHintShown", false) {
                             let mut m = serde_json::Map::new();
                             m.insert("trayHintShown".into(), Value::Bool(true));

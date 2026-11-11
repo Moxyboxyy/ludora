@@ -1,4 +1,4 @@
-//! Steam-Konto in Ludora (entspricht electron/lib/steamFriends.js, ohne Node-Bibliotheken):
+//! Steam-Konto in Ludora:
 //! QR-Anmeldung (IAuthenticationService), Zugriffs-Token über die Web-Cookies, Freundesliste,
 //! Chat über IFriendMessagesService, Stream-Geräte und Update-Fernsteuerung (IClientCommService).
 
@@ -256,7 +256,7 @@ pub async fn community_cookie() -> anyhow::Result<String> {
 
 /// JSON lesen, große Ganzzahlen (64-Bit-IDs) als Text behalten
 pub fn parse_json_big(text: &str) -> Value {
-    let re = regex::Regex::new(r"([:\[,]\s*)(-?\d{16,})(\s*[,\]}])").unwrap();
+    let re = crate::re!(r"([:\[,]\s*)(-?\d{16,})(\s*[,\]}])");
     // zweimal, weil sich Treffer überlappen können ("[1234…,5678…]")
     let a = re.replace_all(text, "$1\"$2\"$3").into_owned();
     let b = re.replace_all(&a, "$1\"$2\"$3").into_owned();
@@ -424,7 +424,7 @@ async fn connect_inner(token: String, first_access: Option<String>) {
                 return;
             }
             let msg = e.to_string();
-            let rejected = regex::Regex::new(r"(?i)AccessDenied|Expired|Revoked|InvalidSignature|InvalidPassword").unwrap().is_match(&msg);
+            let rejected = crate::re!(r"(?i)AccessDenied|Expired|Revoked|InvalidSignature|InvalidPassword").is_match(&msg);
             let retries = S.lock().retries;
             if !rejected && (is_transient(&msg) || retries < 6) {
                 emit(json!({ "status": "connecting", "error": t("Steam nicht erreichbar – neuer Versuch läuft …") }));
@@ -544,7 +544,7 @@ async fn load_friends() -> anyhow::Result<Vec<Value>> {
         .map(|id| {
             let (pubd, privd) = details.get(id).cloned().unwrap_or((json!({}), json!({})));
             let game_id = Some(sv(&privd["game_id"])).filter(|g| !g.is_empty() && g != "0");
-            let appid = game_id.clone().filter(|g| g.parse::<u64>().map_or(false, |x| x < 0x1000000));
+            let appid = game_id.clone().filter(|g| g.parse::<u64>().is_ok_and(|x| x < 0x1000000));
             if let Some(a) = &appid {
                 appids.push(a.clone());
             }
@@ -604,7 +604,8 @@ async fn refresh_once(my: u64) {
                 })
                 .collect();
             drop(s);
-            emit(json!({ "friends": friends, "error": null }));
+            // "live": Status-Änderungen kommen sofort über die Chat-Verbindung (Anzeige in der Freundesliste)
+            emit(json!({ "friends": friends, "error": null, "live": crate::steamcm::is_alive() }));
         }
         Err(e) => {
             if S.lock().gen == my {
@@ -623,7 +624,7 @@ fn schedule_poll(my: u64, ms: u64) {
         refresh_once(my).await;
         let fast = S.lock().fast;
         if S.lock().gen == my && is_connected() {
-            schedule_poll(my, if fast { 5000 } else { 15000 });
+            schedule_poll(my, if fast { 5000 } else { crate::idle_ms(15000) });
         }
     });
 }
@@ -984,7 +985,7 @@ pub async fn remote_installed() -> anyhow::Result<Vec<(String, Vec<String>)>> {
     for s in sessions {
         let id = sv(&s["client_instanceid"]);
         let name = s["machine_name"].as_str().unwrap_or("").to_string();
-        if id.is_empty() || me.as_ref().map_or(false, |m| sv(&m["client_instanceid"]) == id) || same_machine(&name, &host) {
+        if id.is_empty() || me.as_ref().is_some_and(|m| sv(&m["client_instanceid"]) == id) || same_machine(&name, &host) {
             continue;
         }
         // Namenlose Geräte (Handy-App, ausgeschaltete Rechner) antworten nicht -> überspringen

@@ -114,7 +114,7 @@ fn platform() -> &'static str {
 
 /// Passende Datei im Release (gleiche Regeln wie die Electron-Version)
 pub fn pick_asset(assets: &[Value], platform: &str, arch: &str, kind: &str) -> Option<Value> {
-    let files: Vec<&Value> = assets.iter().filter(|a| a["name"].as_str().map_or(false, |n| !n.ends_with(".blockmap") && !n.ends_with(".yml") && !n.ends_with(".sig"))).collect();
+    let files: Vec<&Value> = assets.iter().filter(|a| a["name"].as_str().is_some_and(|n| !n.ends_with(".blockmap") && !n.ends_with(".yml") && !n.ends_with(".sig"))).collect();
     let find = |re: &str| {
         let r = regex::Regex::new(re).unwrap();
         files.iter().find(|a| r.is_match(a["name"].as_str().unwrap_or(""))).map(|a| (*a).clone())
@@ -382,9 +382,9 @@ pub async fn install() -> Value {
                 if !ok {
                     anyhow::bail!("Entpacken fehlgeschlagen");
                 }
-                let new_app = std::fs::read_dir(&unpack)?.flatten().map(|e| e.path()).find(|p| p.extension().map_or(false, |x| x == "app"));
+                let new_app = std::fs::read_dir(&unpack)?.flatten().map(|e| e.path()).find(|p| p.extension().is_some_and(|x| x == "app"));
                 // …/Ludora.app/Contents/MacOS/Ludora
-                let current: Option<PathBuf> = exe.parent().and_then(|p| p.parent()).and_then(|p| p.parent()).map(|p| p.to_path_buf()).filter(|p| p.extension().map_or(false, |x| x == "app"));
+                let current: Option<PathBuf> = exe.parent().and_then(|p| p.parent()).and_then(|p| p.parent()).map(|p| p.to_path_buf()).filter(|p| p.extension().is_some_and(|x| x == "app"));
                 let (Some(new_app), Some(current)) = (new_app, current) else { anyhow::bail!("App-Paket nicht gefunden") };
                 let cur = current.to_string_lossy().to_string();
                 run_restart(

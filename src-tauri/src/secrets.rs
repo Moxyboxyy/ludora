@@ -1,4 +1,4 @@
-//! Anmeldungen verschlüsselt in logins.json (entspricht electron/lib/secrets.js).
+//! Anmeldungen verschlüsselt in logins.json.
 //! Gleiches Verfahren wie Electrons safeStorage, damit vorhandene Anmeldungen weiter gelten:
 //!   Windows: "v10" + AES-256-GCM, Schlüssel per DPAPI geschützt in "Local State" (os_crypt.encrypted_key)
 //!   macOS:   "v10" + AES-128-CBC, Schlüssel aus dem Schlüsselbund ("Ludora Safe Storage") per PBKDF2
@@ -238,11 +238,10 @@ pub mod crypto {
         pub fn decrypt(data: &[u8]) -> Option<Vec<u8>> {
             let (body, key) = if let Some(b) = data.strip_prefix(b"v11") {
                 (b, derive(password()?.as_bytes(), iterations()))
-            } else if let Some(b) = data.strip_prefix(b"v10") {
+            } else {
+                let b = data.strip_prefix(b"v10")?;
                 let pw = if cfg!(target_os = "macos") { password()? } else { "peanuts".into() };
                 (b, derive(pw.as_bytes(), iterations()))
-            } else {
-                return None;
             };
             Dec::new(&key.into(), &IV.into()).decrypt_padded_vec_mut::<Pkcs7>(body).ok()
         }

@@ -1,5 +1,4 @@
-//! Prozesse und laufende Spiele (entspricht electron/lib/running.js) und das Starten von
-//! Programmen/Links (runLaunch in electron/main.js).
+//! Prozesse und laufende Spiele, Starten von Programmen und Links.
 //! Die Prozessliste kommt direkt vom System (sysinfo) statt über PowerShell – schneller und sparsamer.
 
 use serde_json::Value;
@@ -15,8 +14,22 @@ pub struct Proc {
     pub exe: String,
 }
 
-/// Alle Prozesse mit Programmpfad
+static PROC_CACHE: once_cell::sync::Lazy<parking_lot::Mutex<Option<(std::time::Instant, Vec<Proc>)>>> =
+    once_cell::sync::Lazy::new(|| parking_lot::Mutex::new(None));
+
+/// Alle Prozesse mit Programmpfad (höchstens alle 1,5 s neu vom System – spart CPU)
 pub async fn list_processes() -> Vec<Proc> {
+    if let Some((at, list)) = PROC_CACHE.lock().as_ref() {
+        if at.elapsed() < std::time::Duration::from_millis(1500) {
+            return list.clone();
+        }
+    }
+    let list = list_processes_now().await;
+    *PROC_CACHE.lock() = Some((std::time::Instant::now(), list.clone()));
+    list
+}
+
+async fn list_processes_now() -> Vec<Proc> {
     tokio::task::spawn_blocking(|| {
         use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System, UpdateKind};
         let mut sys = System::new_with_specifics(RefreshKind::new());
@@ -45,7 +58,7 @@ pub async fn is_process_running(names: &[String]) -> bool {
 }
 
 pub fn norm(p: &str) -> String {
-    let mut s = p.replace(['/', '\\'], &MAIN_SEPARATOR.to_string());
+    let mut s = p.replace(['/', '\\'], std::path::MAIN_SEPARATOR_STR);
     while s.len() > 1 && s.ends_with(MAIN_SEPARATOR) {
         s.pop();
     }

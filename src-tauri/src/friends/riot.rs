@@ -216,7 +216,7 @@ pub fn init() {
     tauri::async_runtime::spawn(async {
         loop {
             poll().await;
-            let d = if FAST.load(Ordering::SeqCst) { 3000 } else { 10000 };
+            let d = if FAST.load(Ordering::SeqCst) { 3000 } else { crate::idle_ms(10000) };
             tokio::select! {
                 _ = tokio::time::sleep(Duration::from_millis(d)) => {}
                 _ = WAKE.notified() => {}
@@ -226,7 +226,7 @@ pub fn init() {
     tauri::async_runtime::spawn(async {
         loop {
             check_chats().await;
-            let d = if ST.lock().watched.is_empty() { 8000 } else { 2000 };
+            let d = if ST.lock().watched.is_empty() { crate::idle_ms(8000) } else { 2000 };
             tokio::select! {
                 _ = tokio::time::sleep(Duration::from_millis(d)) => {}
                 _ = CHAT_WAKE.notified() => {}
@@ -285,9 +285,9 @@ fn parse_time(v: &Value) -> i64 {
 pub fn to_messages(list: &[Value], mine: Option<&str>) -> Vec<Value> {
     let mut out: Vec<Value> = list
         .iter()
-        .filter(|m| (m["type"] == "chat" || m["type"].is_null()) && m["body"].as_str().map_or(false, |b| !b.is_empty()))
+        .filter(|m| (m["type"] == "chat" || m["type"].is_null()) && m["body"].as_str().is_some_and(|b| !b.is_empty()))
         .map(|m| {
-            let from_me = mine.map_or(false, |me| m["puuid"].as_str() == Some(me) || m["pid"].as_str().unwrap_or("").starts_with(&format!("{me}@")));
+            let from_me = mine.is_some_and(|me| m["puuid"].as_str() == Some(me) || m["pid"].as_str().unwrap_or("").starts_with(&format!("{me}@")));
             json!({ "fromMe": from_me, "text": m["body"], "ts": parse_time(&m["time"]), "id": if m["id"].is_null() { m["mid"].clone() } else { m["id"].clone() } })
         })
         .collect();

@@ -1,4 +1,4 @@
-//! Ubisoft Connect (entspricht electron/providers/ubisoft.js)
+//! Ubisoft Connect
 
 use async_trait::async_trait;
 use regex::Regex;
@@ -34,10 +34,10 @@ fn yaml_value(yaml: &str, key: &str) -> Option<String> {
 /// "l1" / "GAMENAME" -> Text aus localizations.default
 fn localize(yaml: &str, value: Option<String>) -> Option<String> {
     let v = value?;
-    if !Regex::new(r"^(l\d+|[A-Z_]+)$").unwrap().is_match(&v) {
+    if !crate::re!(r"^(l\d+|[A-Z_]+)$").is_match(&v) {
         return Some(v);
     }
-    let block = Regex::new(r"(?m)^localizations:\s*\n\s+default:\s*\n((?:[ \t]{4,}.*\n?)+)").unwrap().captures(yaml)?;
+    let block = crate::re!(r"(?m)^localizations:\s*\n\s+default:\s*\n((?:[ \t]{4,}.*\n?)+)").captures(yaml)?;
     let re = Regex::new(&format!(r"(?m)^\s+{}:\s*(.+?)\s*$", regex::escape(&v))).ok()?;
     re.captures(&block[1]).map(|c| c[1].trim_matches(|ch| ch == '"' || ch == '\'').to_string())
 }
@@ -46,8 +46,8 @@ fn localize(yaml: &str, value: Option<String>) -> Option<String> {
 pub fn read_configurations(buf: &[u8]) -> HashMap<u64, (String, Option<String>)> {
     let mut map = HashMap::new();
     let Some(top) = pb::decode(buf) else { return map };
-    let img = Regex::new(r"(?i)\.(jpe?g|png)$").unwrap();
-    let start = Regex::new(r"(?m)^\s+start_game:").unwrap();
+    let img = crate::re!(r"(?i)\.(jpe?g|png)$");
+    let start = crate::re!(r"(?m)^\s+start_game:");
     for f in top {
         let Some(msg) = pb::decode(f.bytes) else { continue };
         let (Some(id), Some(y)) = (pb::int(&msg, 1), pb::bytes(&msg, 3)) else { continue };
@@ -104,7 +104,7 @@ async fn read_library() -> Vec<(u64, String, Option<String>)> {
     files.sort_by(|a, b| b.1.cmp(&a.1));
     let Some((newest, _)) = files.first() else { return vec![] };
     let Ok(own) = tokio::fs::read(dir.join(newest)).await else { return vec![] };
-    let steam_ver = Regex::new(r"(?i)\[?\bsteam\]?\s*$").unwrap();
+    let steam_ver = crate::re!(r"(?i)\[?\bsteam\]?\s*$");
     let mut seen = HashSet::new();
     let mut out = Vec::new();
     for (id, launch_id, addon) in read_ownership(&own) {

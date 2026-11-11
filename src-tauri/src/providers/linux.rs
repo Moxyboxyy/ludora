@@ -1,5 +1,5 @@
 //! Linux: Heroic (Epic, GOG, Amazon) und Lutris (Battle.net, EA, Ubisoft, Rockstar, Rest)
-//! (entspricht electron/providers/linux.js + lib/linuxLaunchers.js)
+//!
 
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
@@ -174,13 +174,13 @@ pub fn lutris_command() -> Option<(String, Vec<String>)> {
 
 static LAUNCHER_APPS: Lazy<Vec<(&'static str, Regex)>> = Lazy::new(|| {
     vec![
-        ("battlenet", Regex::new(r"(?i)^battle\.?net$").unwrap()),
-        ("ea", Regex::new(r"(?i)^(ea app|ea desktop|origin)$").unwrap()),
-        ("ubisoft", Regex::new(r"(?i)^(ubisoft connect|uplay)$").unwrap()),
-        ("rockstar", Regex::new(r"(?i)^rockstar games launcher$").unwrap()),
-        ("epic", Regex::new(r"(?i)^epic games( store| launcher)?$").unwrap()),
-        ("gog", Regex::new(r"(?i)^gog galaxy$").unwrap()),
-        ("amazon", Regex::new(r"(?i)^amazon games$").unwrap()),
+        ("battlenet", crate::re!(r"(?i)^battle\.?net$").clone()),
+        ("ea", crate::re!(r"(?i)^(ea app|ea desktop|origin)$").clone()),
+        ("ubisoft", crate::re!(r"(?i)^(ubisoft connect|uplay)$").clone()),
+        ("rockstar", crate::re!(r"(?i)^rockstar games launcher$").clone()),
+        ("epic", crate::re!(r"(?i)^epic games( store| launcher)?$").clone()),
+        ("gog", crate::re!(r"(?i)^gog galaxy$").clone()),
+        ("amazon", crate::re!(r"(?i)^amazon games$").clone()),
     ]
 });
 
@@ -248,7 +248,7 @@ fn lutris_rows() -> Vec<Map<String, Value>> {
 
 /// Bild eines Lutris-Spiels ('cover' hochkant, 'banner' breit)
 pub fn lutris_image(slug: &str, kind: &str) -> Option<PathBuf> {
-    if !Regex::new(r"(?i)^[a-z0-9._-]+$").unwrap().is_match(slug) {
+    if !crate::re!(r"(?i)^[a-z0-9._-]+$").is_match(slug) {
         return None;
     }
     let sub = if kind == "banner" { "banners" } else { "coverart" };

@@ -1,4 +1,4 @@
-//! Rockstar Games Launcher (entspricht electron/providers/rockstar.js)
+//! Rockstar Games Launcher
 
 use async_trait::async_trait;
 use serde_json::{json, Value};

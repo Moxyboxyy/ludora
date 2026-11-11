@@ -1,4 +1,4 @@
-//! Konten-Anmeldung im Web (entspricht electron/lib/accounts.js) – derzeit Battle.net-Bibliothek.
+//! Konten-Anmeldung im Web – derzeit Battle.net-Bibliothek.
 //! Anmeldung im eigenen Fenster; die Bibliothek wird mit dessen Cookies abgerufen.
 
 use serde_json::{json, Map, Value};

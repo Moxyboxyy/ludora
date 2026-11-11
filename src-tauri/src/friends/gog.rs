@@ -225,7 +225,7 @@ fn start() {
             if STORE.status() == "disconnected" {
                 return;
             }
-            let d = if FAST.load(Ordering::SeqCst) { 5000 } else { 15000 };
+            let d = if FAST.load(Ordering::SeqCst) { 5000 } else { crate::idle_ms(15000) };
             tokio::select! {
                 _ = tokio::time::sleep(Duration::from_millis(d)) => {}
                 _ = WAKE.notified() => { first = true; }
@@ -249,7 +249,7 @@ pub fn init() {
 
 pub fn restore() {
     let Some(a) = load_saved() else { return };
-    if ST.lock().auth.as_ref().map_or(false, |x| x.refresh_token == a.refresh_token) {
+    if ST.lock().auth.as_ref().is_some_and(|x| x.refresh_token == a.refresh_token) {
         return;
     }
     ST.lock().auth = Some(a);

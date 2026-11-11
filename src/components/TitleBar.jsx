@@ -6,12 +6,11 @@ import { t } from '../i18n.js';
 import UpdateDialog from './UpdateDialog.jsx';
 import WindowControls from './WindowControls.jsx';
 
-// Fensterleiste ganz oben (wie bei Steam): Logo, Menü „Ludora“, die Bereiche und rechts das Ludora-Konto. Die Leiste zieht das Fenster; Knöpfe sind davon ausgenommen.
-// Unter Windows zeichnet Electron rechts die echten Fensterknöpfe (–, □, ✕) darüber.
+// Fensterleiste ganz oben (wie bei Steam): Logo, Menü „Ludora“, die Bereiche und rechts das Ludora-Konto.
+// Gezogen wird über data-tauri-drag-region. Windows/Linux: eigene Fensterknöpfe (–, □, ✕) rechts;
+// macOS: die Ampel-Knöpfe sitzen links in der Leiste.
 const platform = api.platform || 'demo';
-// Rust-Version (Tauri): eigene Fensterknöpfe unter Windows/Linux; gezogen wird über data-tauri-drag-region
-const tauri = api.runtime === 'tauri';
-const ownControls = tauri && platform !== 'darwin';
+const ownControls = api.runtime === 'tauri' && platform !== 'darwin';
 
 const LibraryIcon = () => (
   <svg viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="16" rx="1" /><path d="m17.5 5.2 3 .8-3.6 14-3-.8" /></svg>

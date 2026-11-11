@@ -377,7 +377,7 @@ fn settings_set(app: &AppHandle, patch: &Value) -> Value {
     }
     let new_key = allowed.get("steamGridDbKey").and_then(|v| v.as_str()).map(String::from);
     settings::set(allowed);
-    if new_key.map_or(false, |k| !k.is_empty() && k != before) {
+    if new_key.is_some_and(|k| !k.is_empty() && k != before) {
         crate::covers::clear_misses();
     }
     if language_changed {
@@ -404,7 +404,7 @@ async fn shop_open(app: &AppHandle, store: &Value) -> Value {
         return json!({ "ok": false, "error": t("Ungültiger Store-Link") });
     }
     let info = crate::library::last_providers().into_iter().find(|x| x["id"] == launcher);
-    let has_launcher = info.map_or(false, |i| i["enabled"] != false && (i["count"].as_i64().unwrap_or(0) > 0 || i["installed"].as_i64().unwrap_or(0) > 0));
+    let has_launcher = info.is_some_and(|i| i["enabled"] != false && (i["count"].as_i64().unwrap_or(0) > 0 || i["installed"].as_i64().unwrap_or(0) > 0));
     let uri_works = platform() != "linux" || launcher == "steam";
     if !uri.is_empty() && uri_works && crate::shop::is_allowed_uri(uri) && has_launcher {
         crate::hide::stop(launcher);
@@ -463,7 +463,7 @@ pub fn toggle_favorite(key: &str) -> Value {
         .and_then(|v| serde_json::from_value(v).ok())
         .unwrap_or_default();
     let valid = key.len() <= 220
-        && key.split_once(':').map_or(false, |(a, b)| {
+        && key.split_once(':').is_some_and(|(a, b)| {
             !a.is_empty() && a.chars().all(|c| c.is_ascii_lowercase()) && !b.is_empty()
         });
     if !valid {

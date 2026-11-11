@@ -1,4 +1,4 @@
-//! Windows-Registry (entspricht electron/lib/registry.js, aber direkt über die Windows-API statt "reg query").
+//! Windows-Registry.
 //! Werte kommen als serde_json::Value: REG_SZ/EXPAND_SZ -> String, DWORD/QWORD -> Zahl.
 //! Auf anderen Systemen liefern alle Funktionen leere Ergebnisse.
 

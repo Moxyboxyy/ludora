@@ -89,7 +89,7 @@ fn file_icon_png(file: &Path) -> Option<Vec<u8>> {
         .filter(|p| p.exists());
     if icns.is_none() {
         let files: Vec<String> = std::fs::read_dir(&res).ok()?.flatten().map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| n.to_lowercase().ends_with(".icns")).collect();
-        let pick = files.iter().find(|n| Regex::new(r"(?i)^(appicon|icon)\.icns$").unwrap().is_match(n)).or(files.first())?;
+        let pick = files.iter().find(|n| crate::re!(r"(?i)^(appicon|icon)\.icns$").is_match(n)).or(files.first())?;
         icns = Some(res.join(pick));
     }
     let icns = icns?;
@@ -124,7 +124,7 @@ fn encode_png(rgba: &[u8], w: u32, h: u32) -> Option<Vec<u8>> {
 }
 
 static SKIP_EXE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?i)unins|uninst|crash|report|redist|setup|install|helper|vc_?redist|dxsetup|dotnet|ue4prereq|easyanticheat|battleye|cleanup|touchup|activation|launcherpatcher").unwrap()
+    crate::re!(r"(?i)unins|uninst|crash|report|redist|setup|install|helper|vc_?redist|dxsetup|dotnet|ue4prereq|easyanticheat|battleye|cleanup|touchup|activation|launcherpatcher").clone()
 });
 
 /// Haupt-EXE raten: größte passende .exe im Ordner (und eine Ebene tiefer in bin/binaries/win64/x64/game)
@@ -132,7 +132,7 @@ fn guess_game_exe(dir: &Path) -> Option<PathBuf> {
     let mut found: Vec<(PathBuf, u64)> = vec![];
     fn scan(d: &Path, depth: u8, found: &mut Vec<(PathBuf, u64)>) {
         let Ok(rd) = std::fs::read_dir(d) else { return };
-        let sub = Regex::new(r"(?i)^(bin|binaries|win64|x64|game)$").unwrap();
+        let sub = crate::re!(r"(?i)^(bin|binaries|win64|x64|game)$");
         for e in rd.flatten() {
             let name = e.file_name().to_string_lossy().into_owned();
             let Ok(ft) = e.file_type() else { continue };
@@ -158,7 +158,7 @@ pub async fn game_icon(id: &str) -> Option<Vec<u8>> {
     let png = tokio::task::spawn_blocking(move || {
         let g = g?;
         let target = g["launch"]["target"].as_str().unwrap_or("");
-        let bad = Regex::new(r"(?i)battle\.net|galaxyclient|launcher\.exe|steam\.exe").unwrap();
+        let bad = crate::re!(r"(?i)battle\.net|galaxyclient|launcher\.exe|steam\.exe");
         let mut file: Option<PathBuf> = None;
         if g["launch"]["type"] == "exe" && target.to_lowercase().ends_with(".exe") && g["provider"] != "riot" && !bad.is_match(target) {
             file = Some(PathBuf::from(target));
@@ -167,7 +167,7 @@ pub async fn game_icon(id: &str) -> Option<Vec<u8>> {
         if file.is_none() && IS_MAC {
             if let Some(d) = &dir {
                 file = app_bundle(&d.to_string_lossy()).map(PathBuf::from).or_else(|| {
-                    std::fs::read_dir(d).ok()?.flatten().map(|e| e.path()).find(|p| p.extension().map_or(false, |x| x == "app"))
+                    std::fs::read_dir(d).ok()?.flatten().map(|e| e.path()).find(|p| p.extension().is_some_and(|x| x == "app"))
                 });
             }
         }

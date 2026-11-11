@@ -1,4 +1,4 @@
-//! Battle.net (entspricht electron/providers/battlenet.js + lib/bnetAgent.js)
+//! Battle.net
 
 use async_trait::async_trait;
 use serde_json::{json, Value};
@@ -390,11 +390,11 @@ impl Provider for BattleNet {
                 })));
             }
         }
-        let bn_re = regex::Regex::new(r"(?i)Blizzard Uninstaller|Battle\.net").unwrap();
+        let bn_re = crate::re!(r"(?i)Blizzard Uninstaller|Battle\.net");
         for e in reg::uninstall_entries() {
             let v = &e.values;
             let un = reg::val_str(v, "UninstallString").unwrap_or_default();
-            if !bn_re.is_match(&un) || reg::val_str(v, "DisplayName").map_or(false, |n| n.eq_ignore_ascii_case("Battle.net")) {
+            if !bn_re.is_match(&un) || reg::val_str(v, "DisplayName").is_some_and(|n| n.eq_ignore_ascii_case("Battle.net")) {
                 continue;
             }
             let uid = get_arg(&un, "uid").unwrap_or_default().to_lowercase();
@@ -431,7 +431,7 @@ impl Provider for BattleNet {
                 let name = a["name"].as_str().unwrap_or("").to_string();
                 let best = UID_TO_NAME.iter().map(|(u, n)| (*u, similarity(n, &name))).max_by(|a, b| a.1.total_cmp(&b.1));
                 let uid = best.filter(|(_, s)| *s >= 0.75).map(|(u, _)| u.to_string());
-                if uid.as_ref().map_or(false, |u| uids.contains(u)) {
+                if uid.as_ref().is_some_and(|u| uids.contains(u)) {
                     continue;
                 }
                 if games.iter().any(|g| similarity(g["name"].as_str().unwrap_or(""), &name) >= 0.9) {
@@ -481,7 +481,7 @@ impl Provider for BattleNet {
     }
     fn update_page(&self, game: &Value) -> Option<Value> {
         let args = game["launch"]["args"].as_array().map(|a| a.iter().filter_map(|x| x.as_str()).collect::<Vec<_>>().join(" ")).unwrap_or_default();
-        let re = regex::Regex::new(r"launch\s+(\S+)").unwrap();
+        let re = crate::re!(r"launch\s+(\S+)");
         re.captures(&args).map(|c| uri(format!("battlenet://{}", &c[1])))
     }
     fn uninstall_page(&self, game: &Value) -> Option<Value> {

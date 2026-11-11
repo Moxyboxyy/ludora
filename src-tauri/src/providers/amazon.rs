@@ -1,4 +1,4 @@
-//! Amazon Games (entspricht electron/providers/amazon.js)
+//! Amazon Games
 
 use async_trait::async_trait;
 use serde_json::{json, Value};

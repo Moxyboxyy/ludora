@@ -1,6 +1,5 @@
-//! Deinstallieren (entspricht electron/lib/silentUninstall.js und uninstallPlan in main.js).
+//! Deinstallieren.
 
-use regex::Regex;
 use serde_json::{json, Value};
 use std::path::{Component, Path, PathBuf};
 use std::time::Duration;
@@ -54,7 +53,7 @@ async fn steam_uninstall(game: &Value) -> anyhow::Result<String> {
         let f = lib.join(format!("appmanifest_{id}.acf"));
         if f.exists() {
             let text = std::fs::read_to_string(&f).unwrap_or_default();
-            let dir = Regex::new(r#"(?i)"installdir"\s+"([^"]+)""#).unwrap().captures(&text).map(|c| c[1].to_string());
+            let dir = crate::re!(r#"(?i)"installdir"\s+"([^"]+)""#).captures(&text).map(|c| c[1].to_string());
             found = Some((f, lib, dir));
             break;
         }
@@ -180,15 +179,15 @@ pub fn silent_command(cmd: &str, quiet: Option<&str>) -> Option<String> {
     if c.is_empty() {
         return None;
     }
-    if let Some(m) = Regex::new(r#"(?i)msiexec(?:\.exe)?"?\s+/[IX]\s*(\{[0-9A-F-]+\})"#).unwrap().captures(c) {
+    if let Some(m) = crate::re!(r#"(?i)msiexec(?:\.exe)?"?\s+/[IX]\s*(\{[0-9A-F-]+\})"#).captures(c) {
         return Some(format!("MsiExec.exe /X{} /qn /norestart", &m[1]));
     }
-    let exe = Regex::new(r#"^"([^"]+)""#).unwrap().captures(c).map(|m| m[1].to_string()).unwrap_or_else(|| c.split_whitespace().next().unwrap_or("").to_string()).to_lowercase();
+    let exe = crate::re!(r#"^"([^"]+)""#).captures(c).map(|m| m[1].to_string()).unwrap_or_else(|| c.split_whitespace().next().unwrap_or("").to_string()).to_lowercase();
     let base = exe.rsplit(['\\', '/']).next().unwrap_or("").to_string();
-    if Regex::new(r"^unins\d{3}\.exe$").unwrap().is_match(&base) {
+    if crate::re!(r"^unins\d{3}\.exe$").is_match(&base) {
         return Some(format!("{c} /VERYSILENT /SUPPRESSMSGBOXES /NORESTART"));
     }
-    if Regex::new(r"^(uninst|uninstall)[^\\/]*\.exe$").unwrap().is_match(&base) && !Regex::new(r"\s/S(\s|$)").unwrap().is_match(c) {
+    if crate::re!(r"^(uninst|uninstall)[^\\/]*\.exe$").is_match(&base) && !crate::re!(r"\s/S(\s|$)").is_match(c) {
         return Some(format!("{c} /S"));
     }
     None

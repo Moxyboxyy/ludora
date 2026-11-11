@@ -1,14 +1,13 @@
 //! Chatfenster (eins pro Freund) und Weiterleitung an Steam / Riot / Epic.
 //! Chat-IDs: Steam = SteamID64, andere Launcher = "<launcher>:<id>"
 
-use regex::Regex;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 
 
 pub fn valid_id(id: &str) -> bool {
-    Regex::new(r"^(\d{17}|(riot|epic):[A-Za-z0-9-]{8,80})$").unwrap().is_match(id)
+    crate::re!(r"^(\d{17}|(riot|epic):[A-Za-z0-9-]{8,80})$").is_match(id)
 }
 
 pub fn window_label(id: &str) -> String {

@@ -1,8 +1,7 @@
-//! Riot Games (entspricht electron/providers/riot.js + lib/riotClient.js)
+//! Riot Games
 
 use async_trait::async_trait;
 use base64::Engine;
-use regex::Regex;
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -27,8 +26,8 @@ const PRODUCTS: [(&str, &str, bool, bool); 3] = [
 
 async fn installed_from_metadata() -> Vec<(String, String, String)> {
     let meta = riot_dir().join("Metadata");
-    let re = Regex::new(r"^([a-z0-9_]+)\.(live|pbe)$").unwrap();
-    let dir_re = Regex::new(r#"product_install_full_path:\s*"?([^"\n]+)"?"#).unwrap();
+    let re = crate::re!(r"^([a-z0-9_]+)\.(live|pbe)$");
+    let dir_re = crate::re!(r#"product_install_full_path:\s*"?([^"\n]+)"?"#);
     let mut out = vec![];
     for id in list_dir(&meta).await {
         let Some(c) = re.captures(&id) else { continue };
@@ -96,7 +95,7 @@ pub mod client {
     }
 
     fn start_time_from_name(name: &str) -> Option<i64> {
-        let re = Regex::new(r"^(\d{4})-(\d\d)-(\d\d)T(\d\d)-(\d\d)-(\d\d)").unwrap();
+        let re = crate::re!(r"^(\d{4})-(\d\d)-(\d\d)T(\d\d)-(\d\d)-(\d\d)");
         let c = re.captures(name)?;
         use chrono::TimeZone;
         let n = |i: usize| c[i].parse::<u32>().ok();
@@ -105,7 +104,7 @@ pub mod client {
 
     /// Letzter Status je Produkt aus einem Log-Text: id -> (status, progress, t)
     pub fn parse_log(text: &str, start: Option<i64>) -> HashMap<String, (String, f64, Option<i64>)> {
-        let re = Regex::new(r"^(\d+(?:\.\d+)?)\|.*?HandleProductPatchlineStatusUpdate: productId: ([\w-]+), patchlineId: ([\w-]+), status: (\w+), progress: ([\d.]+)").unwrap();
+        let re = crate::re!(r"^(\d+(?:\.\d+)?)\|.*?HandleProductPatchlineStatusUpdate: productId: ([\w-]+), patchlineId: ([\w-]+), status: (\w+), progress: ([\d.]+)");
         let mut out = HashMap::new();
         for l in text.lines() {
             if let Some(c) = re.captures(l) {
@@ -156,7 +155,7 @@ pub mod client {
             if st != "Updating" && st != "DependencyUpdate" {
                 continue;
             }
-            if t.map_or(false, |t| now - t > 120_000) {
+            if t.is_some_and(|t| now - t > 120_000) {
                 continue;
             }
             out.insert(id, json!({ "state": "downloading", "progress": progress, "source": "Riot" }));
@@ -230,7 +229,7 @@ impl Provider for Riot {
             }
             let Some(product) = get_arg(&un, "uninstall-product") else { continue };
             let patchline = get_arg(&un, "uninstall-patchline").unwrap_or_else(|| "live".into());
-            if product.eq_ignore_ascii_case("riot_client") || reg::val_str(v, "DisplayName").map_or(false, |n| n.eq_ignore_ascii_case("Riot Client")) {
+            if product.eq_ignore_ascii_case("riot_client") || reg::val_str(v, "DisplayName").is_some_and(|n| n.eq_ignore_ascii_case("Riot Client")) {
                 continue;
             }
             let client = clean_exe_path(&un);

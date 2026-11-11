@@ -1,4 +1,4 @@
-//! Alle Launcher (entspricht electron/providers/index.js).
+//! Alle Launcher.
 //! Spiele und Start-Beschreibungen sind serde_json::Value – exakt das Format, das die Oberfläche kennt.
 
 use async_trait::async_trait;

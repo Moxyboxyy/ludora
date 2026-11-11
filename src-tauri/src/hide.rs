@@ -1,4 +1,4 @@
-//! Launcher-Fenster im Hintergrund halten (entspricht electron/lib/hide.js).
+//! Launcher-Fenster im Hintergrund halten.
 //! Windows: direkt über user32 (EnumWindows/ShowWindowAsync) statt eines PowerShell-Skripts.
 //! macOS: AppleScript über System Events.
 
@@ -25,7 +25,7 @@ pub fn keep_in_background(provider_id: &str, names: Option<Vec<String>>, seconds
     std::thread::spawn(move || {
         imp::run(&names, seconds, hide, &stop_flag);
         let mut r = RUNNING.lock();
-        if r.get(&pid).map_or(false, |f| Arc::ptr_eq(f, &stop_flag)) {
+        if r.get(&pid).is_some_and(|f| Arc::ptr_eq(f, &stop_flag)) {
             r.remove(&pid);
         }
     });

@@ -1,4 +1,4 @@
-//! Kleine Helfer (entspricht electron/lib/util.js, platform.js, names.js, i18n.js).
+//! Kleine Helfer.
 
 use serde_json::{json, Map, Value};
 use std::path::{Path, PathBuf};
@@ -91,7 +91,7 @@ pub fn clean_exe_path(s: &str) -> String {
     if let Some(rest) = s.strip_prefix('"') {
         s = rest.split('"').next().unwrap_or("").to_string();
     }
-    let re = regex::Regex::new(r",\s*-?\d+$").unwrap();
+    let re = crate::re!(r",\s*-?\d+$");
     re.replace(&s, "").into_owned()
 }
 
@@ -219,6 +219,15 @@ pub fn t_args(text: &str, args: &[&str]) -> String {
         s = s.replace(&format!("{{{i}}}"), a);
     }
     s
+}
+
+/// Regulärer Ausdruck, der nur einmal kompiliert wird (statt bei jedem Aufruf) – spart CPU
+#[macro_export]
+macro_rules! re {
+    ($p:expr) => {{
+        static R: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new($p).unwrap());
+        &*R
+    }};
 }
 
 #[cfg(test)]

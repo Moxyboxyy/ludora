@@ -1,4 +1,4 @@
-//! GOG Galaxy-Datenbank (entspricht electron/lib/galaxy.js): besessene Spiele aller über Galaxy
+//! GOG Galaxy-Datenbank: besessene Spiele aller über Galaxy
 //! verbundenen Plattformen, installierte GOG-Spiele (macOS) und laufende Downloads.
 
 use once_cell::sync::Lazy;
@@ -42,7 +42,7 @@ pub async fn read_installed() -> Vec<(String, Option<String>)> {
             return vec![];
         }
         let cols = db.columns("InstalledBaseProducts");
-        let re = regex::Regex::new(r"(?i)path|location|directory").unwrap();
+        let re = crate::re!(r"(?i)path|location|directory");
         let path_col = cols.iter().find(|c| re.is_match(c)).cloned();
         let sql = match &path_col {
             Some(c) => format!("SELECT productId AS id, \"{c}\" AS path FROM InstalledBaseProducts"),

@@ -1,4 +1,4 @@
-//! Bibliothek und Spiele (die Bibliotheks-Teile von electron/main.js):
+//! Bibliothek und Spiele:
 //! Scan, Zwischenspeicher, Cover/Kompatibilität im Hintergrund, Downloads mit Tempo/Restzeit,
 //! Starten, Updaten (Launcher erst bereit machen), Deinstallieren, eigene Spiele.
 
@@ -149,7 +149,7 @@ static RUNNING: Lazy<Mutex<(Option<Instant>, HashMap<String, u32>)>> = Lazy::new
 pub async fn running_games() -> HashMap<String, u32> {
     {
         let r = RUNNING.lock();
-        if r.0.map_or(false, |t| t.elapsed() < Duration::from_secs(3)) {
+        if r.0.is_some_and(|t| t.elapsed() < Duration::from_secs(3)) {
             return r.1.clone();
         }
     }
@@ -275,7 +275,7 @@ pub async fn launch_game(game: &Value) -> anyhow::Result<()> {
 pub async fn launch(id: &str) -> Value {
     let r = async {
         let game = find_game(id)?;
-        if let Some(pid) = running_cached(&game["id"].as_str().unwrap_or("").to_string()) {
+        if let Some(pid) = running_cached(game["id"].as_str().unwrap_or("")) {
             crate::running::focus(pid);
             return Ok(json!({ "ok": true, "focused": true }));
         }
@@ -512,7 +512,7 @@ fn apply_io(id: &str, u: &Value, speed: Option<f64>, delta: f64) -> Value {
 
 pub async fn downloads_status() -> Value {
     let enabled = settings::get("enabledLaunchers").unwrap_or(json!({}));
-    let tasks = providers::providers().iter().cloned().filter(|p| enabled[p.id()] != false).map(|p| {
+    let tasks = providers::providers().iter().filter(|&p| enabled[p.id()] != false).cloned().map(|p| {
         tokio::spawn(async move {
             let list = p.updates().await?;
             let downloading: Vec<&Value> = list.iter().filter(|u| u["update"]["state"] == "downloading").collect();

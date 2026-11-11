@@ -1,5 +1,5 @@
 //! Weitere Freundeslisten (Riot, Epic, GOG), gemeinsamer Zustandsspeicher, Chat-Verlauf und Personen.
-//! Entspricht electron/lib/friends/*.js.
+//!.
 
 pub mod chatlog;
 pub mod epic;
@@ -73,16 +73,16 @@ pub fn merge(target: &mut Value, patch: Value) {
 
 /// Netzwerkfehler (kein Internet, Server kurz weg) – dann später erneut versuchen statt abzumelden
 pub fn is_transient(m: &str) -> bool {
-    let re_no = regex::Regex::new(r"(?i)invalid_grant|invalid_token|unauthori[sz]ed|\b40[013]\b|expired|revoked").unwrap();
+    let re_no = crate::re!(r"(?i)invalid_grant|invalid_token|unauthori[sz]ed|\b40[013]\b|expired|revoked");
     if re_no.is_match(m) {
         return false;
     }
-    regex::Regex::new(r"(?i)dns|resolve|connect|reset|refused|timed? ?out|unreachable|socket|network|error sending request|\b5\d\d\b|\b429\b").unwrap().is_match(m)
+    crate::re!(r"(?i)dns|resolve|connect|reset|refused|timed? ?out|unreachable|socket|network|error sending request|\b5\d\d\b|\b429\b").is_match(m)
 }
 
 pub fn unescape_xml(s: &str) -> String {
     let s = s.replace("&quot;", "\"").replace("&apos;", "'").replace("&lt;", "<").replace("&gt;", ">");
-    let re = regex::Regex::new(r"&#(\d+);").unwrap();
+    let re = crate::re!(r"&#(\d+);");
     let s = re.replace_all(&s, |c: &regex::Captures| c[1].parse::<u32>().ok().and_then(char::from_u32).map(|c| c.to_string()).unwrap_or_default());
     s.replace("&amp;", "&")
 }

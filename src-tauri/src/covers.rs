@@ -1,4 +1,4 @@
-//! Cover-Bilder (entspricht electron/lib/covers.js + coverCheck.js) und Plattform-Kompatibilität (compat.js).
+//! Cover-Bilder und Plattform-Kompatibilität (compat.js).
 
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
@@ -735,7 +735,7 @@ pub async fn serve_ghimg(uri: String) -> tauri::http::Response<Vec<u8>> {
         "steam" => file_response(crate::providers::steam::find_cached_image(&a, &b).await),
         "riot" => {
             let id = urlencoding_decode(&path);
-            if regex::Regex::new(r"(?i)^[a-z0-9_.-]+$").unwrap().is_match(&id) {
+            if crate::re!(r"(?i)^[a-z0-9_.-]+$").is_match(&id) {
                 let base = if IS_MAC { PathBuf::from("/Users/Shared") } else { { let pd = env("PROGRAMDATA"); PathBuf::from(if pd.is_empty() { "C:\\ProgramData".to_string() } else { pd }) } };
                 let f = base.join("Riot Games").join("Metadata").join(&id).join(format!("{id}.ico"));
                 file_response(Some(f).filter(|f| f.exists()))

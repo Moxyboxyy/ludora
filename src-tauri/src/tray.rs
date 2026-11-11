@@ -1,4 +1,4 @@
-//! Tray-Symbol mit Menü (entspricht electron/lib/tray.js).
+//! Tray-Symbol mit Menü.
 //! Linksklick: Fenster zeigen/verstecken (Windows/Linux); Rechtsklick: Menü mit Favoriten.
 
 use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
@@ -72,6 +72,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
             if let Some(w) = app.get_webview_window("main") {
                 if w.is_visible().unwrap_or(false) && w.is_focused().unwrap_or(false) {
                     let _ = w.hide();
+                    crate::set_background(app, true);
                 } else {
                     crate::show_main(app);
                 }

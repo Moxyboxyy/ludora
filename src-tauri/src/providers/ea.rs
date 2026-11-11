@@ -1,7 +1,6 @@
-//! EA app (entspricht electron/providers/ea.js)
+//! EA app
 
 use async_trait::async_trait;
-use regex::Regex;
 use serde_json::{json, Value};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -33,7 +32,7 @@ pub fn slug_to_name(slug: &str) -> String {
     if let Some((_, n)) = SLUG_NAMES.iter().find(|(s, _)| *s == slug) {
         return n.to_string();
     }
-    let up = Regex::new(r"^(ii|iii|iv|vi|fc|ea|nfs|ufc|nhl|nba|f1)$").unwrap();
+    let up = crate::re!(r"^(ii|iii|iv|vi|fc|ea|nfs|ufc|nhl|nba|f1)$");
     slug.split('-')
         .map(|w| {
             if up.is_match(w) {
@@ -54,7 +53,7 @@ async fn library_from_logs() -> Vec<(String, String, bool)> {
         return vec![];
     }
     let dir = PathBuf::from(local).join(r"Electronic Arts\EA Desktop\Logs");
-    let re = Regex::new(r"baseSlug=\[([a-z0-9-]+)\] installedStatus=\[(\w+)\]").unwrap();
+    let re = crate::re!(r"baseSlug=\[([a-z0-9-]+)\] installedStatus=\[(\w+)\]");
     let mut status: Vec<(String, String)> = Vec::new();
     for f in ["EADesktop.bak", "EADesktop.log"] {
         let Some(text) = read_text(dir.join(f)).await else { continue };
@@ -89,10 +88,10 @@ impl Provider for Ea {
     fn processes(&self) -> &[&str] { &["EADesktop"] }
 
     async fn detect(&self) -> anyhow::Result<Detected> {
-        let ignore = Regex::new(r"(?i)^(EA app|Origin|EA Desktop)").unwrap();
-        let publisher_re = Regex::new(r"(?i)electronic arts|^ea\b").unwrap();
-        let other_store = Regex::new(r"(?i)steamapps|epic games|ubisoft game launcher").unwrap();
-        let bad_exe = Regex::new(r"(?i)uninst|cleanup|touchup").unwrap();
+        let ignore = crate::re!(r"(?i)^(EA app|Origin|EA Desktop)");
+        let publisher_re = crate::re!(r"(?i)electronic arts|^ea\b");
+        let other_store = crate::re!(r"(?i)steamapps|epic games|ubisoft game launcher");
+        let bad_exe = crate::re!(r"(?i)uninst|cleanup|touchup");
         let mut games = Vec::new();
         for e in reg::uninstall_entries() {
             let v = &e.values;

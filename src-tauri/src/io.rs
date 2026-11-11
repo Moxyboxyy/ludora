@@ -1,4 +1,4 @@
-//! Download-Geschwindigkeit messen (entspricht electron/lib/ioSampler.js + procio.js):
+//! Download-Geschwindigkeit messen:
 //! empfangene Bytes der Launcher-Programme, jede Sekunde. Läuft nur, solange jemand fragt
 //! (stoppt 60 s nach der letzten Abfrage) – direkt über sysinfo statt über PowerShell.
 
@@ -76,7 +76,7 @@ pub fn keep_alive() {
                 }
                 for (id, bytes) in s {
                     let list = st.history.entry(id).or_default();
-                    if list.last().map_or(false, |(_, b)| bytes < *b) {
+                    if list.last().is_some_and(|(_, b)| bytes < *b) {
                         list.clear();
                     }
                     list.push((now, bytes));
