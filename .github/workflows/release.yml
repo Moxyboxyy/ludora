@@ -68,15 +68,18 @@ jobs:
         if: runner.os == 'Linux'
         timeout-minutes: 15
         run: |
-          # Hängende Ubuntu-Spiegel nicht ewig abwarten: Zeitlimits, Wiederholungen und notfalls der Hauptserver
-          APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=25 -o Acquire::https::Timeout=25 -o DPkg::Lock::Timeout=120"
+          # Die Standard-Spiegel der GitHub-Rechner (azure.archive.ubuntu.com) sind zeitweise nicht erreichbar.
+          # Darum der Reihe nach mehrere unabhängige Ubuntu-Spiegel probieren, bis einer funktioniert.
+          APT="-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=120 -o APT::Update::Error-Mode=any"
           PKGS="libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libdbus-1-dev xdg-utils"
-          install() { timeout 420 sudo apt-get $APT update && timeout 420 sudo apt-get $APT install -y --no-install-recommends $PKGS; }
-          if ! install; then
-            echo "Spiegelserver hakt – weiter mit archive.ubuntu.com"
-            sudo sed -i 's#http://azure.archive.ubuntu.com#http://archive.ubuntu.com#g' /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
-            install
-          fi
+          sudo rm -f /etc/apt/sources.list.d/ubuntu.sources
+          for M in http://azure.archive.ubuntu.com/ubuntu http://mirrors.edge.kernel.org/ubuntu http://archive.ubuntu.com/ubuntu http://mirror.math.princeton.edu/pub/ubuntu http://ftp.halifax.rwth-aachen.de/ubuntu; do
+            echo "::group::Spiegel $M"
+            printf 'deb %s jammy main universe\ndeb %s jammy-updates main universe\ndeb %s jammy-security main universe\n' "$M" "$M" "$M" | sudo tee /etc/apt/sources.list >/dev/null
+            if timeout 180 sudo apt-get $APT update && timeout 480 sudo apt-get $APT install -y --no-install-recommends $PKGS; then echo "::endgroup::"; echo "Pakete installiert über $M"; exit 0; fi
+            echo "::endgroup::"; echo "::warning::Spiegel $M nicht nutzbar, nächster"
+          done
+          exit 1
       - run: npm ci
       - run: npm run test:js
         if: runner.os == 'Linux'
