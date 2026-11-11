@@ -79,3 +79,16 @@ test('Funktionstest: nur in der Testversion (Debug-Build, Vite-Entwicklung)', ()
   assert.match(lib, /#\[cfg\(debug_assertions\)\]\s*pub mod selftest;/);
   assert.match(lib, /#\[cfg\(debug_assertions\)\]\s*selftest::open_window/);
 });
+
+test('JSX: keine //-Kommentare zwischen Tags (würden als Text angezeigt)', () => {
+  const dir = path.join(root, 'src');
+  const files = [];
+  const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (p.endsWith('.jsx')) files.push(p); } };
+  walk(dir);
+  const bad = [];
+  for (const f of files) {
+    const lines = fs.readFileSync(f, 'utf8').split('\n');
+    lines.forEach((l, i) => { if (/^\s*\/\/ /.test(l) && i > 0 && />\s*$/.test(lines[i - 1]) && /^\s*</.test(lines[i + 1] || '')) bad.push(`${path.relative(root, f)}:${i + 1}`); });
+  }
+  assert.deepStrictEqual(bad, []);
+});

@@ -508,7 +508,7 @@ export default function FriendsPanel({ games, onLaunchGame, notify, providerById
 
   return (
       <aside className="friends-window friends" ref={panelRef}>
-          // Eigene Fensterleiste wie im Hauptfenster: ziehbar, Fensterknöpfe rechts (Windows/Linux) bzw. Ampel links (Mac)
+          {/* Eigene Fensterleiste wie im Hauptfenster: ziehbar, Fensterknöpfe rechts (Windows/Linux) bzw. Ampel links (Mac) */}
           <header className={`fw-bar ${FW_PLATFORM} ${FW_OWN_CONTROLS ? 'own-controls' : ''}`} data-tauri-drag-region>
             <button className="fw-current" onClick={() => setSwitcher((v) => !v)} aria-expanded={switcher} aria-label={current[0] === 'all' ? t("Alle Freunde") : current[1]}
               title={current[0] === 'all' ? t("Alle Freunde") : current[1]}>
