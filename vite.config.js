@@ -10,7 +10,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     // Rust-Build-Ordner nicht beobachten (gesperrte .dll-Dateien bringen Vite unter Windows zum Absturz)
-    watch: { ignored: ['**/src-tauri/**'] }
+    watch: { ignored: [(p) => /[\\/]src-tauri([\\/]|$)/.test(p), '**/src-tauri/**'] }
   },
   build: { outDir: 'dist', emptyOutDir: true }
 });
