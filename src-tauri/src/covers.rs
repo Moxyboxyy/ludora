@@ -270,7 +270,45 @@ async fn from_ms_store(g: &Value) -> Option<(Vec<String>, Vec<String>)> {
 }
 
 async fn head_ok(u: &str) -> bool {
-    crate::net::client().head(u).timeout(Duration::from_secs(8)).send().await.map(|r| r.status().is_success()).unwrap_or(false)
+    let c = crate::net::client();
+    if c.head(u).timeout(Duration::from_secs(8)).send().await.map(|r| r.status().is_success()).unwrap_or(false) {
+        return true;
+    }
+    // Manche Bild-Server (z. B. Microsoft, Epic) beantworten HEAD nicht – dann das erste Byte holen
+    c.get(u).header("Range", "bytes=0-0").timeout(Duration::from_secs(8)).send().await.map(|r| r.status().is_success()).unwrap_or(false)
+}
+
+async fn from_epic_store(g: &Value) -> Option<(Vec<String>, Vec<String>)> {
+    let name: String = g["name"].as_str()?.chars().filter(|c| !matches!(c, '™' | '®' | '©')).collect();
+    crate::shop::epic_images(name.trim()).await
+}
+
+/// Cover zu einem Spieltitel (Shop: Spiele ohne eigenes Bild); Treffer und Fehlschläge werden gemerkt
+pub async fn find_by_title(title: &str) -> Option<(Vec<String>, Vec<String>)> {
+    let key = format!("title:{}", title.to_lowercase());
+    let cached = CACHE.lock().get().get(&key).cloned();
+    if let Some(hit) = cached {
+        if let Some(r) = to_images(&hit) {
+            return Some(r);
+        }
+        if now() - hit["at"].as_i64().unwrap_or(0) < NEGATIVE_TTL {
+            return None;
+        }
+    }
+    let g = json!({ "name": title });
+    let mut found = None;
+    for f in [3usize, 5, 4, 2] {
+        if let Some(r) = source(f, &g).await.and_then(|r| to_images(&imgs_json(&r))) {
+            found = Some(r);
+            break;
+        }
+    }
+    let mut c = CACHE.lock();
+    let mut e = found.as_ref().map(imgs_json).unwrap_or(json!({}));
+    e["at"] = json!(now());
+    c.get().insert(key, e);
+    c.save();
+    found
 }
 
 async fn from_ubisoft(g: &Value) -> Option<(Vec<String>, Vec<String>)> {
@@ -285,12 +323,16 @@ async fn source(i: usize, g: &Value) -> Option<(Vec<String>, Vec<String>)> {
         2 => from_steamgriddb(g).await,
         3 => from_steam_store(g).await,
         4 => from_ms_store(g).await,
+        5 => from_epic_store(g).await,
         _ => from_ubisoft(g).await,
     }
 }
 
+/// Anzahl der Quellen in source()
+const SOURCES: usize = 7;
+
 async fn lookup(g: &Value) -> Option<(Vec<String>, Vec<String>)> {
-    for i in 0..6 {
+    for i in 0..SOURCES {
         if let Some(r) = source(i, g).await.and_then(|r| to_images(&imgs_json(&r))) {
             return Some(r);
         }
@@ -335,7 +377,7 @@ pub async fn resolve_missing(games: Vec<Value>, on_found: Arc<dyn Fn(String, Val
 pub async fn repair(g: &Value) -> Option<Value> {
     let tried: Vec<String> = strs(&g["covers"]).into_iter().chain(strs(&g["wides"])).collect();
     let id = g["id"].as_str().unwrap_or("").to_string();
-    for i in 0..6 {
+    for i in 0..SOURCES {
         let Some((cv, wd)) = source(i, g).await else { continue };
         let mut covers = vec![];
         let mut wides = vec![];
@@ -445,7 +487,7 @@ pub async fn check_all(games: Vec<Value>, on_update: Arc<dyn Fn(String, Value) +
                 let urls: Vec<String> = strs(&g["covers"]).into_iter().chain(strs(&g["wides"])).collect();
                 // v2: das Hochformat-Cover muss selbst laden – ein funktionierendes Querformat reicht nicht
                 // (sonst bleiben z. B. Steam-Spiele ohne alte CDN-Grafik beim Platzhalter)
-                let key = format!("v2|{}", urls.join("|"));
+                let key = format!("v3|{}", urls.join("|"));
                 if let Some(prev) = st.get(&id) {
                     if prev["key"] == key.as_str() && t - prev["at"].as_i64().unwrap_or(0) < TTL {
                         res.lock().insert(id, (prev["result"].as_str().unwrap_or("ok").to_string(), key));
@@ -473,7 +515,7 @@ pub async fn check_all(games: Vec<Value>, on_update: Arc<dyn Fn(String, Value) +
                     "none"
                 };
                 let k2: Vec<String> = strs(&g["covers"]).into_iter().chain(strs(&g["wides"])).collect();
-                res.lock().insert(id, (r.to_string(), format!("v2|{}", k2.join("|"))));
+                res.lock().insert(id, (r.to_string(), format!("v3|{}", k2.join("|"))));
             }
         }));
     }

@@ -319,6 +319,7 @@ pub fn from_epic(elements: &[Value]) -> Vec<Value> {
             let title = e["title"].as_str()?;
             let imgs = e["keyImages"].as_array().cloned().unwrap_or_default();
             let img = ["OfferImageWide", "DieselStoreFrontWide", "featuredMedia", "Thumbnail"].iter().find_map(|t| imgs.iter().find(|i| i["type"] == *t)).and_then(|i| i["url"].as_str().map(String::from));
+            let tall = ["OfferImageTall", "DieselStoreFrontTall", "CodeRedemption_340x440"].iter().find_map(|t| imgs.iter().find(|i| i["type"] == *t)).and_then(|i| i["url"].as_str().map(String::from));
             let tp = &e["price"]["totalPrice"];
             let cents = tp["discountPrice"].as_f64();
             let orig = tp["originalPrice"].as_f64().unwrap_or(0.0);
@@ -326,6 +327,7 @@ pub fn from_epic(elements: &[Value]) -> Vec<Value> {
             Some(json!({
                 "title": title,
                 "image": img,
+                "imageTall": tall,
                 "store": store("epic", format!("https://store.epicgames.com/de/p/{slug}"), Some(format!("com.epicgames.launcher://store/p/{slug}")),
                     cents.map(|c| c / 100.0),
                     if cents == Some(0.0) { Some(t("Kostenlos")) } else { tp["fmtPrice"]["discountPrice"].as_str().map(String::from) },
@@ -334,6 +336,20 @@ pub fn from_epic(elements: &[Value]) -> Vec<Value> {
             }))
         })
         .collect()
+}
+
+/// Bilder eines Spiels aus dem Epic-Store (Hochformat + Querformat), per Titel gesucht.
+/// Hilft vor allem bei Spielen, die es nicht bei Steam gibt (Riot-Spiele u. a.).
+pub async fn epic_images(title: &str) -> Option<(Vec<String>, Vec<String>)> {
+    let o = Opts { q: title.to_string(), page: 0, deals: false, sort: String::new() };
+    let list = epic(&o).await.ok()?;
+    let best = list.items.iter().map(|i| (i, crate::util::similarity(i["title"].as_str().unwrap_or(""), title))).max_by(|a, b| a.1.total_cmp(&b.1))?;
+    if best.1 < 0.8 {
+        return None;
+    }
+    let one = |v: &Value| v.as_str().map(|s| vec![s.to_string()]).unwrap_or_default();
+    let (covers, wides) = (one(&best.0["imageTall"]), one(&best.0["image"]));
+    if covers.is_empty() && wides.is_empty() { None } else { Some((covers, wides)) }
 }
 
 async fn epic(o: &Opts) -> anyhow::Result<List> {
@@ -592,6 +608,30 @@ async fn cheapshark_store(launcher: &str, o: &Opts) -> anyhow::Result<List> {
     Ok(List { items, more: Some(arr.len() as i64 >= PAGE), total: None })
 }
 
+/// Spiele ohne Bild (Battle.net, Riot, Rockstar …): Cover über die gleichen Quellen wie die Bibliothek suchen
+async fn fill_missing_images(games: &mut [Value]) {
+    let todo: Vec<(usize, String)> = games
+        .iter()
+        .enumerate()
+        .filter(|(_, g)| g["image"].is_null())
+        .filter_map(|(i, g)| g["title"].as_str().map(|t| (i, t.to_string())))
+        .take(16)
+        .collect();
+    if todo.is_empty() {
+        return;
+    }
+    let found = futures::future::join_all(todo.iter().map(|(_, title)| async move {
+        tokio::time::timeout(std::time::Duration::from_secs(8), crate::covers::find_by_title(title)).await.ok().flatten()
+    }))
+    .await;
+    for ((i, _), hit) in todo.iter().zip(found) {
+        if let Some((covers, wides)) = hit {
+            games[*i]["image"] = json!(wides.first().or(covers.first()));
+            games[*i]["imageFallback"] = json!(covers.first().or(wides.first()));
+        }
+    }
+}
+
 fn static_items() -> Vec<Value> {
     let bn = |title: &str, code: &str, url: &str| json!({ "title": title, "image": null, "store": store("battlenet", url.into(), Some(format!("battlenet://{code}")), None, None, None, 0) });
     let riot = |title: &str, url: &str| json!({ "title": title, "image": null, "store": store("riot", url.into(), None, Some(0.0), Some(t("Kostenlos")), None, 0) });
@@ -735,6 +775,7 @@ pub async fn query(opts: &Value) -> Value {
     }
     let raw: Vec<Vec<Value>> = lists.iter().map(|l| l.items.clone()).collect();
     let mut games = merge(&raw, &q);
+    fill_missing_images(&mut games).await;
     let best = |g: &Value| g["stores"].as_array().map_or(0, |s| s.iter().map(|x| x["discount"].as_i64().unwrap_or(0)).max().unwrap_or(0).max(0));
     if deals {
         games.retain(|g| best(g) > 0 || g["stores"].as_array().is_some_and(|s| s.iter().any(|x| x["onSale"] == true)));
