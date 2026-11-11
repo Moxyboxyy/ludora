@@ -16,4 +16,17 @@ async function start() {
   );
 }
 
-start();
+// Startfehler sichtbar machen statt eines leeren Fensters
+function showError(err) {
+  const root = document.getElementById('root');
+  if (!root || root.childElementCount) return; // Oberfläche steht schon
+  root.innerHTML = '';
+  const pre = document.createElement('pre');
+  pre.style.cssText = 'color:#ff6b6b;padding:24px;white-space:pre-wrap;font:13px monospace';
+  pre.textContent = 'Ludora konnte nicht starten:\n\n' + (err && (err.stack || err.message) || String(err));
+  root.appendChild(pre);
+}
+window.addEventListener('error', (e) => showError(e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => showError(e.reason));
+
+start().catch(showError);
