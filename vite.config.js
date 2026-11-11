@@ -12,5 +12,6 @@ export default defineConfig({
     // Rust-Build-Ordner nicht beobachten (gesperrte .dll-Dateien bringen Vite unter Windows zum Absturz)
     watch: { ignored: [(p) => /[\\/]src-tauri([\\/]|$)/.test(p), '**/src-tauri/**'] }
   },
-  build: { outDir: 'dist', emptyOutDir: true }
+  // splash.html: eigenes Fenster für die Logo-Startanimation
+  build: { outDir: 'dist', emptyOutDir: true, rollupOptions: { input: { main: 'index.html', splash: 'splash.html' } } }
 });

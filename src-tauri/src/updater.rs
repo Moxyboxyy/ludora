@@ -304,7 +304,20 @@ fn run_restart(dir: &Path, platform: &str, install: &[String], start: &str) -> a
     let script = dir.join(if win { "update.cmd" } else { "update.sh" });
     std::fs::write(&script, restart_script(platform, std::process::id(), install, start))?;
     if win {
-        crate::running::spawn_detached("cmd.exe", &["/d".into(), "/c".into(), script.to_string_lossy().to_string()], None)?;
+        // Unsichtbare Konsole für cmd (CREATE_NO_WINDOW) statt gar keiner (DETACHED_PROCESS): sonst öffnet jedes
+        // tasklist/find/ping im Warte-Loop ein eigenes, kurz aufblitzendes Konsolenfenster.
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            std::process::Command::new("cmd.exe")
+                .args(["/d", "/c"])
+                .arg(&script)
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .creation_flags(0x0800_0000 | 0x0000_0200) // CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP
+                .spawn()?;
+        }
     } else {
         #[cfg(unix)]
         {

@@ -40,6 +40,14 @@ pub async fn dispatch(app: &AppHandle, channel: &str, args: Vec<Value>) -> Resul
     let a0 = s(&args, 0);
     Ok(match channel {
         // ---------- App ----------
+        "app:ready" => {
+            crate::splash::ui_ready(app);
+            json!(true)
+        }
+        "splash:done" => {
+            crate::splash::anim_done(app);
+            json!(true)
+        }
         "app:boot" => json!({ "platform": platform(), "language": crate::util::lang() }),
         "app:info" => json!({ "version": app.package_info().version.to_string(), "runtime": "tauri", "platform": platform() }),
         "app:quit" => {

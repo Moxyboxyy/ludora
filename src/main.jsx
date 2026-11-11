@@ -22,20 +22,13 @@ async function start() {
   createRoot(document.getElementById('root')).render(
     chat ? React.createElement(ChatWindow, { steamid: chat[1] }) : React.createElement(App)
   );
-  hideSplash();
+  signalReady();
 }
 
-// Startanimation (index.html) ausblenden, sobald die Oberfläche steht – frühestens nach dem Ende der Animation
-const SPLASH_MS = 1650;
-function hideSplash(now = false) {
-  const el = document.getElementById('splash');
-  if (!el) return;
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const wait = now || reduced ? 0 : Math.max(0, SPLASH_MS - (performance.now() - (window.__splashT || 0)));
-  setTimeout(() => {
-    el.classList.add('out');
-    setTimeout(() => el.remove(), reduced ? 0 : 320);
-  }, wait);
+// Rust zeigt das Hauptfenster erst, wenn die Oberfläche steht und die Logo-Animation (eigenes Fenster) durch ist
+function signalReady() {
+  if (!isTauri()) return;
+  import('@tauri-apps/api/core').then(({ invoke }) => invoke('ipc', { channel: 'app:ready', args: [] })).catch(() => {});
 }
 
 // Startfehler sichtbar machen statt eines leeren Fensters
@@ -47,7 +40,7 @@ function showError(err) {
   pre.style.cssText = 'color:#ff6b6b;padding:24px;white-space:pre-wrap;font:13px monospace';
   pre.textContent = 'Ludora konnte nicht starten:\n\n' + (err && (err.stack || err.message) || String(err));
   root.appendChild(pre);
-  hideSplash(true);
+  signalReady();
 }
 window.addEventListener('error', (e) => showError(e.error || e.message));
 window.addEventListener('unhandledrejection', (e) => showError(e.reason));

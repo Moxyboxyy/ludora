@@ -32,6 +32,7 @@ pub mod selftest;
 pub mod sqlite;
 pub mod steam;
 pub mod steamcm;
+pub mod splash;
 pub mod streams;
 pub mod tray;
 pub mod uninstall;
@@ -241,9 +242,13 @@ pub fn run() {
         .setup(move |app| {
             let h = app.handle().clone();
             if let Some(w) = app.get_webview_window("main") {
+                // Hauptfenster startet unsichtbar (tauri.conf.json): normal erst nach der Logo-Animation zeigen,
+                // beim Autostart (--hidden) bleibt es im Tray
                 if start_hidden {
                     let _ = w.hide();
                     BACKGROUND.store(true, Ordering::Relaxed);
+                } else {
+                    splash::start(&h);
                 }
                 let h2 = h.clone();
                 w.on_window_event(move |ev| {

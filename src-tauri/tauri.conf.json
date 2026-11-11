@@ -21,13 +21,14 @@
         "minHeight": 600,
         "decorations": false,
         "backgroundColor": "#0f1115",
-        "visible": true,
+        "visible": false,
         "center": true
       }
     ],
     "security": {
       "csp": null
-    }
+    },
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,
@@ -65,7 +66,10 @@
     },
     "linux": {
       "deb": {
-        "depends": []
+        "depends": [],
+        "files": {
+          "/opt/Ludora/ludora": "linux/opt-ludora.sh"
+        }
       }
     }
   }
