@@ -642,6 +642,11 @@ svg.star.filled { fill: currentColor; }
 .tb-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; background: var(--panel-2); color: var(--text); letter-spacing: 0; }
 .tb-badge.online { background: rgba(107,227,161,.18); color: var(--ok); }
 .tb-drag { flex: 1; align-self: stretch; }
+/* Einstellungen: Zahnrad links neben dem Ludora-Namen (zusätzlich zum Eintrag im Ludora-Menü) */
+.tb-settings { width: 30px; height: 30px; margin-right: 4px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); }
+.tb-settings:hover { color: var(--text); background: rgba(255,255,255,.05); }
+.tb-settings:hover svg { transform: rotate(45deg); }
+.tb-settings svg { width: 17px; height: 17px; transition: transform .25s; }
 .tb-account { display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 10px 0 4px; border-radius: 8px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .tb-account:hover { color: var(--text); background: rgba(255,255,255,.05); }
 .tb-avatar { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--panel-2); color: var(--muted); }
