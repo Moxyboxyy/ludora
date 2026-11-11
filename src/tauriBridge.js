@@ -1,5 +1,5 @@
 // Brücke für die Rust-Version (Tauri): baut window.gamehub mit genau denselben Funktionen wie
-// electron/preload.js – die Oberfläche merkt keinen Unterschied. Alle Aufrufe gehen über einen
+// der früheren Electron-Version – die Oberfläche merkt keinen Unterschied. Alle Aufrufe gehen über einen
 // einzigen Rust-Befehl "ipc" (Kanal + Argumente), Ereignisse über Tauri-Events gleichen Namens.
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';

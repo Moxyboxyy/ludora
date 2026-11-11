@@ -1,8 +1,8 @@
 fn main() {
-    // Zugangsdaten des Ludora-Servers: wie in der Electron-Version aus electron/hub-config.json
-    // (im Release-Build von GitHub Actions erzeugt; lokal optional).
-    let cfg = std::path::Path::new("../electron/hub-config.json");
-    println!("cargo:rerun-if-changed=../electron/hub-config.json");
+    // Zugangsdaten des Ludora-Servers aus src-tauri/hub-config.json (Vorlage: hub-config.example.json;
+    // im Release-Build von GitHub Actions erzeugt; lokal optional – ohne geht alles außer Ludora-Konten).
+    let cfg = std::path::Path::new("hub-config.json");
+    println!("cargo:rerun-if-changed=hub-config.json");
     let text = std::fs::read_to_string(cfg).unwrap_or_default();
     let pick = |key: &str| -> String {
         let re = format!("\"{key}\"");

@@ -453,7 +453,7 @@ export default function App() {
 
           {isDemo && (
             <div className="banner">{t(
-              "Vorschau mit Beispieldaten – in Electron unter Windows siehst du deine echten Spiele."
+              "Vorschau mit Beispieldaten – in der Ludora-App siehst du deine echten Spiele."
             )}</div>
           )}
 

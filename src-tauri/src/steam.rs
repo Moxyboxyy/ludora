@@ -584,40 +584,72 @@ async fn load_friends() -> anyhow::Result<Vec<Value>> {
     Ok(friends)
 }
 
+/// Freundesliste einmal laden und melden
+async fn refresh_once(my: u64) {
+    if S.lock().gen != my || !is_connected() {
+        return;
+    }
+    match load_friends().await {
+        Ok(friends) => {
+            check_messages(my).await;
+            if S.lock().gen != my {
+                return;
+            }
+            let s = S.lock();
+            let friends: Vec<Value> = friends
+                .into_iter()
+                .map(|mut f| {
+                    f["unread"] = json!(s.unread.get(f["steamid"].as_str().unwrap_or("")).copied().unwrap_or(0));
+                    f
+                })
+                .collect();
+            drop(s);
+            emit(json!({ "friends": friends, "error": null }));
+        }
+        Err(e) => {
+            if S.lock().gen == my {
+                emit(json!({ "error": t_args("Freunde konnten nicht geladen werden: {0}", &[&e.to_string()]) }));
+            }
+        }
+    }
+}
+
 fn schedule_poll(my: u64, ms: u64) {
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(Duration::from_millis(ms)).await;
         if S.lock().gen != my || !is_connected() {
             return;
         }
-        match load_friends().await {
-            Ok(friends) => {
-                check_messages(my).await;
-                if S.lock().gen != my {
-                    return;
-                }
-                let s = S.lock();
-                let friends: Vec<Value> = friends
-                    .into_iter()
-                    .map(|mut f| {
-                        f["unread"] = json!(s.unread.get(f["steamid"].as_str().unwrap_or("")).copied().unwrap_or(0));
-                        f
-                    })
-                    .collect();
-                drop(s);
-                emit(json!({ "friends": friends, "error": null }));
-            }
-            Err(e) => {
-                if S.lock().gen == my {
-                    emit(json!({ "error": t_args("Freunde konnten nicht geladen werden: {0}", &[&e.to_string()]) }));
-                }
-            }
-        }
+        refresh_once(my).await;
         let fast = S.lock().fast;
         if S.lock().gen == my && is_connected() {
             schedule_poll(my, if fast { 5000 } else { 15000 });
         }
     });
+}
+
+static LIVE_GEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Live-Änderung (Status/Spiel eines Freundes kam über die CM-Verbindung): Liste gleich neu laden
+pub fn poke_live() {
+    use std::sync::atomic::Ordering;
+    let n = LIVE_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+    let my = S.lock().gen;
+    tauri::async_runtime::spawn(async move {
+        // Steam schickt Änderungen oft in Schüben – kurz sammeln
+        tokio::time::sleep(Duration::from_millis(1500)).await;
+        if LIVE_GEN.load(Ordering::SeqCst) == n {
+            refresh_once(my).await;
+        }
+    });
+}
+
+/// Eigener Online-Status (0 = offline, 1 = online, 2 = beschäftigt, 3 = abwesend, …, 7 = unsichtbar)
+pub async fn my_persona_state() -> Option<u64> {
+    let me = S.lock().state["me"]["steamid"].as_str()?.to_string();
+    let r = call("IPlayerService", "GetPlayerLinkDetails", &[("steamids[0]", me)], false, 15_000).await.ok()?;
+    let p = &r["accounts"][0]["private_data"]["persona_state"];
+    p.as_u64().or_else(|| p.as_str().and_then(|x| x.parse().ok()))
 }
 
 // ---------- Chat ----------

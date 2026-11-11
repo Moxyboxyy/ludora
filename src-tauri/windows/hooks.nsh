@@ -2,6 +2,9 @@
 ; Die alte Installation wird still entfernt, damit es nicht zwei Ludora gibt.
 ; Einstellungen, Anmeldungen und Cover bleiben erhalten (gleicher Datenordner %APPDATA%\Ludora).
 
+; Autostart der alten Version ("electron.app.Ludora") merken und auf die neue App umstellen
+Var LudoraAutostart
+
 !macro LUDORA_REMOVE_ELECTRON ROOT FLAG
   StrCpy $R0 0
   ${Do}
@@ -26,6 +29,11 @@
 !macroend
 
 !macro NSIS_HOOK_PREINSTALL
+  StrCpy $LudoraAutostart ""
+  ReadRegStr $LudoraAutostart HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "electron.app.Ludora"
+  ${If} $LudoraAutostart != ""
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "electron.app.Ludora"
+  ${EndIf}
   Push $R0
   Push $R1
   Push $R2
@@ -39,4 +47,11 @@
   Pop $R1
   Pop $R0
   SetOutPath $INSTDIR
+!macroend
+
+!macro NSIS_HOOK_POSTINSTALL
+  ; War Autostart in der alten Version an: für die neue App eintragen (gleicher Name wie die App selbst)
+  ${If} $LudoraAutostart != ""
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Ludora" '"$INSTDIR\Ludora.exe" --hidden'
+  ${EndIf}
 !macroend

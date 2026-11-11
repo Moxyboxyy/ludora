@@ -1,4 +1,4 @@
-// Zugriff auf den Electron-Hauptprozess.
+// Zugriff auf die Ludora-App (Rust), über window.gamehub aus src/tauriBridge.js.
 // Läuft die Oberfläche im normalen Browser (z. B. "npm run build" + Vorschau),
 // gibt es Demo-Daten, damit man am Design arbeiten kann.
 import { demoScan } from './demo.js';
@@ -132,6 +132,6 @@ export const api = native || {
   onStreams: () => () => {},
   stream: async () => ({ ok: true }),
   update: { get: async () => ({ status: 'available', current: '0.5.0', latest: '0.5.1', progress: 0 }), check: async () => ({}), install: async () => ({ ok: true, page: true }), onChange: () => () => {}, onOpen: () => () => {}, },
-  app: { onNavigate: () => () => {}, info: async () => ({ version: '0.2.0', electron: 'Vorschau' }), devtools: async () => true, quit: async () => true, openData: async () => true },
+  app: { onNavigate: () => () => {}, info: async () => ({ version: '0.2.0', runtime: 'Vorschau' }), devtools: async () => true, quit: async () => true, openData: async () => true },
   platform: 'demo'
 };

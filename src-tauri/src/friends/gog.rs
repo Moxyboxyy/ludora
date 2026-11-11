@@ -187,6 +187,10 @@ async fn poll(load_list: bool) {
     }
     match res {
         Ok(list) => {
+            let n = list.len();
+            if STORE.get()["friends"].as_array().map_or(usize::MAX, |a| a.len()) != n {
+                crate::log::info(&format!("[friends] gog: {n} Freunde"));
+            }
             ST.lock().vault_asked = false;
             STORE.set(json!({ "status": "connected", "needsLogin": false, "error": null, "friends": list }));
         }
@@ -207,6 +211,7 @@ async fn poll(load_list: bool) {
 }
 
 fn start() {
+    crate::log::info("[friends] gog: verbinde");
     let my = GEN.fetch_add(1, Ordering::SeqCst) + 1;
     STORE.set(json!({ "status": "connecting", "needsLogin": false, "error": null }));
     tauri::async_runtime::spawn(async move {

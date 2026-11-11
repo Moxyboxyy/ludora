@@ -720,7 +720,7 @@ function HubDialog({ hub, providerById, notify, onClose }) {
       <div className="assign hub" onMouseDown={(e) => e.stopPropagation()}>
         <h3>{t("Mein Ludora-Konto")}</h3>
         {!hub.configured ? (
-          <p className="muted small">{t("Der Ludora-Server ist noch nicht eingerichtet. Trage die Adresse und den öffentlichen Schlüssel deines Supabase-Projekts in diese Datei ein (siehe Anleitung):")} <code>electron/hub-config.json</code></p>
+          <p className="muted small">{t("Der Ludora-Server ist noch nicht eingerichtet. Trage die Adresse und den öffentlichen Schlüssel deines Supabase-Projekts in diese Datei ein (siehe Anleitung):")} <code>src-tauri/hub-config.json</code></p>
         ) : hub.status !== 'signedIn' ? (
           <>
             <p className="muted small">{t(

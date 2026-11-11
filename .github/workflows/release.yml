@@ -70,7 +70,7 @@ jobs:
       - name: Server-Konfiguration schreiben
         shell: bash
         run: |
-          printf '{ "url": "%s", "anonKey": "%s", "linkFunction": "%s" }\n' "$HUB_URL" "$HUB_KEY" "$HUB_FUNCTION" > electron/hub-config.json
+          printf '{ "url": "%s", "anonKey": "%s", "linkFunction": "%s" }\n' "$HUB_URL" "$HUB_KEY" "$HUB_FUNCTION" > src-tauri/hub-config.json
       - run: cargo test --manifest-path src-tauri/Cargo.toml --release
         if: runner.os == 'Linux'
       - name: App bauen
@@ -90,7 +90,7 @@ jobs:
               ditto -c -k --keepParent "$base/macos/Ludora.app" "out/Ludora-$v-${{ matrix.arch }}.zip"
               cp "$(ls $base/dmg/*.dmg | head -1)" "out/Ludora-$v-${{ matrix.arch }}.dmg" ;;
             linux)
-              cp "$(ls $base/deb/*.deb | head -1)" "out/ludora_${v}_amd64.deb"
+              cp "$(ls $base/deb/*.deb | head -1)" "out/Ludora-$v-amd64.deb"
               cp "$(ls $base/appimage/*.AppImage | head -1)" "out/Ludora-$v-x86_64.AppImage" ;;
           esac
           ls -la out

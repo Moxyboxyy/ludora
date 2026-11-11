@@ -202,12 +202,7 @@ src-tauri/
   src/friends/       Riot, Epic, GOG friends; steam.rs + steamcm.rs for Steam
   tauri.conf.json    window and installer settings
 src/tauriBridge.js   builds window.gamehub for the UI
-electron/            old Electron version (until 0.7.x; i18n/en.json is still used)
-  main.js            window, tray, launching games, IPC
-  preload.js         safe bridge to the UI
-  i18n/              translations (German source texts → en.json)
-  lib/               helpers (registry, VDF, store, friends, accounts, …)
-  providers/         one module per launcher
+src-tauri/i18n/      translations (German source texts → en.json), used by UI and Rust
 src/                 React UI
 supabase/            database schema and verification function for Ludora accounts
 tests/               tests
@@ -215,8 +210,8 @@ tests/               tests
 
 - **New launcher:** create `src-tauri/src/providers/<name>.rs` implementing the `Provider` trait and add it to
   `all()` in `src-tauri/src/providers/mod.rs`.
-- **New language:** create `electron/i18n/<code>.json` like `en.json` and register it in `src/i18n.js` and
-  `electron/lib/i18n.js`.
+- **New language:** create `src-tauri/i18n/<code>.json` like `en.json` and register it in `src/i18n.js` and
+  `src-tauri/src/util.rs`.
 
 ### Your own Ludora server (for Ludora accounts)
 
@@ -227,7 +222,7 @@ Ludora themselves needs their own project:
 2. **SQL Editor:** run `supabase/schema.sql`, then `supabase/02_friends.sql`, `supabase/03_delete_account.sql`, `supabase/04_vault.sql` and `supabase/05_security.sql`.
 3. **Authentication → Sign In / Providers → Email:** turn off “Confirm email” (Ludora accounts have no email).
 4. **Edge Functions:** create a function with the content of `supabase/functions/link/index.ts` and turn off “Verify JWT”.
-5. Copy `electron/hub-config.example.json` to `electron/hub-config.json` and enter the *Project URL*, the **public**
+5. Copy `src-tauri/hub-config.example.json` to `src-tauri/hub-config.json` and enter the *Project URL*, the **public**
    key (*anon* / *publishable*) and the function name. Never put the *secret* / *service_role* key into the app.
    `hub-config.json` is git-ignored.
 
@@ -243,7 +238,7 @@ it on your PC and commit the resulting `signatures/<tag>.json` to `main` – onl
 node scripts/sign-release.mjs v0.7.0 path/to/private-key.pem
 ```
 
-Building your own fork? Generate your own key pair and replace `PUBLIC_KEY` in `electron/lib/updater.js`. `supabase/test_dummies.sql` creates two test profiles.
+Building your own fork? Generate your own key pair and replace `PUBLIC_KEY_B64` in `src-tauri/src/updater.rs`. `supabase/test_dummies.sql` creates two test profiles.
 
 ## License
 

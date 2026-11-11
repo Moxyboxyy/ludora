@@ -1,4 +1,4 @@
-// Beispieldaten für die Browser-Vorschau (ohne Electron)
+// Beispieldaten für die Browser-Vorschau (ohne die Ludora-App)
 import { t } from './i18n.js';
 const P = {
   steam: { name: 'Steam', color: '#1b2838', accent: '#66c0f4' },

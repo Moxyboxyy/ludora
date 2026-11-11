@@ -1,6 +1,6 @@
 // Übersetzungen: Die Texte im Code sind Deutsch und dienen als Schlüssel.
-// electron/i18n/en.json übersetzt sie ins Englische (Standardsprache). Platzhalter: {0}, {1}, …
-import en from '../electron/i18n/en.json';
+// src-tauri/i18n/en.json übersetzt sie ins Englische (Standardsprache). Platzhalter: {0}, {1}, …
+import en from '../src-tauri/i18n/en.json';
 
 const DICTS = { en };
 export const LANGUAGES = [['en', 'English'], ['de', 'Deutsch']];

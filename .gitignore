@@ -3,8 +3,8 @@ node_modules/
 dist/
 release/
 
-# Eigene Server-Zugangsdaten (Vorlage: electron/hub-config.example.json)
-electron/hub-config.json
+# Eigene Server-Zugangsdaten (Vorlage: src-tauri/hub-config.example.json)
+src-tauri/hub-config.json
 
 # Lokale Berichte und Zwischenstände
 cover-report.json

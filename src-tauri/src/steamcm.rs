@@ -25,6 +25,8 @@ const EMSG_CLIENT_HEARTBEAT: u32 = 703;
 const EMSG_CLIENT_LOGON_RESPONSE: u32 = 751;
 const EMSG_CLIENT_LOGGED_OFF: u32 = 757;
 const EMSG_CLIENT_LOGON: u32 = 5514;
+const EMSG_CLIENT_CHANGE_STATUS: u32 = 716;
+const EMSG_CLIENT_PERSONA_STATE: u32 = 766;
 
 type Job = oneshot::Sender<(i32, Vec<u8>)>;
 
@@ -228,6 +230,8 @@ async fn connect() -> anyhow::Result<Arc<Session>> {
 
     // Lesen: Antworten auf Aufträge zuordnen
     let alive_r = alive.clone();
+    let tx_r = tx.clone();
+    let my_id = steamid;
     tauri::async_runtime::spawn(async move {
         while let Some(Ok(m)) = read.next().await {
             let Message::Binary(b) = m else { continue };
@@ -250,6 +254,17 @@ async fn connect() -> anyhow::Result<Arc<Session>> {
                             handle_incoming(&body);
                         }
                     }
+                    EMSG_CLIENT_PERSONA_STATE => {
+                        // Eigener Status im Steam-Client geändert? Dann mitziehen, sonst Freundesliste neu laden
+                        if let Some(st) = own_state_change(&body, my_id) {
+                            if st != 0 && st != MY_STATE.swap(st, Ordering::SeqCst) {
+                                let mut w = Writer::default();
+                                w.uint(1, st);
+                                let _ = tx_r.send(frame(EMSG_CLIENT_CHANGE_STATUS, &header(my_id, session_id, None, None), &w.buf));
+                            }
+                        }
+                        crate::steam::poke_live();
+                    }
                     EMSG_CLIENT_LOGGED_OFF => {
                         alive_r.store(false, Ordering::SeqCst);
                     }
@@ -263,7 +278,34 @@ async fn connect() -> anyhow::Result<Arc<Session>> {
         alive_r.store(false, Ordering::SeqCst);
     });
     crate::log::info("[chat] Steam-Chat verbunden");
+    // Steam schickt Status-Änderungen der Freunde nur an Sitzungen mit eigenem Status: deinen
+    // aktuellen übernehmen (für deine Freunde ändert sich nichts; offline -> unsichtbar)
+    let s2 = sess.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Some(st) = crate::steam::my_persona_state().await {
+            let target = if st == 0 { 7 } else { st };
+            MY_STATE.store(target, Ordering::SeqCst);
+            let mut w = Writer::default();
+            w.uint(1, target);
+            let _ = s2.tx.send(frame(EMSG_CLIENT_CHANGE_STATUS, &header(s2.steamid, s2.session_id, None, None), &w.buf));
+        }
+    });
     Ok(sess)
+}
+
+static MY_STATE: AtomicU64 = AtomicU64::new(0);
+
+/// CMsgClientPersonaState: Status des eigenen Kontos, falls enthalten
+fn own_state_change(body: &[u8], me: u64) -> Option<u64> {
+    let f = protobuf::decode(body)?;
+    for fr in f.iter().filter(|x| x.field == 2 && x.wire == 2) {
+        let Some(inner) = protobuf::decode(fr.bytes) else { continue };
+        let id = inner.iter().find(|x| x.field == 1 && x.wire == 1).and_then(|x| x.bytes.try_into().ok()).map(u64::from_le_bytes);
+        if id == Some(me) {
+            return protobuf::int(&inner, 2);
+        }
+    }
+    None
 }
 
 /// CFriendMessages_IncomingMessage_Notification
@@ -414,6 +456,15 @@ mod tests {
         let f = protobuf::decode(&w.buf).unwrap();
         assert_eq!(protobuf::string(&f, 8).as_deref(), Some("hi"));
         assert_eq!(f.iter().find(|x| x.field == 5).unwrap().bytes, &1700000000u32.to_le_bytes());
+    }
+    #[test]
+    fn own_state() {
+        let mut fr = Writer::default();
+        fr.fixed64(1, 42).uint(2, 3);
+        let mut w = Writer::default();
+        w.uint(1, 0).bytes(2, &fr.buf);
+        assert_eq!(own_state_change(&w.buf, 42), Some(3));
+        assert_eq!(own_state_change(&w.buf, 7), None);
     }
     #[test]
     fn multi_gzip() {
