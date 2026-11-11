@@ -5,9 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ludora</title>
     <link rel="icon" type="image/svg+xml" href="/src/assets/logo.svg" />
+    <style>
+      /* Startanimation: liegt über der Oberfläche, bis React steht und die Animation durch ist.
+         Nur transform/opacity, damit sie auch auf schwachen Rechnern nichts kostet. */
+      html, body { background: #0f1115; }
+      #splash {
+        position: fixed; inset: 0; z-index: 9999; background: #0f1115;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+        transition: opacity .28s ease;
+      }
+      #splash.out { opacity: 0; pointer-events: none; }
+      #splash svg { width: 128px; height: 128px; overflow: visible; }
+      #splash .plate { animation: sp-fade .3s ease both; }
+      /* Nur das Innere blendet von klein nach groß ein und dreht sich dabei, der abgerundete Rahmen bleibt stehen */
+      #splash .inner { transform-box: view-box; transform-origin: 512px 512px; animation: sp-spin 1.1s cubic-bezier(.55,0,.2,1) both; }
+      #splash .word {
+        font: 700 22px/1 "Segoe UI", system-ui, -apple-system, sans-serif; letter-spacing: .02em; color: #e8eaf0;
+        animation: sp-rise .45s 1.15s ease both;
+      }
+      #splash .tile, #splash .hub, #splash .glow { transform-box: fill-box; transform-origin: center; }
+      #splash .tile { animation: sp-on .38s ease both; }
+      #splash .t1 { animation-delay: .15s; } #splash .t2 { animation-delay: .35s; }
+      #splash .t4 { animation-delay: .55s; } #splash .t3 { animation-delay: .75s; }
+      #splash .hub { animation: sp-pop .3s 1.05s cubic-bezier(.3,1.6,.5,1) both; }
+      #splash .glow { animation: sp-breathe 1.2s 1.1s ease both; }
+      @keyframes sp-spin { from { transform: rotate(-360deg) scale(.15); opacity: 0; } 45% { opacity: 1; } to { transform: none; } }
+      @keyframes sp-on { from { opacity: 0; transform: scale(.82); } 60% { opacity: 1; transform: scale(1.05); } to { opacity: 1; transform: none; } }
+      @keyframes sp-fade { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes sp-pop { from { transform: scale(0); } to { transform: none; } }
+      @keyframes sp-breathe { 0% { opacity: 0; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+      @keyframes sp-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+      @media (prefers-reduced-motion: reduce) {
+        #splash, #splash * { animation: none !important; transition: none !important; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="splash" aria-hidden="true">
+      <svg viewBox="96 96 832 832">
+        <defs>
+          <linearGradient id="sp-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e2330"/><stop offset="1" stop-color="#0d0f14"/></linearGradient>
+          <linearGradient id="sp-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fb0ff"/><stop offset="1" stop-color="#b08cff"/></linearGradient>
+          <linearGradient id="sp-h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d8cf0"/><stop offset="1" stop-color="#8e6cf0"/></linearGradient>
+          <radialGradient id="sp-glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#9a8cff" stop-opacity=".45"/><stop offset="1" stop-color="#9a8cff" stop-opacity="0"/></radialGradient>
+          <linearGradient id="sp-rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        </defs>
+        <g class="plate"><rect x="100" y="100" width="824" height="824" rx="186" fill="url(#sp-bg)"/>
+        <rect x="101.5" y="101.5" width="821" height="821" rx="184.5" fill="none" stroke="url(#sp-rim)" stroke-width="3"/></g>
+        <g class="inner">
+        <circle class="glow" cx="512" cy="512" r="330" fill="url(#sp-glow)"/>
+        <g transform="rotate(45 512 512)">
+          <rect class="tile t1" x="331" y="331" width="170" height="170" rx="40" fill="url(#sp-g)"/>
+          <rect class="tile t2" x="523" y="331" width="170" height="170" rx="40" fill="url(#sp-h)" opacity=".92"/>
+          <rect class="tile t3" x="331" y="523" width="170" height="170" rx="40" fill="url(#sp-h)" opacity=".92"/>
+          <rect class="tile t4" x="523" y="523" width="170" height="170" rx="40" fill="url(#sp-g)"/>
+        </g>
+        <g class="hub"><circle cx="512" cy="512" r="52" fill="#0f1115"/><circle cx="512" cy="512" r="29" fill="#fff"/></g>
+        </g>
+      </svg>
+      <div class="word">Ludora</div>
+    </div>
+    <script>
+      // Chat- und Debugfenster sowie ein versteckter Start (Autostart in den Tray) brauchen keine Startanimation
+      window.__splashT = performance.now();
+      if (location.hash || document.visibilityState === 'hidden') document.getElementById('splash').remove();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
