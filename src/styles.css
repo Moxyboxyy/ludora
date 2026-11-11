@@ -598,7 +598,6 @@ svg.star.filled { fill: currentColor; }
   height: 44px; flex-shrink: 0; display: flex; align-items: center; gap: 18px;
   padding: 0 12px 0 14px;
   background: linear-gradient(90deg, var(--panel) 0, var(--panel) 240px, var(--bg) 520px);
-  border-bottom: 1px solid rgba(38,43,55,.55);
   user-select: none; position: relative; z-index: 40;
 }
 .titlebar.darwin { padding-left: 84px; padding-right: 12px; } /* links sitzen die Ampel-Knöpfe */
@@ -792,7 +791,7 @@ svg.star.filled { fill: currentColor; }
 .fw-bar {
   --fw-pad: 12px;
   position: relative; height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 var(--fw-pad);
-  background: var(--panel); border-bottom: 1px solid rgba(38,43,55,.55); user-select: none; z-index: 40;
+  background: var(--panel); user-select: none; z-index: 40;
 }
 .fw-bar.darwin { --fw-pad: 84px; } /* Mac: links sitzen die Ampel-Knöpfe */
 .fw-bar.own-controls { padding-right: 0; }
