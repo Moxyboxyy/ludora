@@ -51,6 +51,9 @@ impl Store {
             }
             s.clone()
         };
+        if let Some(e) = snapshot["error"].as_str() {
+            crate::log::warn(&format!("[friends] {} {}: {e}", self.id, snapshot["status"].as_str().unwrap_or("")));
+        }
         if let Some(app) = APP.get() {
             crate::broadcast(app, "friends2:update", json!({ "id": self.id, "state": snapshot }));
         }

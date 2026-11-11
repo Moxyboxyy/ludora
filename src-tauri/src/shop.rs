@@ -347,7 +347,10 @@ async fn epic(o: &Opts) -> anyhow::Result<List> {
                 }
                 last = anyhow::anyhow!("Epic: unerwartete Antwort");
             }
-            Err(e) => last = e,
+            Err(e) => {
+                crate::log::warn(&format!("[shop] epic {ep}: {e}"));
+                last = e
+            }
         }
     }
     Err(last)

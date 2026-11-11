@@ -390,7 +390,9 @@ async fn shop_open(app: &AppHandle, store: &Value) -> Value {
     let url = store["url"].as_str().unwrap_or("");
     let uri = store["uri"].as_str().unwrap_or("");
     let launcher = store["launcher"].as_str().unwrap_or("");
+    crate::log::info(&format!("[shop] öffnen {launcher}: {url} {uri}"));
     if !crate::shop::is_allowed_url(url) {
+        crate::log::warn(&format!("[shop] Link nicht erlaubt: {url}"));
         return json!({ "ok": false, "error": t("Ungültiger Store-Link") });
     }
     let info = crate::library::last_providers().into_iter().find(|x| x["id"] == launcher);
@@ -471,7 +473,10 @@ pub fn toggle_favorite(key: &str) -> Value {
 
 pub fn open_url(app: &AppHandle, url: &str) {
     use tauri_plugin_opener::OpenerExt;
-    let _ = app.opener().open_url(url, None::<&str>);
+    if let Err(e) = app.opener().open_url(url, None::<&str>) {
+        crate::log::warn(&format!("[app] Link öffnen über opener fehlgeschlagen ({e}) – versuche System"));
+        let _ = crate::running::open_with_system(url);
+    }
 }
 
 pub fn open_path(app: &AppHandle, path: &str) {
