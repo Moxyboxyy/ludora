@@ -174,11 +174,15 @@ async fn owned_from_local_cache(steam: &Path, local_apps: &Map<String, Value>) -
     let info = tokio::task::spawn_blocking(move || vdf::read_app_info(&bytes, Some(&ids)))
         .await?
         .map_err(anyhow::Error::msg)?;
-    Ok(info
+    let mut out: Vec<_> = info
         .into_iter()
         .filter(|(_, i)| i.kind == "game" && !i.name.is_empty())
         .map(|(id, i)| (id, i.name, None, None))
-        .collect())
+        .collect();
+    // Aufsteigend nach App-ID wie in der Electron-Version: bei gleichem Namen (z. B. alte und neue
+    // Ausgabe) gewinnt dann dieselbe App-ID
+    out.sort_by_key(|(id, ..)| id.parse::<u64>().unwrap_or(u64::MAX));
+    Ok(out)
 }
 
 // ---------- Bibliothek mit API-Key ----------
