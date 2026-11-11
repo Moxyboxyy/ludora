@@ -5,6 +5,22 @@
       "sha256": "4377a902474c090bbc98cd9ca3693cb25caf76cd42f50b0bee8cc908e18175f1",
       "sig": "a+K4WRL4CUKMdBWwjUecVchdKf7HIrgItWbKwa7c9wrZ8fxkyXzrz+5PPJBufI2GKmHLyrt1KMqBvWLfWa/zDQ=="
     },
+    "Ludora-0.8.0-arm64.dmg": {
+      "sha256": "c11dd738ec7793171248e948ad313d6065531642c6feaca2d283ce400bb635eb",
+      "sig": "S53GURLVN110HMKa6c0JXD8n571aD6z/wsP9AZ7CGdSQhYjoeIRJRlmlulyE22B65plWklp3Awv2gwzWPQ9JCg=="
+    },
+    "Ludora-0.8.0-arm64.zip": {
+      "sha256": "a84919617e7da66e32acab2b87b8ddc80c20e3c254e5d54d89568995b417dfab",
+      "sig": "OHnMmGJxR7OB/Vz47Fb5UzEKBcftyMpJvbv7a/4VbQxRoYByNhNZL3cYs8mUe2JlARzqEchUWWKSyA8mtbxdDA=="
+    },
+    "Ludora-0.8.0-x64.dmg": {
+      "sha256": "4991c09ecd494ec1f9a6acb0f168c78c8ac1f5f3c7809636a56cda38a6c5ba29",
+      "sig": "v42L3lO0Jt7hhSnUm6HVEP+IE16EBvlylTg1W5+4LA3W2HvWAouWBop1SMpeMfX++arqCf+SUFjZSUcHrC3QDg=="
+    },
+    "Ludora-0.8.0-x64.zip": {
+      "sha256": "97ef9f734c2827587ec3a23ff26a8d04f6438d90bcb7cf79561cdb1352bdcc5c",
+      "sig": "xtiypFSRoNmU0BHzkjGFxiG1e3xQcwrmS1fOvUnkhZ/QGz88udVS8YgsBhhxCua42LeGVs3P03uakXy92gvbAg=="
+    },
     "Ludora-0.8.0-x86_64.AppImage": {
       "sha256": "ad464161a9e33056aff8a355e2a2067bbebf52aa5b5c77b7dd138f9a5f7ea624",
       "sig": "rs+kOlhv726yaJIqo+SqpqfWBdVx1DtEjNhmuz0VhBBQ3T3/L/JZC8AC1R1rtr3ezM+ANx4lK8O0nUjmxD+nBA=="
