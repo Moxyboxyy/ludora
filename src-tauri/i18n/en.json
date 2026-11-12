@@ -573,5 +573,6 @@
   "Einblenden": "Show",
   "Keine – Rechtsklick auf einen Launcher blendet ihn aus.": "None – right-click a launcher to hide it.",
   "{0} ausgeblendet – wieder einblenden: Rechtsklick auf eine freie Stelle der Seitenleiste": "{0} hidden – to show it again, right-click an empty spot in the sidebar",
-  "{0} eingeblendet": "{0} shown"
+  "{0} eingeblendet": "{0} shown",
+  "Dein Spitzname – eigentlich: {0}": "Your nickname – actual name: {0}"
 }

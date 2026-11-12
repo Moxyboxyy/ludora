@@ -45,6 +45,8 @@ struct S {
     auth: Option<Auth>,
     friend_ids: Vec<String>,
     names: HashMap<String, String>,
+    /// Spitznamen, die du bei Epic für Freunde vergeben hast
+    aliases: HashMap<String, String>,
     presence: HashMap<String, HashMap<String, Pres>>,
     sender: Option<mpsc::UnboundedSender<String>>,
 }
@@ -155,9 +157,10 @@ async fn load_friends() -> anyhow::Result<()> {
         let mut ids = vec![];
         for f in sum["friends"].as_array().cloned().unwrap_or_default() {
             let Some(id) = f["accountId"].as_str() else { continue };
-            if let Some(al) = f["alias"].as_str().filter(|x| !x.is_empty()) {
-                s.names.insert(id.into(), al.into());
-            }
+            match f["alias"].as_str().map(str::trim).filter(|x| !x.is_empty()) {
+                Some(al) => s.aliases.insert(id.into(), al.into()),
+                None => s.aliases.remove(id),
+            };
             ids.push(id.to_string());
         }
         s.friend_ids = ids.clone();
@@ -225,7 +228,11 @@ fn build_list(s: &S) -> Vec<Value> {
                     (state, game, rich)
                 }
             };
-            json!({ "id": id, "name": s.names.get(id).cloned().unwrap_or_else(|| id.clone()), "avatar": null, "state": state, "gameName": game, "richText": rich, "lastOnline": null })
+            // Eigener Spitzname geht vor, der Epic-Name bleibt als realName
+            let real = s.names.get(id).cloned();
+            let alias = s.aliases.get(id).cloned();
+            let real_name = if alias.is_some() { json!(real) } else { Value::Null };
+            json!({ "id": id, "name": alias.or(real).unwrap_or_else(|| id.clone()), "realName": real_name, "avatar": null, "state": state, "gameName": game, "richText": rich, "lastOnline": null })
         })
         .collect()
 }

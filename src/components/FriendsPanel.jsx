@@ -59,7 +59,7 @@ function Avatar({ a, name }) {
 /** Steam-Freund -> einheitliches Konto */
 function fromSteam(f) {
   return {
-    key: `steam:${f.steamid}`, launcher: 'steam', id: f.steamid, name: f.name, avatar: f.avatar,
+    key: `steam:${f.steamid}`, launcher: 'steam', id: f.steamid, name: f.name, realName: f.realName, avatar: f.avatar,
     state: f.state, gameName: f.appid ? (f.gameName || t("Im Spiel")) : null, richText: f.richText,
     lastOnline: f.lastOnline, joinable: f.joinable, appid: f.appid, unread: f.unread, raw: f
   };
@@ -299,7 +299,7 @@ export default function FriendsPanel({ games, onLaunchGame, notify, providerById
         onDoubleClick={() => (a.launcher === 'steam' ? steamAction(a.raw, 'chat') : CHAT_LAUNCHERS.has(a.launcher) ? openChat(a) : openLauncher(a))}>
         {nested ? <span className="acc-logo" title={LAUNCHER_NAME[a.launcher]}><LauncherLogo provider={providerById[a.launcher]} /></span> : <Avatar a={a} />}
         <div className="friend-info">
-          <div className="friend-name">
+          <div className="friend-name" title={a.realName ? t("Dein Spitzname – eigentlich: {0}", [a.realName]) : undefined}>
             {nested && p?.hub && p.unverified?.has(a.key) && <span className="unverified" title={t("Vom Besitzer angegeben, nicht von Riot bestätigt")}>?</span>}
             {a.name}
             {a.unread > 0 && <span className="unread">{a.unread}</span>}
@@ -434,14 +434,14 @@ export default function FriendsPanel({ games, onLaunchGame, notify, providerById
     const personEntries = allPeople.map((p) => {
       const members = p.members.map((m) => byKey.get(`${m.launcher}:${m.id}`)).filter(Boolean);
       const best = members.slice().sort((x, y) => rank(y) - rank(x))[0] || { state: 'offline' };
-      return { kind: 'person', p, best, rank: rank(best), sortName: p.name, ok: match(p.name) || members.some((m) => match(m.name) || match(m.gameName)) };
+      return { kind: 'person', p, best, rank: rank(best), sortName: p.name, ok: match(p.name) || members.some((m) => match(m.name) || match(m.realName) || match(m.gameName)) };
     });
-    const loose = accounts.filter((a) => !personOf.has(a.key) && !hubFriendKeys.has(a.key)).map((a) => ({ kind: 'account', a, best: a, rank: rank(a), sortName: a.shortName || a.name, ok: match(a.name) || match(a.gameName) }));
+    const loose = accounts.filter((a) => !personOf.has(a.key) && !hubFriendKeys.has(a.key)).map((a) => ({ kind: 'account', a, best: a, rank: rank(a), sortName: a.shortName || a.name, ok: match(a.name) || match(a.realName) || match(a.gameName) }));
     entries = [...hubFriends.map(hubEntry), ...personEntries.filter((e) => !(e.p.members || []).some((m) => hubFriendKeys.has(`${m.launcher}:${m.id}`))), ...loose].filter((e) => e.ok);
   } else if (tab === 'hub') {
     entries = hubFriends.map(hubEntry).filter((e) => e.ok);
   } else {
-    entries = accounts.filter((a) => a.launcher === tab && (match(a.name) || match(a.gameName)))
+    entries = accounts.filter((a) => a.launcher === tab && (match(a.name) || match(a.realName) || match(a.gameName)))
       .map((a) => ({ kind: 'account', a, best: a, rank: rank(a), sortName: a.shortName || a.name }));
   }
   const by = (x, y) => x.sortName.localeCompare(y.sortName, 'de', { sensitivity: 'base' });

@@ -518,6 +518,44 @@ async fn resolve_game_names(appids: &[String]) {
     }
 }
 
+/// Spitznamen, die du in Steam für Freunde vergeben hast (SteamID64 -> Spitzname); alle 5 Minuten neu
+static NICKNAMES: Lazy<Mutex<(i64, HashMap<String, String>)>> = Lazy::new(|| Mutex::new((0, HashMap::new())));
+
+async fn nicknames() -> HashMap<String, String> {
+    {
+        let n = NICKNAMES.lock();
+        if n.0 > 0 && chrono::Utc::now().timestamp() - n.0 < 300 {
+            return n.1.clone();
+        }
+    }
+    match call("IPlayerService", "GetNicknameList", &[], false, 10_000).await {
+        Ok(r) => {
+            let map = parse_nicknames(&r);
+            *NICKNAMES.lock() = (chrono::Utc::now().timestamp(), map.clone());
+            map
+        }
+        Err(e) => {
+            crate::log::warn(&format!("[steam] Spitznamen: {e}"));
+            NICKNAMES.lock().1.clone()
+        }
+    }
+}
+
+/// { nicknames: [{ accountid, nickname }] } -> SteamID64 -> Spitzname
+pub fn parse_nicknames(r: &Value) -> HashMap<String, String> {
+    const BASE: u64 = 76_561_197_960_265_728;
+    r["nicknames"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|n| {
+            let acc = n["accountid"].as_u64().or_else(|| n["accountid"].as_str().and_then(|s| s.parse().ok()))?;
+            let nick = n["nickname"].as_str().map(str::trim).filter(|x| !x.is_empty())?;
+            Some(((BASE + acc).to_string(), nick.to_string()))
+        })
+        .collect()
+}
+
 async fn load_friends() -> anyhow::Result<Vec<Value>> {
     let r = call("IFriendsListService", "GetFriendsList", &[], false, 20_000).await?;
     let ids: Vec<String> = r["friendslist"]["friends"]
@@ -540,6 +578,7 @@ async fn load_friends() -> anyhow::Result<Vec<Value>> {
             }
         }
     }
+    let nicks = nicknames().await;
     let mut appids = vec![];
     let mut friends: Vec<Value> = ids
         .iter()
@@ -559,9 +598,13 @@ async fn load_friends() -> anyhow::Result<Vec<Value>> {
             let lobby = Some(sv(&privd["lobby_steam_id"])).filter(|l| !l.is_empty() && l != "0");
             let last_off = privd["last_seen_online"].as_i64().or(privd["last_logoff_time"].as_i64()).unwrap_or(0);
             let server = privd["game_server_ip_and_port"].as_u64().unwrap_or(0) > 0;
+            // Eigener Spitzname für diesen Freund (in Steam vergeben) geht vor; der Steam-Name bleibt als realName
+            let persona = pubd["persona_name"].as_str().unwrap_or(id);
+            let nick = nicks.get(id);
             json!({
                 "steamid": id,
-                "name": pubd["persona_name"].as_str().unwrap_or(id),
+                "name": nick.map(String::as_str).unwrap_or(persona),
+                "realName": if nick.is_some() { json!(persona) } else { Value::Null },
                 "avatar": avatar_url(&pubd["sha_digest_avatar"]),
                 "state": state_name(privd["persona_state"].as_u64().unwrap_or(0)),
                 "appid": appid.clone().or(game_id.clone()),
@@ -1008,6 +1051,13 @@ pub async fn remote_installed() -> anyhow::Result<Vec<(String, Vec<String>)>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn spitznamen() {
+        let m = parse_nicknames(&json!({ "nicknames": [{ "accountid": 1, "nickname": "Kumpel" }, { "accountid": "2", "nickname": " " }] }));
+        assert_eq!(m.get("76561197960265729").map(String::as_str), Some("Kumpel"));
+        assert_eq!(m.len(), 1);
+    }
 
     #[test]
     fn hilfen() {
