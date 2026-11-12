@@ -267,6 +267,8 @@ export const TESTS = [
       const r = await call('hub:lookup', items);
       return r?.ok ? ok(`${items.length} geprüft, ${r.items.length} nutzen Ludora`) : fail(r?.error || 'Abgleich fehlgeschlagen');
     } },
+  { id: 'hubLinkOne', group: 'Ludora-Konto', name: 'Steam-Konto einzeln verknüpfen', channels: ['hub:linkOne'], kind: 'manual',
+    run: async () => { const r = await call('hub:linkOne', 'steam'); return r?.ok ? ok('Steam verknüpft') : r?.needsLogin ? warn('bei Steam nicht angemeldet') : fail(r?.error || 'fehlgeschlagen'); } },
   { id: 'hubRelink', group: 'Ludora-Konto', name: 'Launcher-Konten neu verknüpfen', channels: ['hub:relink'], kind: 'manual',
     run: async () => { const r = await call('hub:relink'); const f = Object.entries(r?.failed || {}); return r?.error ? fail(r.error) : f.length ? fail(f.map(([l, e]) => `${l}: ${e}`).join('; ')) : r?.linked?.length ? ok(`verknüpft: ${r.linked.join(', ')}`) : warn('kein Launcher-Konto angemeldet'); } },
   { id: 'hubLogin', group: 'Ludora-Konto', name: 'Anmelden', channels: ['hub:login'], kind: 'manual', needs: 'name+password',

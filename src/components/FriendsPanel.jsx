@@ -663,7 +663,9 @@ export default function FriendsPanel({ games, onLaunchGame, notify, providerById
           </div>
         )}
 
-        {hubOpen && <HubDialog hub={hub} providerById={providerById} notify={notify} onClose={() => setHubOpen(false)} />}
+        {hubOpen && <HubDialog hub={hub} providerById={providerById} notify={notify} onClose={() => setHubOpen(false)}
+          launcherState={(id) => (id === 'steam' ? steam : others[id] || { status: 'disconnected', needsLogin: id !== 'riot' })}
+          onShowLauncher={(id) => { setTab(id); setHubOpen(false); }} />}
 
         {assign && (
           <AssignDialog a={assign} people={people} onCancel={() => setAssign(null)} onPick={(pid, name) => addToPerson(assign, pid, name)} />
@@ -729,8 +731,28 @@ function AssignDialog({ a, people, onCancel, onPick }) {
 const RESTORED_NAME = { steamWebToken: 'Steam', friendsEpic: 'Epic', friendsGog: 'GOG' };
 
 /** Mein Ludora-Konto: registrieren / anmelden / verknüpfte Konten */
-function HubDialog({ hub, providerById, notify, onClose }) {
-  // „Jetzt verknüpfen“ im Ludora-Konto: Ergebnis als Meldung zeigen
+function HubDialog({ hub, providerById, notify, onClose, launcherState = () => ({}), onShowLauncher = () => {} }) {
+  // Einzelne Zeile: Konto verknüpfen bzw. vorher beim Launcher anmelden
+  const [linking, setLinking] = useState(null);
+  const linkOne = async (l) => {
+    setLinking(l);
+    try {
+      const r = await api.hub.linkOne(l);
+      if (r?.ok) notify(t("Verknüpft: {0}", [LAUNCHER_NAME[l]]));
+      else notify(r?.error || t("Verknüpfen fehlgeschlagen"), 'error');
+    } finally { setLinking(null); }
+  };
+  const signIn = async (l) => {
+    if (l === 'steam') return onShowLauncher('steam'); // Steam: QR-Code bzw. Anmeldung im Reiter Steam
+    if (l === 'riot') {
+      const r = await api.friends2.startRiot();
+      notify(r?.ok ? t("Riot Client wird im Hintergrund gestartet – danach wird automatisch verknüpft.") : r?.error || t("Nicht möglich"), r?.ok ? 'info' : 'error');
+      return;
+    }
+    const r = await api.friends2.login(l);
+    if (r && !r.ok && r.error) notify(r.error, 'error');
+  };
+  // „Alle neu verknüpfen“ im Ludora-Konto: Ergebnis als Meldung zeigen
   const [relinking, setRelinking] = useState(false);
   const relink = async () => {
     setRelinking(true);
@@ -811,22 +833,35 @@ function HubDialog({ hub, providerById, notify, onClose }) {
                         <span className={`hub-link-state ${x.verified ? 'ok' : ''}`}>{x.verified ? t("✓ bestätigt") : t("nicht bestätigt")}</span>
                         <button className="link" onClick={() => api.hub.unlink(l, x.account_id)}>{t("Entfernen")}</button>
                       </>
-                    ) : hub.linkErrors?.[l] ? (
-                      <span className="form-error small">{t("Verknüpfen fehlgeschlagen: {0}", [hub.linkErrors[l]])}</span>
-                    ) : (
-                      <span className="muted small">{t("noch nicht verknüpft – melde dich im Reiter {0} an", [LAUNCHER_NAME[l]])}</span>
-                    )}
+                    ) : (() => {
+                      // Nicht verknüpft: angemeldet -> „Verknüpfen“, sonst -> „Anmelden“
+                      const st = launcherState(l);
+                      const signedIn = st.status === 'connected';
+                      const busy = linking === l || st.status === 'connecting';
+                      return (
+                        <>
+                          <span className={hub.linkErrors?.[l] ? 'form-error small hub-link-acc' : 'muted small hub-link-acc'}>
+                            {hub.linkErrors?.[l] ? t("Verknüpfen fehlgeschlagen: {0}", [hub.linkErrors[l]])
+                              : signedIn ? t("angemeldet, noch nicht verknüpft")
+                              : l === 'riot' ? t("Riot Client läuft nicht") : t("nicht angemeldet")}
+                          </span>
+                          {signedIn
+                            ? <button className="secondary small" disabled={busy} onClick={() => linkOne(l)}>{busy ? t("Verknüpfe …") : t("Verknüpfen")}</button>
+                            : <button className="primary small" disabled={busy} onClick={() => signIn(l)}>{busy ? t("Verbinde …") : l === 'riot' ? t("Riot starten") : t("Anmelden")}</button>}
+                        </>
+                      );
+                    })()}
                   </div>)
                 );
               })}
             </div>
             <p className="muted small">{t(
-              "Verknüpft wird automatisch, sobald du in Ludora bei einem Launcher angemeldet bist. Steam, Epic und GOG werden dabei beim Anbieter bestätigt; Riot gibt nur lokale Daten heraus."
+              "Melde dich bei einem Launcher an – danach wird er automatisch verknüpft. Steam, Epic und GOG werden dabei beim Anbieter bestätigt; Riot gibt nur lokale Daten heraus."
             )}</p>
             {hub.error && <p className="form-error">{hub.error}</p>}
             {hub.vaultError && <p className="form-error small">{hub.vaultError}</p>}
             <div className="hub-actions">
-              <button className="secondary small" disabled={relinking} onClick={relink}>{relinking ? t("Verknüpfe …") : t("Jetzt verknüpfen")}</button>
+              <button className="secondary small" disabled={relinking} onClick={relink}>{relinking ? t("Verknüpfe …") : t("Alle neu verknüpfen")}</button>
               <button className="link" onClick={() => api.hub.logout()}>{t("Abmelden")}</button>
             </div>
             <button className="link danger small" onClick={async () => {

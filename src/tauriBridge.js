@@ -42,6 +42,7 @@ export async function installTauriBridge() {
       deleteAccount: call('hub:deleteAccount'),
       unlink: call('hub:unlink'),
       relink: call('hub:relink'),
+      linkOne: call('hub:linkOne'),
       lookup: call('hub:lookup'),
       friendRequest: call('hub:friendRequest'),
       friendAccept: call('hub:friendAccept'),

@@ -82,7 +82,7 @@ export const api = native || {
       links: [{ launcher: 'steam', account_id: '1', account_name: 'Alex', verified: true }, { launcher: 'riot', account_id: 'x', account_name: 'Alex#EUW', verified: false }] };
     return {
       get: async () => st, register: async () => ({ ok: true }), login: async () => ({ ok: true }), logout: async () => ({ ok: true }), deleteAccount: async () => ({ ok: false, cancelled: true }),
-      unlink: async () => ({ ok: true }), relink: async () => ({ ok: true }), onUpdate: () => () => {},
+      unlink: async () => ({ ok: true }), relink: async () => ({ ok: true }), linkOne: async () => ({ ok: true }), onUpdate: () => () => {},
       friendRequest: async () => ({ ok: true, message: 'Anfrage gesendet.' }), friendAccept: async () => ({ ok: true }), friendRemove: async () => ({ ok: true }), refreshFriends: async () => {}, steamAdd: async () => ({ ok: true }),
       lookup: async () => ({ ok: true, items: [
         { launcher: 'steam', account_id: '76561198000000002', username: 'tobi', display_name: 'TobiTheGamer', verified: true },

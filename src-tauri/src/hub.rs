@@ -451,6 +451,22 @@ pub async fn relink() -> Value {
     json!({ "ok": failed.is_empty(), "linked": linked, "failed": failed })
 }
 
+/// Ein einzelnes Launcher-Konto verknüpfen (Knopf „Verknüpfen“ in der Zeile des Launchers)
+pub async fn link_single(launcher: &str) -> Value {
+    if !LINKABLE.contains(&launcher) {
+        return json!({ "ok": false, "error": t("Unbekannter Launcher") });
+    }
+    if !is_signed_in() {
+        return json!({ "ok": false, "error": t("Nicht bei Ludora angemeldet") });
+    }
+    LINKED_ONCE.lock().remove(launcher);
+    match link_one(launcher).await {
+        Some(Ok(())) => json!({ "ok": true }),
+        Some(Err(e)) => json!({ "ok": false, "error": e }),
+        None => json!({ "ok": false, "needsLogin": true, "error": t("Du bist in Ludora nicht bei diesem Launcher angemeldet.") }),
+    }
+}
+
 // ---------- Ludora-Freunde, Herzschlag ----------
 
 async fn load_friends() -> anyhow::Result<()> {

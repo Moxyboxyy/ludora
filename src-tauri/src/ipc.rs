@@ -250,6 +250,7 @@ pub async fn dispatch(app: &AppHandle, channel: &str, args: Vec<Value>) -> Resul
         }
         "hub:unlink" => crate::hub::unlink(&a0, &s(&args, 1)).await,
         "hub:relink" => crate::hub::relink().await,
+        "hub:linkOne" => crate::hub::link_single(&a0).await,
         "hub:friendRequest" => crate::hub::friend_request(&a0).await,
         "hub:friendAccept" => crate::hub::friend_accept(&a0).await,
         "hub:friendRemove" => crate::hub::friend_remove(&a0).await,
