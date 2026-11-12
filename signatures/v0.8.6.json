@@ -1,0 +1,33 @@
+{
+  "tag": "v0.8.6",
+  "files": {
+    "Ludora-0.8.6-amd64.deb": {
+      "sha256": "9d977dea71cddd7967fc096201642a971e1b37cc245bb2009a1d6dfa326cccfc",
+      "sig": "nxvW1dCdctOfKcmnKmLZ8ogWEMhUvaGVOMj+GnEw/Gn6hsCXaZ3JPby1L8G3K95Dha0vSIMb4DT6e8Mz2wQVCQ=="
+    },
+    "Ludora-0.8.6-arm64.dmg": {
+      "sha256": "ea5638ff08ba0c284fa889b2560cba548d20f9fbd3126519e99a09f664b7390f",
+      "sig": "XKuZamoImnIaK7hRim1ln9TEpaHqz7AcrML/fwUdWf23+jDKIbNwN7GGjJNltrv3wUOzgCXTd1qAy1iVTSShDQ=="
+    },
+    "Ludora-0.8.6-arm64.zip": {
+      "sha256": "c7f1bdea45ea11ad80b38cd9b70ab1fe258d5ec1365487d9eb14ca3ac3dc8a4f",
+      "sig": "i7KYMED568CJWvk3a2IOpE6bBTRYg2zv0SI4JQBUJrsHyhgg7hN1XHN5IfmSdvdh0iDWU8fJmwlS37ehElaOAQ=="
+    },
+    "Ludora-0.8.6-x64.dmg": {
+      "sha256": "0d5b3e1afad498994935619230e7d9ef79507eba74a95a8c13ad1307dad8d377",
+      "sig": "qoEidCd0QKw1nDNzKbHRPi99C2BE5ITy0lHwOU7I79ZdpK5GVFNzCOiGHa+yYwOpJFAXLeuMTKz3jc57ebMkAQ=="
+    },
+    "Ludora-0.8.6-x64.zip": {
+      "sha256": "a57fa4633d6e56c7bfaa801c78ef25df3ff2447559a1bd728b21c5274084b58f",
+      "sig": "MXoOfU/3pfgGb+3pIMBy9JpDxyvS3RM1pO0ogbG6dzNaQho+4CgrCqgRGIxYuK1jzWqwr5GtQeyi4E/2Z8aSCg=="
+    },
+    "Ludora-0.8.6-x86_64.AppImage": {
+      "sha256": "e3c423a5d219a615237bc6e28d732935c237c63596a34fe9e974a6b21bd0e2b8",
+      "sig": "BKeFo61jT7fpNXlZ56wciE/f2TetEzfPSPF5NCqSn5BYHudIR0iYcOkvhUyqyj5MAr2/AxXRdXWbFWudmNMNCA=="
+    },
+    "Ludora-Setup-0.8.6.exe": {
+      "sha256": "67cd0302dac3c30ddb2348cb4592571c4a25dbfa5fbd4fe8ef749265e75c1a20",
+      "sig": "Fw82scZueGb0l1BuZfzUfJ0P0616DIofF80L4DIZKLCAWr4iSVeIdUnB4ZTj8Q9V9ikjcRn0/ZTCA4xFLceqAA=="
+    }
+  }
+}
