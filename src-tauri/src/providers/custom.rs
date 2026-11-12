@@ -99,9 +99,9 @@ pub fn providers() -> Vec<P> {
         .collect()
 }
 
-/// Minecraft-Launcher u. ä.: Ordner „instances“/„modpacks“ – jeder Unterordner ist eine Instanz ohne eigene .exe
+/// Minecraft-Launcher u. ä.: Ordner „instances“/„modpacks“/„profiles“ – jeder Unterordner ist eine Instanz ohne eigene .exe
 pub fn is_instances_dir(folder: &Path) -> bool {
-    folder.file_name().is_some_and(|n| crate::re!(r"(?i)^(instances|modpacks)$").is_match(&n.to_string_lossy()))
+    folder.file_name().is_some_and(|n| crate::re!(r"(?i)^(instances|modpacks|profiles)$").is_match(&n.to_string_lossy()))
 }
 
 /// Instanzen in einem instances-Ordner: (Ordnername, Anzeigename, Ordner)
@@ -197,38 +197,32 @@ pub fn auto_folders(exe: &str, name: &str) -> Vec<PathBuf> {
             roots.push(up.to_path_buf());
         }
     }
-    // Datenordner, die wie der Launcher heißen (Programmdatei oder eingegebener Name)
-    let mut names: Vec<String> = vec![name.trim().to_string()];
-    if let Some(stem) = exe.file_stem().map(|s| s.to_string_lossy().into_owned()) {
-        names.push(stem);
-    }
-    for base in [dirs::config_dir(), dirs::data_local_dir(), dirs::data_dir()].into_iter().flatten() {
-        for n in &names {
-            let n = n.trim();
-            if !n.is_empty() && !n.contains(['/', '\\', '.']) {
-                roots.push(base.join(n));
+    // Datenordner des Launchers: Ordner, deren Name das Kernwort enthält (z. B. „norisk“ aus „NoRisk Launcher“
+    // bzw. noriskclient-launcher-v3.exe) – in AppData, Local und im Benutzerordner
+    let stem = exe.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let keys = key_words(&[name, &stem]);
+    let home = crate::util::home();
+    for base in [dirs::config_dir(), dirs::data_local_dir(), dirs::data_dir(), Some(home)].into_iter().flatten() {
+        let Ok(rd) = std::fs::read_dir(&base) else { continue };
+        for e in rd.flatten() {
+            let n = squash(&e.file_name().to_string_lossy());
+            if e.path().is_dir() && keys.iter().any(|k| n.contains(k.as_str())) {
+                roots.push(e.path());
             }
         }
     }
-    // Ordner im Benutzerordner (z. B. ~/curseforge, ~/.ftba)
-    let home = crate::util::home();
-    for n in &names {
-        let n = n.trim().to_lowercase().replace(' ', "");
-        if !n.is_empty() && !n.contains(['/', '\\', '.']) {
-            roots.push(home.join(&n));
-            roots.push(home.join(format!(".{n}")));
-        }
-    }
-    let sub = crate::re!(r"(?i)^(games?|spiele|library|libraries|apps|installed|content|common|steamapps|instances|modpacks)$");
+    let sub = crate::re!(r"(?i)^(games?|spiele|library|apps|installed|content|common|steamapps|instances|modpacks|profiles)$");
+    // Nicht hineinschauen: Caches, Logs, Browser-Daten der Launcher-Oberfläche …
+    let skip = crate::re!(r"(?i)^(\.git|node_modules|cache|caches|.*cache|logs?|ebwebview|webview2?|crashpad|gpucache|assets|libraries|natives|runtimes?|java|jre|meta|temp|tmp|backups?|trash|screenshots|saves|mods|resourcepacks|shaderpacks|config)$");
     let mut out: Vec<PathBuf> = vec![];
     let mut seen = std::collections::HashSet::new();
     for root in roots {
         if !root.is_dir() {
             continue;
         }
-        // Zwei Ebenen tief nach passend benannten Ordnern suchen (z. B. root/apps, root/data/games)
+        // Bis zu drei Ebenen tief nach passend benannten Ordnern suchen (z. B. norisk/NoRiskClientV3/data/profiles)
         let mut level = vec![root.clone()];
-        for _ in 0..2 {
+        for _ in 0..3 {
             let mut next = vec![];
             for d in &level {
                 let Ok(rd) = std::fs::read_dir(d) else { continue };
@@ -237,16 +231,41 @@ pub fn auto_folders(exe: &str, name: &str) -> Vec<PathBuf> {
                     if !p.is_dir() {
                         continue;
                     }
-                    if sub.is_match(&e.file_name().to_string_lossy()) {
+                    let n = e.file_name().to_string_lossy().into_owned();
+                    if sub.is_match(&n) {
                         if seen.insert(p.clone()) {
                             out.push(p.clone());
                         }
-                    } else {
+                    } else if !skip.is_match(&n) {
                         next.push(p);
                     }
                 }
             }
-            level = next.into_iter().take(200).collect();
+            level = next.into_iter().take(300).collect();
+        }
+    }
+    out
+}
+
+/// Nur Buchstaben und Ziffern, klein („NoRisk Launcher“ -> „noriskclient“ …)
+fn squash(s: &str) -> String {
+    s.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
+}
+
+/// Kernwörter aus Name und Programmdatei: ohne allgemeine Wörter wie launcher, client, app, setup, Versionsnummern
+fn key_words(names: &[&str]) -> Vec<String> {
+    let generic = crate::re!(r"^(launcher|client|app|application|game|games|setup|desktop|beta|win|win64|x64|x86|the|v?\d+)$");
+    let mut out: Vec<String> = vec![];
+    for n in names {
+        for w in crate::re!(r"[A-Za-z0-9]+").find_iter(n) {
+            let w = w.as_str().to_lowercase();
+            // „noriskclient“ -> zusätzlich ohne die allgemeinen Endungen
+            let trimmed = crate::re!(r"(launcher|client|app)+$").replace(&w, "").into_owned();
+            for k in [w, trimmed] {
+                if k.len() >= 4 && !generic.is_match(&k) && !out.contains(&k) {
+                    out.push(k);
+                }
+            }
         }
     }
     out
@@ -381,6 +400,42 @@ mod tests {
         assert!(f.iter().any(|p| p.ends_with("apps")));
         let games: Vec<_> = f.iter().flat_map(|p| scan_folder(p)).collect();
         assert!(games.iter().any(|g| g.1 == "Spiel Eins"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn kernwoerter() {
+        let k = key_words(&["NoRisk Launcher", "noriskclient-launcher-v3"]);
+        assert!(k.contains(&"norisk".to_string()));
+        assert!(!k.iter().any(|w| w == "launcher" || w == "v3"));
+    }
+
+    #[test]
+    fn norisk_profile() {
+        // Aufbau wie beim NoRisk-Launcher: <Daten>/norisk/NoRiskClientV3/data/profiles/<Profil>
+        let dir = std::env::temp_dir().join(format!("ludora-nr-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let prof = dir.join("norisk").join("NoRiskClientV3").join("data").join("profiles");
+        std::fs::create_dir_all(prof.join("Fabric 26.3")).unwrap();
+        std::fs::create_dir_all(dir.join("norisk").join("NoRiskClientV3").join("logs")).unwrap();
+        let roots = vec![dir.join("norisk")];
+        // auto_folders nutzt die echten Datenordner – hier die Suche ab einem Wurzelordner nachstellen
+        let sub = |p: &Path| is_instances_dir(p);
+        let mut found = vec![];
+        let mut level = roots;
+        for _ in 0..3 {
+            let mut next = vec![];
+            for d in &level {
+                for e in std::fs::read_dir(d).unwrap().flatten() {
+                    if e.path().is_dir() {
+                        if sub(&e.path()) { found.push(e.path()); } else { next.push(e.path()); }
+                    }
+                }
+            }
+            level = next;
+        }
+        assert_eq!(found.len(), 1);
+        assert_eq!(scan_instances(&found[0])[0].1, "Fabric 26.3");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
