@@ -85,20 +85,6 @@ export default function FriendsPanel({ games, onLaunchGame, notify, providerById
   const [tab, setTab] = useState(() => initialTab || loadPref('friendsTab', 'all'));
   const [switcher, setSwitcher] = useState(false); // Freundefenster: Auswahl der Liste (Klick auf die Leiste)
   const [switcherShown, switcherClosing] = useExit(switcher, 300);
-  // „Jetzt verknüpfen“ im Ludora-Konto: Ergebnis als Meldung zeigen
-  const [relinking, setRelinking] = useState(false);
-  const relink = async () => {
-    setRelinking(true);
-    try {
-      const r = await api.hub.relink();
-      const names = (ids) => ids.map((id) => LAUNCHERS.find((l) => l[0] === id)?.[1] || id).join(', ');
-      const failed = Object.keys(r?.failed || {});
-      if (r?.error) notify(r.error, 'error');
-      else if (failed.length) notify(t("Verknüpfen fehlgeschlagen: {0}", [`${names(failed)} – ${r.failed[failed[0]]}`]), 'error');
-      else if (r?.linked?.length) notify(t("Verknüpft: {0}", [names(r.linked)]));
-      else notify(t("Kein Launcher-Konto angemeldet – melde dich zuerst bei Steam, Epic, GOG oder Riot an."), 'error');
-    } finally { setRelinking(false); }
-  };
   // Freundefenster: Hauptfenster hat eine andere Liste gewählt
   useEffect(() => api.friendsWindow?.onTab?.((id) => { setTab(id); setSwitcher(false); }), []);
   const [query, setQuery] = useState('');
@@ -744,6 +730,20 @@ const RESTORED_NAME = { steamWebToken: 'Steam', friendsEpic: 'Epic', friendsGog:
 
 /** Mein Ludora-Konto: registrieren / anmelden / verknüpfte Konten */
 function HubDialog({ hub, providerById, notify, onClose }) {
+  // „Jetzt verknüpfen“ im Ludora-Konto: Ergebnis als Meldung zeigen
+  const [relinking, setRelinking] = useState(false);
+  const relink = async () => {
+    setRelinking(true);
+    try {
+      const r = await api.hub.relink();
+      const names = (ids) => ids.map((id) => LAUNCHERS.find((l) => l[0] === id)?.[1] || id).join(', ');
+      const failed = Object.keys(r?.failed || {});
+      if (r?.error) notify(r.error, 'error');
+      else if (failed.length) notify(t("Verknüpfen fehlgeschlagen: {0}", [`${names(failed)} – ${r.failed[failed[0]]}`]), 'error');
+      else if (r?.linked?.length) notify(t("Verknüpft: {0}", [names(r.linked)]));
+      else notify(t("Kein Launcher-Konto angemeldet – melde dich zuerst bei Steam, Epic, GOG oder Riot an."), 'error');
+    } finally { setRelinking(false); }
+  };
   const [mode, setMode] = useState('login');
   const [name, setName] = useState('');
   const [pw, setPw] = useState('');
