@@ -60,7 +60,7 @@ svg.fill { fill: currentColor; stroke: none; }
 .nav-row .nav-item { padding-right: 10px; }
 .nav-row .nav-item.muted { padding-right: 34px; } /* „Nicht installiert“: Platz für den Download-Knopf */
 .nav-open {
-  position: absolute; right: 4px; padding: 5px; border-radius: 6px; color: var(--muted);
+  position: absolute; right: 5px; /* Symbol endet bündig mit den Zahlen (10 px vom Rand) */ padding: 5px; border-radius: 6px; color: var(--muted);
   display: flex; opacity: 0; transition: opacity .12s ease;
 }
 .nav-open svg { width: 15px; height: 15px; }
@@ -282,6 +282,9 @@ code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-si
 .tool-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 10px; border-radius: 10px; font-size: 14px; color: var(--text); } /* mittig wie die Hinzufügen-Knöpfe */
 .tool-btn:hover { background: var(--panel-2); }
 .tool-btn .label { flex: none; }
+/* Zahl/Prozent rechts bündig wie die Zahlen der Launcher, Symbol und Text bleiben mittig */
+.sidebar:not(.collapsed) .tool-btn { position: relative; }
+.sidebar:not(.collapsed) .tool-btn .tool-badge { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); }
 .tool-btn.active svg { color: var(--accent); animation: bob 1.2s ease-in-out infinite; }
 @keyframes bob { 50% { transform: translateY(2px); } }
 .tool-badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: #2a3142; color: var(--text); }
@@ -637,7 +640,7 @@ svg.star.filled { fill: currentColor; }
 .tb-account.on { color: var(--text); }
 .tb-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Seitenleiste: Logo sitzt jetzt oben in der Fensterleiste */
-.sidebar .brand { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding: 0 6px 10px 10px; }
+.sidebar .brand { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding: 0 5px 10px 10px; }
 .sidebar { padding-top: 12px; }
 
 /* Freunde: schwebender Knopf unten rechts */
