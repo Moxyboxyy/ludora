@@ -551,8 +551,6 @@
   "Programm des Launchers": "Launcher program",
   "Zum Öffnen des Launchers aus Ludora": "To open the launcher from Ludora",
   "Spieleordner": "Games folder",
-  "Jeder Unterordner wird ein Spiel": "Every subfolder becomes a game",
-  "Einzelne Spiele kannst du dem Launcher danach über „Spiel hinzufügen“ zuordnen. Entfernen: Rechtsklick auf den Launcher in der Seitenleiste.": "You can add single games to the launcher afterwards via “Add game”. To remove it, right-click the launcher in the sidebar.",
   "Bitte einen Namen eingeben.": "Please enter a name.",
   "Der Name ist zu lang (höchstens 40 Zeichen).": "The name is too long (40 characters max).",
   "Wähle das Programm des Launchers oder einen Spieleordner (oder beides).": "Choose the launcher program or a games folder (or both).",
@@ -574,5 +572,7 @@
   "Keine – Rechtsklick auf einen Launcher blendet ihn aus.": "None – right-click a launcher to hide it.",
   "{0} ausgeblendet – wieder einblenden: Rechtsklick auf eine freie Stelle der Seitenleiste": "{0} hidden – to show it again, right-click an empty spot in the sidebar",
   "{0} eingeblendet": "{0} shown",
-  "Dein Spitzname – eigentlich: {0}": "Your nickname – actual name: {0}"
+  "Dein Spitzname – eigentlich: {0}": "Your nickname – actual name: {0}",
+  "Leer lassen: Ludora sucht selbst im Launcher": "Leave empty: Ludora searches the launcher itself",
+  "Ohne Spieleordner sucht Ludora die Spiele selbst im Ordner des Launchers und in seinen Datenordnern (z. B. „apps“ oder „games“). Jeder Unterordner dort wird ein Spiel. Einzelne Spiele kannst du danach über „Spiel hinzufügen“ zuordnen.": "Without a games folder, Ludora looks for games in the launcher's own folder and its data folders (e.g. “apps” or “games”). Every subfolder there becomes a game. You can add single games afterwards via “Add game”."
 }

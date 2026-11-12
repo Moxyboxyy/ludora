@@ -90,10 +90,10 @@ export default function AddGameDialog({ onClose, onAdded, customLaunchers = [], 
             </div>
             <label>{t("Spieleordner")} <span className="opt">({t("optional")})</span></label>
             <div className="file-pick">
-              <input value={folder} readOnly placeholder={t("Jeder Unterordner wird ein Spiel")} />
+              <input value={folder} readOnly placeholder={t("Leer lassen: Ludora sucht selbst im Launcher")} />
               <button type="button" className="secondary" onClick={pickFolder}>{t("Durchsuchen")}</button>
             </div>
-            <p className="hint small">{t("Einzelne Spiele kannst du dem Launcher danach über „Spiel hinzufügen“ zuordnen. Entfernen: Rechtsklick auf den Launcher in der Seitenleiste.")}</p>
+            <p className="hint small">{t("Ohne Spieleordner sucht Ludora die Spiele selbst im Ordner des Launchers und in seinen Datenordnern (z. B. „apps“ oder „games“). Jeder Unterordner dort wird ein Spiel. Einzelne Spiele kannst du danach über „Spiel hinzufügen“ zuordnen.")}</p>
           </>
         )}
 
