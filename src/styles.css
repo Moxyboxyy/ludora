@@ -56,7 +56,9 @@ svg.fill { fill: currentColor; stroke: none; }
 .launcher-logo.small { width: 14px; height: 14px; }
 .launcher-logo.dim { opacity: .4; filter: grayscale(1); }
 .nav-row { position: relative; display: flex; align-items: center; }
-.nav-row .nav-item { padding-right: 34px; }
+/* Zahl genau so weit rechts wie bei „Alle Spiele“; der Öffnen-Knopf liegt beim Drüberfahren an ihrer Stelle */
+.nav-row .nav-item { padding-right: 10px; }
+.nav-row .nav-item.muted { padding-right: 34px; } /* „Nicht installiert“: Platz für den Download-Knopf */
 .nav-open {
   position: absolute; right: 4px; padding: 5px; border-radius: 6px; color: var(--muted);
   display: flex; opacity: 0; transition: opacity .12s ease;
