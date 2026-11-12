@@ -288,6 +288,38 @@ pub async fn launch(id: &str) -> Value {
 
 // ---------- Update ----------
 
+/// Läuft gerade ein Spiel, das den Download aufhält? Das Spiel selbst lässt sich nie im laufenden Betrieb
+/// aktualisieren; Steam (je nach Einstellung) und Ubisoft Connect pausieren Downloads, solange eines ihrer Spiele läuft.
+/// reason: "self" | "steam" (perGame: Einstellung des laufenden Spiels) | "pauses" | "maybe" (unklar, nur ein Hinweis)
+async fn download_blocker(p: &P, game: &Value) -> Option<Value> {
+    let running = running_games().await;
+    if running.is_empty() {
+        return None;
+    }
+    let name = |g: &Value| g["name"].as_str().unwrap_or("").to_string();
+    if running.contains_key(game["id"].as_str().unwrap_or("")) {
+        return Some(json!({ "reason": "self", "game": name(game) }));
+    }
+    let games = LAST_SCAN.lock()["games"].as_array().cloned().unwrap_or_default();
+    let others: Vec<Value> = games
+        .into_iter()
+        .filter(|g| g["provider"] == game["provider"] && g["id"] != game["id"] && running.contains_key(g["id"].as_str().unwrap_or("")))
+        .collect();
+    let first = others.first()?;
+    match p.id() {
+        "steam" => {
+            for o in &others {
+                if let Some(per_game) = crate::providers::steam::pauses_downloads_while(o["nativeId"].as_str().unwrap_or("")).await {
+                    return Some(json!({ "reason": "steam", "game": name(o), "perGame": per_game }));
+                }
+            }
+            None
+        }
+        "ubisoft" => Some(json!({ "reason": "pauses", "game": name(first) })),
+        _ => Some(json!({ "reason": "maybe", "game": name(first) })),
+    }
+}
+
 pub async fn update_game(id: &str, visible: bool) -> Value {
     let r = async {
         let game = find_game(id)?;
@@ -304,11 +336,18 @@ pub async fn update_game(id: &str, visible: bool) -> Value {
                 }
             }
         };
+        let blocked = download_blocker(&p, &game).await;
+        if let Some(b) = &blocked {
+            log::info(&format!("[update] {name}: Download wird aufgehalten – {b}"));
+        }
         if visible {
             hide::stop(p.id());
             run_launch(page(&p, &game).await.as_ref(), false).await?;
-            return Ok(json!({ "ok": true, "visible": true }));
+            return Ok(json!({ "ok": true, "visible": true, "blocked": blocked }));
         }
+        // Sicher aufgehalten: Auftrag trotzdem abgeben (der Launcher merkt ihn sich), aber nicht warten und den Launcher
+        // nicht mitten ins laufende Spiel holen
+        let sure = blocked.as_ref().is_some_and(|b| b["reason"] != "maybe");
         // 1. Launcher muss laufen und bereit sein
         ensure_launcher(&p, &game, true).await?;
         let mode = settings::get_str("launcherMode", "hide");
@@ -321,6 +360,9 @@ pub async fn update_game(id: &str, visible: bool) -> Value {
             match crate::steam::start_update(game["nativeId"].as_str().unwrap_or(""), 20_000).await {
                 Ok(ok) => {
                     log::info(&format!("[update] Steam-Fernsteuerung: Auftrag für {} {}", game["nativeId"].as_str().unwrap_or(""), if ok { "angenommen" } else { "nicht angenommen" }));
+                    if ok && sure {
+                        return Ok(json!({ "ok": true, "visible": false, "blocked": blocked }));
+                    }
                     if ok && wait_for_download(&game, &p, p.update_wait_ms()).await {
                         log::info(&format!("[update] {name} lädt"));
                         return Ok(json!({ "ok": true, "visible": false }));
@@ -338,12 +380,20 @@ pub async fn update_game(id: &str, visible: bool) -> Value {
             if let Some(l) = p.background_update(&game).await {
                 run_launch(Some(&l), true).await?;
             }
+            if sure {
+                return Ok(json!({ "ok": true, "visible": false, "blocked": blocked }));
+            }
             if wait_for_download(&game, &p, p.update_wait_ms()).await {
                 log::info(&format!("[update] {name} lädt"));
                 return Ok(json!({ "ok": true, "visible": false }));
             }
         }
-        // 3. Ging nicht -> Launcher sichtbar beim Spiel öffnen
+        // 3. Ging nicht – läuft ein Spiel desselben Launchers, liegt es vermutlich daran: Launcher nicht ins Spiel holen
+        if blocked.is_some() {
+            log::warn(&format!("[update] {name} startet nicht – vermutlich, weil ein Spiel läuft"));
+            return Ok(json!({ "ok": true, "visible": false, "blocked": blocked }));
+        }
+        // Sonst Launcher sichtbar beim Spiel öffnen
         log::warn(&format!("[update] {name} startet nicht von selbst – Launcher wird sichtbar geöffnet {}", steam_error.clone().unwrap_or_default()));
         hide::stop(p.id());
         run_launch(page(&p, &game).await.as_ref(), false).await?;

@@ -271,6 +271,37 @@ pub async fn read_manifests(steam: &Path) -> Vec<(PathBuf, Value)> {
     out
 }
 
+/// Pausiert Steam andere Downloads, solange dieses Spiel läuft? Pro Spiel (Eigenschaften → Updates →
+/// Hintergrund-Downloads: 0 = wie global, 1 = immer erlauben, 2 = nie erlauben), sonst die globale Einstellung
+/// „Downloads während des Spielens erlauben“ (config/config.vdf, fehlt = aus – Steams Voreinstellung).
+/// Rückgabe: None = Steam lädt weiter, Some(true) = wegen der Einstellung des Spiels, Some(false) = wegen der globalen
+pub async fn pauses_downloads_while(appid: &str) -> Option<bool> {
+    let steam = find_steam_path().await?;
+    let per_game = read_manifests(&steam)
+        .await
+        .into_iter()
+        .find(|(_, m)| get_str(m, "appid").as_deref() == Some(appid))
+        .and_then(|(_, m)| get_str(&m, "AllowOtherDownloadsWhileRunning"));
+    match per_game.as_deref() {
+        Some("1") => None,
+        Some("2") => Some(true),
+        _ => {
+            let text = read_text(steam.join("config").join("config.vdf")).await;
+            let allowed = text.map(|t| allows_downloads_during_gameplay(&vdf::parse(&t))).unwrap_or(false);
+            if allowed { None } else { Some(false) }
+        }
+    }
+}
+
+/// Globale Steam-Einstellung „Downloads während des Spielens erlauben“ (irgendwo unter InstallConfigStore)
+pub fn allows_downloads_during_gameplay(config: &Value) -> bool {
+    fn find<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
+        let o = v.as_object()?;
+        o.iter().find(|(k, _)| k.eq_ignore_ascii_case(key)).map(|(_, v)| v).or_else(|| o.values().find_map(|c| find(c, key)))
+    }
+    find(config, "AllowDownloadsDuringGameplay").and_then(|v| v.as_str()) == Some("1")
+}
+
 /// Auswertung von logs/content_log.txt (Steams eigene Download-Rate, Zustände)
 #[derive(Default, Debug)]
 pub struct LogInfo {
@@ -649,6 +680,14 @@ pub fn strip_nulls(mut v: Value) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn downloads_beim_spielen() {
+        let cfg = |v: &str| vdf::parse(&format!("\"InstallConfigStore\" {{ \"Software\" {{ \"Valve\" {{ \"Steam\" {{ \"DownloadThrottleKbps\" \"0\" \"AllowDownloadsDuringGameplay\" \"{v}\" }} }} }} }}"));
+        assert!(allows_downloads_during_gameplay(&cfg("1")));
+        assert!(!allows_downloads_during_gameplay(&cfg("0")));
+        assert!(!allows_downloads_during_gameplay(&vdf::parse("\"InstallConfigStore\" { \"Software\" { } }")));
+    }
 
     #[test]
     fn manifest_zustaende() {

@@ -75,7 +75,7 @@ export default function App() {
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 4000);
+    const timer = setTimeout(() => setToast(null), toast.kind === 'warn' ? 9000 : 4000); // Hinweise sind länger
     return () => clearTimeout(timer);
   }, [toast]);
 
@@ -273,6 +273,18 @@ export default function App() {
     else notify(what === 'store' ? t("{0}-Shop wird geöffnet …", [p?.name]) : t("{0} wird geöffnet …", [p?.name]));
   }
 
+  // Läuft ein Spiel, das den Download aufhält? (siehe download_blocker in library.rs)
+  function blockedText(b, game, via) {
+    if (b.reason === 'self') return t("{0} läuft gerade – {1} kann es erst aktualisieren, wenn du das Spiel beendest. Das Update ist vorgemerkt.", [game.name, via]);
+    if (b.reason === 'steam') return t("Steam pausiert Downloads, solange {0} läuft – das Update von {1} startet, sobald du {0} beendest.", [b.game, game.name])
+      + ' ' + (b.perGame
+        ? t("(Ändern: in Steam bei {0} → Eigenschaften → Updates → Hintergrund-Downloads)", [b.game])
+        : t("(Ändern: Steam → Einstellungen → Downloads → „Downloads während des Spielens erlauben“)"));
+    if (b.reason === 'pauses') return t("{0} lädt nicht, solange {1} läuft – das Update von {2} startet, sobald du {1} beendest.", [via, b.game, game.name]);
+    return t("{0} hat das Update von {1} noch nicht gestartet – wahrscheinlich, weil {2} läuft. Es startet meist, sobald du {2} beendest; sonst danach nochmal auf „Update“ klicken.", [via, game.name, b.game])
+      + (game.provider === 'gog' ? ' ' + t("(GOG Galaxy kann Downloads beim Spielen pausieren – Einstellungen → Installieren, Aktualisieren)") : '');
+  }
+
   async function runUpdate(game, visible = false) {
     // Läuft der Download schon, öffnet ein Klick den Launcher sichtbar
     const show = visible || game.update?.state === 'downloading';
@@ -281,6 +293,7 @@ export default function App() {
     let res;
     try { res = await api.updateGame(game.id, show); } catch (err) { res = { ok: false, error: String(err?.message || err) }; }
     if (!res.ok) notify(res.error || t("Launcher konnte nicht gestartet werden"), 'error');
+    else if (res.blocked) notify(blockedText(res.blocked, game, via), 'warn');
     else if (res.fallback || (res.visible && !show)) notify(t(
       "{0} startet das Update nicht von selbst – {1} ist jetzt bei {2} geöffnet, dort auf „Aktualisieren“ klicken.",
       [via, via, game.name]

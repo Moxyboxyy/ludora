@@ -525,5 +525,12 @@
   "Im Hauptfenster andocken": "Dock in main window",
   "Liste wählen – gerade: {0}": "Choose list – current: {0}",
   "Ungelesene Nachrichten in anderen Listen": "Unread messages in other lists",
-  "Bei {0} nicht angemeldet – öffne das Freundefenster, um dich anzumelden.": "Not signed in to {0} – open the friends window to sign in."
+  "Bei {0} nicht angemeldet – öffne das Freundefenster, um dich anzumelden.": "Not signed in to {0} – open the friends window to sign in.",
+  "{0} läuft gerade – {1} kann es erst aktualisieren, wenn du das Spiel beendest. Das Update ist vorgemerkt.": "{0} is running – {1} can only update it once you close the game. The update is queued.",
+  "Steam pausiert Downloads, solange {0} läuft – das Update von {1} startet, sobald du {0} beendest.": "Steam pauses downloads while {0} is running – the update of {1} starts as soon as you close {0}.",
+  "(Ändern: in Steam bei {0} → Eigenschaften → Updates → Hintergrund-Downloads)": "(Change it in Steam: {0} → Properties → Updates → Background downloads)",
+  "(Ändern: Steam → Einstellungen → Downloads → „Downloads während des Spielens erlauben“)": "(Change it: Steam → Settings → Downloads → “Allow downloads during gameplay”)",
+  "{0} lädt nicht, solange {1} läuft – das Update von {2} startet, sobald du {1} beendest.": "{0} doesn't download while {1} is running – the update of {2} starts as soon as you close {1}.",
+  "{0} hat das Update von {1} noch nicht gestartet – wahrscheinlich, weil {2} läuft. Es startet meist, sobald du {2} beendest; sonst danach nochmal auf „Update“ klicken.": "{0} hasn't started the update of {1} yet – probably because {2} is running. It usually starts once you close {2}; otherwise click “Update” again afterwards.",
+  "(GOG Galaxy kann Downloads beim Spielen pausieren – Einstellungen → Installieren, Aktualisieren)": "(GOG Galaxy can pause downloads while playing – Settings → Installing, updating)"
 }
