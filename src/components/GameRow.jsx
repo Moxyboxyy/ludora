@@ -22,9 +22,8 @@ function GameRow({ game, provider, launching, onPlay, onFolder, onRemove, onSetC
       <div className="row-name" title={game.name}>
         <span>{game.name}</span>
       </div>
-      <div className="row-source">
-        <LauncherLogo provider={provider} small />
-        {provider?.name}
+      <div className="row-source" title={provider?.name} aria-label={provider?.name}>
+        <LauncherLogo provider={provider} />
       </div>
       <div className="row-size">{formatPlaytime(game.playtimeMin)}</div>
       <div className="row-size">{formatSize(game.sizeBytes)}</div>
