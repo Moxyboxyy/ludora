@@ -140,6 +140,33 @@ fn instance_name(dir: &Path) -> Option<String> {
     None
 }
 
+/// Offizieller Minecraft-Launcher, TLauncher u. ä.: Profile aus launcher_profiles.json (im Datenordner oder eine Ebene
+/// darunter, z. B. %APPDATA%\.minecraft): (ID, Anzeigename)
+pub fn mc_profiles(roots: &[PathBuf]) -> Vec<(String, String)> {
+    let mut files: Vec<PathBuf> = vec![];
+    for r in roots {
+        files.push(r.join("launcher_profiles.json"));
+        if let Ok(rd) = std::fs::read_dir(r) {
+            files.extend(rd.flatten().filter(|e| e.path().is_dir()).map(|e| e.path().join("launcher_profiles.json")));
+        }
+    }
+    let mut out: Vec<(String, String)> = vec![];
+    for f in files {
+        let Some(v) = std::fs::read_to_string(&f).ok().and_then(|t| serde_json::from_str::<Value>(&t).ok()) else { continue };
+        for (id, p) in v["profiles"].as_object().into_iter().flatten() {
+            let name = p["name"].as_str().map(str::trim).filter(|n| !n.is_empty()).map(String::from).unwrap_or_else(|| match p["type"].as_str() {
+                Some("latest-release") => "Minecraft".to_string(),
+                Some("latest-snapshot") => "Minecraft (Snapshot)".to_string(),
+                _ => p["lastVersionId"].as_str().map(|v| format!("Minecraft {v}")).unwrap_or_else(|| id.clone()),
+            });
+            if !out.iter().any(|(_, n)| n == &name) {
+                out.push((id.clone(), name));
+            }
+        }
+    }
+    out
+}
+
 /// Start einer Instanz: bekannte Launcher können eine Instanz direkt starten, sonst öffnet sich der Launcher
 fn instance_launch(launcher_exe: &str, key: &str, name: &str) -> Value {
     let stem = Path::new(launcher_exe).file_stem().map(|s| s.to_string_lossy().to_lowercase()).unwrap_or_default();
@@ -176,7 +203,7 @@ pub fn scan_folder(folder: &Path) -> Vec<(String, String, PathBuf, PathBuf)> {
         let exe = if IS_MAC {
             std::fs::read_dir(&path).ok().and_then(|r| r.flatten().map(|x| x.path()).find(|p| p.extension().is_some_and(|x| x == "app")))
         } else {
-            crate::icons::guess_game_exe(&path).or_else(|| if IS_LINUX { guess_linux_exe(&path) } else { None })
+            guess_deep(&path)
         };
         if let Some(exe) = exe {
             out.push((name.clone(), name, exe, path));
@@ -189,6 +216,12 @@ pub fn scan_folder(folder: &Path) -> Vec<(String, String, PathBuf, PathBuf)> {
 /// darüber) sowie in den Datenordnern mit dem Namen des Launchers (z. B. %APPDATA%\itch\apps), jeweils in
 /// typischen Unterordnern wie games, library oder apps.
 pub fn auto_folders(exe: &str, name: &str) -> Vec<PathBuf> {
+    search_in(launcher_roots(exe, name))
+}
+
+/// Wo ein Launcher seine Daten haben kann: Programmordner (und darüber) sowie Ordner in AppData, Local und im
+/// Benutzerordner, deren Name das Kernwort enthält (z. B. „norisk“, „prism“, „curseforge“, „.minecraft“, „.ftba“)
+pub fn launcher_roots(exe: &str, name: &str) -> Vec<PathBuf> {
     let exe = Path::new(exe);
     let mut roots: Vec<PathBuf> = vec![];
     if let Some(dir) = exe.parent() {
@@ -211,6 +244,11 @@ pub fn auto_folders(exe: &str, name: &str) -> Vec<PathBuf> {
             }
         }
     }
+    roots.into_iter().filter(|r| r.is_dir()).collect()
+}
+
+/// In den Datenordnern nach Spiele- und Instanz-Ordnern suchen
+fn search_in(roots: Vec<PathBuf>) -> Vec<PathBuf> {
     let sub = crate::re!(r"(?i)^(games?|spiele|library|apps|installed|content|common|steamapps|instances|modpacks|profiles)$");
     // Nicht hineinschauen: Caches, Logs, Browser-Daten der Launcher-Oberfläche …
     let skip = crate::re!(r"(?i)^(\.git|node_modules|cache|caches|.*cache|logs?|ebwebview|webview2?|crashpad|gpucache|assets|libraries|natives|runtimes?|java|jre|meta|temp|tmp|backups?|trash|screenshots|saves|mods|resourcepacks|shaderpacks|config)$");
@@ -254,7 +292,7 @@ fn squash(s: &str) -> String {
 
 /// Kernwörter aus Name und Programmdatei: ohne allgemeine Wörter wie launcher, client, app, setup, Versionsnummern
 fn key_words(names: &[&str]) -> Vec<String> {
-    let generic = crate::re!(r"^(launcher|client|app|application|game|games|setup|desktop|beta|win|win64|x64|x86|the|v?\d+)$");
+    let generic = crate::re!(r"^(launcher|client|app|application|game|games|setup|desktop|beta|win|win64|x64|x86|the|and|for|new|pro|mod|mods|v?\d+)$");
     let mut out: Vec<String> = vec![];
     for n in names {
         for w in crate::re!(r"[A-Za-z0-9]+").find_iter(n) {
@@ -262,10 +300,141 @@ fn key_words(names: &[&str]) -> Vec<String> {
             // „noriskclient“ -> zusätzlich ohne die allgemeinen Endungen
             let trimmed = crate::re!(r"(launcher|client|app)+$").replace(&w, "").into_owned();
             for k in [w, trimmed] {
-                if k.len() >= 4 && !generic.is_match(&k) && !out.contains(&k) {
+                if k.len() >= 3 && !generic.is_match(&k) && !out.contains(&k) {
                     out.push(k);
                 }
             }
+        }
+    }
+    out
+}
+
+/// Programmdatei eines Spiels: im Ordner selbst (bzw. bin/win64 …), sonst eine Ebene tiefer
+/// (z. B. Xbox: <Spiel>/Content/…, Oculus: <Spiel>/Software/…)
+pub fn guess_deep(dir: &Path) -> Option<PathBuf> {
+    let direct = crate::icons::guess_game_exe(dir).or_else(|| if IS_LINUX { guess_linux_exe(dir) } else { None });
+    if direct.is_some() {
+        return direct;
+    }
+    let skip = crate::re!(r"(?i)^(_commonredist|redist|redistributables?|directx|vcredist|support|tools?|logs?|cache|temp|__installer|installers?|setup|eac|easyanticheat|battleye)$");
+    std::fs::read_dir(dir)
+        .ok()?
+        .flatten()
+        .filter(|e| e.path().is_dir() && !skip.is_match(&e.file_name().to_string_lossy()))
+        .take(20)
+        .filter_map(|e| crate::icons::guess_game_exe(&e.path()))
+        .max_by_key(|p| std::fs::metadata(p).map(|m| m.len()).unwrap_or(0))
+}
+
+/// Ordner, die nie eine Spielebibliothek sind (Benutzer-, System- und App-Daten-Ordner selbst)
+fn is_system_dir(p: &Path) -> bool {
+    let norm = |x: &Path| x.to_string_lossy().trim_end_matches(['\\', '/']).to_lowercase();
+    let me = norm(p);
+    if me.len() <= 3 {
+        return true; // Laufwerk
+    }
+    let fixed = [
+        dirs::home_dir(), dirs::download_dir(), dirs::desktop_dir(), dirs::document_dir(), dirs::picture_dir(), dirs::video_dir(),
+        dirs::audio_dir(), dirs::config_dir(), dirs::data_local_dir(), dirs::data_dir(), dirs::cache_dir(),
+        std::env::var_os("ProgramFiles").map(PathBuf::from), std::env::var_os("ProgramFiles(x86)").map(PathBuf::from),
+        std::env::var_os("SystemRoot").map(PathBuf::from), std::env::var_os("ProgramData").map(PathBuf::from), Some(std::env::temp_dir()),
+    ];
+    if fixed.iter().flatten().any(|f| norm(f) == me) {
+        return true;
+    }
+    crate::re!(r"(?i)[\\/](windows|system32|\$recycle\.bin|appdata[\\/]local[\\/]temp|temp|tmp|cache|logs?)([\\/]|$)").is_match(&me)
+}
+
+/// Pfade aus den Einstellungsdateien des Launchers (JSON, INI, YAML, XML …) – dort steht meist, wohin er Spiele
+/// installiert (HoYoPlay, Humble, Plarium, Wargaming, Legacy Games …). Ordner oder .exe-Dateien, die es gibt.
+pub fn config_paths(roots: &[PathBuf]) -> Vec<PathBuf> {
+    let ext = crate::re!(r"(?i)\.(json|ini|cfg|conf|config|ya?ml|xml|vdf|toml|properties|dat)$");
+    let skip = crate::re!(r"(?i)^(cache|caches|.*cache|logs?|ebwebview|webview2?|crashpad|gpucache|code cache|blob_storage|indexeddb|local storage|session storage|assets|libraries|natives|runtimes?|java|jre|temp|tmp|backups?|trash|node_modules|locales?|resources)$");
+    let win = crate::re!(r#"[A-Za-z]:(?:\\\\|\\|/)[^"'<>|\r\n\t*?,;\]\}]{1,240}"#);
+    // Linux/macOS: absolute Pfade (nur echte, vorhandene Ordner zählen); unter Windows nur Laufwerkspfade
+    let unix = crate::re!(r#"(?:~|/[A-Za-z])[^"'<>|\r\n\t*?,;\]\}:]{1,240}"#);
+    let mut files: Vec<PathBuf> = vec![];
+    for r in roots {
+        let mut level = vec![r.clone()];
+        for _ in 0..3 {
+            let mut next = vec![];
+            for d in &level {
+                let Ok(rd) = std::fs::read_dir(d) else { continue };
+                for e in rd.flatten() {
+                    let p = e.path();
+                    let n = e.file_name().to_string_lossy().into_owned();
+                    if p.is_dir() {
+                        if !skip.is_match(&n) {
+                            next.push(p);
+                        }
+                    } else if ext.is_match(&n) && e.metadata().map(|m| m.len() < 2_000_000).unwrap_or(false) && files.len() < 120 {
+                        files.push(p);
+                    }
+                }
+            }
+            level = next.into_iter().take(150).collect();
+        }
+    }
+    let home = crate::util::home();
+    let mut out: Vec<PathBuf> = vec![];
+    for f in files {
+        let Ok(bytes) = std::fs::read(&f) else { continue };
+        let text = String::from_utf8_lossy(&bytes);
+        let unix_hits = if IS_WIN { None } else { Some(unix.find_iter(&text)) };
+        for m in win.find_iter(&text).chain(unix_hits.into_iter().flatten()) {
+            let raw = m.as_str().replace("\\\\", "\\").replace("\\/", "/");
+            let raw = raw.trim().trim_end_matches(['\\', '/', '.', ' ']);
+            let p = if let Some(rest) = raw.strip_prefix("~/") { home.join(rest) } else { PathBuf::from(raw) };
+            let ok = (p.is_dir() && !is_system_dir(&p)) || (p.is_file() && p.extension().is_some_and(|x| x.eq_ignore_ascii_case("exe")));
+            // Nicht: Pfade in den eigenen Datenordnern des Launchers (die durchsucht search_in schon) und Laufzeit-,
+            // Cache- oder Werkzeugordner (Java, Runtime …) – dort liegen Programme, aber keine Spiele
+            let bad_part = p.components().any(|c| crate::re!(r"(?i)^(runtimes?|java|jre|jdk.*|natives|libraries|cache|caches|.*cache|logs?|temp|tmp|tools?|redist|_commonredist|python.*|node_modules|webview2?|ebwebview)$").is_match(&c.as_os_str().to_string_lossy()));
+            if ok && !bad_part && !out.contains(&p) && !roots.iter().any(|r| p.starts_with(r)) {
+                out.push(p);
+                if out.len() >= 60 {
+                    return out;
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Windows: Spiele, die der Launcher unter „Apps & Features“ eingetragen hat – Deinstallieren läuft über den
+/// Launcher bzw. das Spiel liegt in einem seiner Ordner. (Name, Programmdatei, Ordner)
+pub fn registry_games(launcher_exe: &str, launcher_name: &str, libraries: &[PathBuf]) -> Vec<(String, PathBuf, PathBuf)> {
+    if !IS_WIN {
+        return vec![];
+    }
+    let low = |s: &str| s.replace('/', "\\").to_lowercase();
+    let ldir = Path::new(launcher_exe).parent().map(|d| low(&d.to_string_lossy())).unwrap_or_default();
+    // Launcher-Ordner muss eindeutig sein (nicht direkt „C:\Program Files“)
+    let ldir = if ldir.matches('\\').count() >= 2 { ldir } else { String::new() };
+    let libs: Vec<String> = libraries.iter().map(|l| low(&l.to_string_lossy())).filter(|l| l.matches('\\').count() >= 2).collect();
+    let lname = squash(launcher_name);
+    let mut out = vec![];
+    for e in crate::reg::uninstall_entries() {
+        let v = &e.values;
+        let name = crate::reg::val_str(v, "DisplayName").unwrap_or_default();
+        if name.is_empty() || crate::reg::val_str(v, "SystemComponent").as_deref() == Some("1") {
+            continue;
+        }
+        let un = low(&crate::reg::val_str(v, "UninstallString").unwrap_or_default());
+        let loc = crate::reg::val_str(v, "InstallLocation").unwrap_or_default().trim_matches('"').trim_end_matches('\\').to_string();
+        let loc_l = low(&loc);
+        let by_launcher = !ldir.is_empty() && un.contains(&ldir) && loc_l != ldir;
+        let in_library = !loc_l.is_empty() && libs.iter().any(|l| loc_l.starts_with(&format!("{l}\\")));
+        if !(by_launcher || in_library) || squash(&name) == lname || (!ldir.is_empty() && loc_l == ldir) {
+            continue;
+        }
+        let dir = PathBuf::from(&loc);
+        let icon = crate::reg::val_str(v, "DisplayIcon").map(|i| i.split(',').next().unwrap_or("").trim_matches('"').to_string()).unwrap_or_default();
+        let exe = Some(PathBuf::from(&icon))
+            .filter(|p| p.extension().is_some_and(|x| x.eq_ignore_ascii_case("exe")) && p.is_file() && !crate::re!(r"(?i)unins|setup|launcher").is_match(&icon))
+            .or_else(|| if dir.is_dir() { guess_deep(&dir) } else { None });
+        if let Some(exe) = exe {
+            let dir = if dir.is_dir() { dir } else { exe.parent().map(Path::to_path_buf).unwrap_or_default() };
+            out.push((name, exe, dir));
         }
     }
     out
@@ -335,7 +504,56 @@ impl Provider for Custom {
             vec![folder]
         } else if !self.exe.is_empty() {
             let (exe, name) = (self.exe.clone(), self.name.clone());
-            tokio::task::spawn_blocking(move || auto_folders(&exe, &name)).await.unwrap_or_default()
+            let (folders, profiles, extra) = tokio::task::spawn_blocking(move || {
+                let roots = launcher_roots(&exe, &name);
+                let mut folders = search_in(roots.clone());
+                // Pfade aus den Einstellungen: Ordner mit Spielen darin = Bibliothek, sonst ein einzelnes Spiel
+                let mut extra: Vec<(String, PathBuf, PathBuf)> = vec![];
+                let exe_dir = Path::new(&exe).parent().map(Path::to_path_buf).unwrap_or_default();
+                for p in config_paths(&roots) {
+                    if p.is_file() {
+                        if p != Path::new(&exe) && !p.starts_with(&exe_dir) && !crate::re!(r"(?i)unins|setup|crash|helper|updater").is_match(&p.to_string_lossy()) {
+                            let dir = p.parent().map(Path::to_path_buf).unwrap_or_default();
+                            let name = dir.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                            extra.push((name, p.clone(), dir));
+                        }
+                    } else if p != exe_dir && !exe_dir.starts_with(&p) {
+                        if !scan_folder(&p).is_empty() {
+                            folders.push(p);
+                        } else if let Some(game_exe) = guess_deep(&p) {
+                            let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                            extra.push((name, game_exe, p));
+                        }
+                    }
+                }
+                extra.extend(registry_games(&exe, &name, &folders));
+                (folders, mc_profiles(&roots), extra)
+            })
+            .await
+            .unwrap_or_default();
+            // Einzelne Spiele aus Einstellungen und „Apps & Features“
+            for (name, game_exe, dir) in extra {
+                let exe_s = game_exe.to_string_lossy().into_owned();
+                let dup = games.iter().any(|g| g["launch"]["target"].as_str().is_some_and(|t| t.eq_ignore_ascii_case(&exe_s)) || g["name"].as_str().is_some_and(|n| n.eq_ignore_ascii_case(&name)));
+                if name.is_empty() || dup {
+                    continue;
+                }
+                let dir_s = dir.to_string_lossy().into_owned();
+                games.push(json!({
+                    "nativeId": format!("cfg:{}", squash(&exe_s)), "name": name, "installDir": dir_s,
+                    "status": "installed", "covers": [],
+                    "launch": { "type": "exe", "target": exe_s, "args": [], "cwd": dir_s },
+                }));
+            }
+            // Profile des offiziellen Minecraft-Launchers u. ä. – starten über den Launcher
+            for (id, name) in profiles {
+                games.push(json!({
+                    "nativeId": format!("mcp:{id}"), "name": name, "installDir": Path::new(&self.exe).parent().map(|d| d.to_string_lossy().into_owned()),
+                    "status": "installed", "covers": [], "instance": true,
+                    "launch": { "type": "exe", "target": self.exe, "args": [], "cwd": Path::new(&self.exe).parent().map(|d| d.to_string_lossy().into_owned()) },
+                }));
+            }
+            folders
         } else {
             vec![]
         };
@@ -359,7 +577,7 @@ impl Provider for Custom {
             let found = tokio::task::spawn_blocking(move || folders.iter().flat_map(|f| scan_folder(f)).collect::<Vec<_>>()).await.unwrap_or_default();
             for (key, name, exe, dir) in found {
                 let exe_s = exe.to_string_lossy().into_owned();
-                if games.iter().any(|g| g["launch"]["target"] == exe_s.as_str()) || exe_s.to_lowercase() == launcher_exe {
+                if games.iter().any(|g| g["launch"]["target"].as_str().is_some_and(|t| t.eq_ignore_ascii_case(&exe_s))) || exe_s.to_lowercase() == launcher_exe {
                     continue; // schon einzeln hinzugefügt bzw. der Launcher selbst
                 }
                 let nid = format!("dir:{key}");
@@ -373,6 +591,14 @@ impl Provider for Custom {
                     "launch": { "type": "exe", "target": exe_s, "args": [], "cwd": dir_s },
                 }));
             }
+        }
+        // Nichts gefunden (Lunar, Badlion, LabyMod … haben keine eigenen Spiele-Ordner): der Launcher selbst als Spiel
+        if games.is_empty() && !self.exe.is_empty() {
+            let dir = Path::new(&self.exe).parent().map(|d| d.to_string_lossy().into_owned());
+            games.push(json!({
+                "nativeId": "self", "name": self.name, "installDir": dir, "status": "installed", "covers": [],
+                "launch": { "type": "exe", "target": self.exe, "args": [], "cwd": dir },
+            }));
         }
         Ok(games.into())
     }
@@ -400,6 +626,40 @@ mod tests {
         assert!(f.iter().any(|p| p.ends_with("apps")));
         let games: Vec<_> = f.iter().flat_map(|p| scan_folder(p)).collect();
         assert!(games.iter().any(|g| g.1 == "Spiel Eins"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn pfade_aus_einstellungen() {
+        // /tmp gilt als Systemordner – Testordner daher im Benutzerordner
+        let base = if IS_WIN { std::env::temp_dir() } else { crate::util::home() };
+        let dir = base.join(format!("ludora-cfg-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let lib = dir.join("Games").join("HoYo");
+        std::fs::create_dir_all(lib.join("Genshin Impact").join("Content")).unwrap();
+        std::fs::write(lib.join("Genshin Impact").join("Content").join("GenshinImpact.exe"), vec![0u8; 500]).unwrap();
+        std::fs::create_dir_all(dir.join("data")).unwrap();
+        let p = lib.to_string_lossy().replace('\\', "\\\\");
+        std::fs::write(dir.join("data").join("config.json"), format!(r#"{{"installPath":"{p}"}}"#)).unwrap();
+        let found = config_paths(&[dir.join("data")]);
+        assert!(found.iter().any(|f| f == &lib), "{found:?}");
+        // Xbox-artig: Programmdatei eine Ebene tiefer (Content)
+        let games = scan_folder(&lib);
+        assert!(games.iter().any(|g| g.1 == "Genshin Impact" && g.2.ends_with("GenshinImpact.exe")));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn minecraft_profile() {
+        let dir = std::env::temp_dir().join(format!("ludora-mc-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join(".minecraft")).unwrap();
+        std::fs::write(dir.join(".minecraft").join("launcher_profiles.json"), r#"{"profiles":{"a":{"type":"latest-release","name":""},"b":{"type":"custom","name":"Fabric Survival","lastVersionId":"fabric-1.21"},"c":{"type":"custom","lastVersionId":"1.8.9"}}}"#).unwrap();
+        let mut p = mc_profiles(&[dir.clone()]);
+        p.sort_by(|x, y| x.1.cmp(&y.1));
+        let names: Vec<&str> = p.iter().map(|x| x.1.as_str()).collect();
+        assert_eq!(names, vec!["Fabric Survival", "Minecraft", "Minecraft 1.8.9"]);
+        assert!(key_words(&["FTB App"]).contains(&"ftb".to_string()));
         let _ = std::fs::remove_dir_all(&dir);
     }
 
