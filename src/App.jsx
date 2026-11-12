@@ -7,6 +7,7 @@ import AddGameDialog from './components/AddGameDialog.jsx';
 import DownloadsPanel from './components/DownloadsPanel.jsx';
 import SettingsDialog from './components/SettingsDialog.jsx';
 import ShopView from './components/ShopView.jsx';
+import FriendsDock from './components/FriendsDock.jsx';
 import TitleBar from './components/TitleBar.jsx';
 import { OpenIcon, StoreIcon, UsersIcon, LauncherLogo } from './components/bits.jsx';
 import { reloadApp } from './reload.js';
@@ -56,6 +57,17 @@ export default function App() {
   const unread = useFriendsUnread();
   const [friendsDial, setFriendsDial] = useState(false); // Freunde-Knopf: runde Launcher-Knöpfe nach oben
   const [dialShown, dialClosing] = useExit(friendsDial, 300);
+  // Freundesliste rechts im Hauptfenster angedockt (Knopf im Freundefenster oder Fenster an den rechten Rand ziehen)
+  const [docked, setDocked] = useState(() => loadPref('friendsDock', '0') === '1');
+  const [dockOpen, setDockOpen] = useState(() => loadPref('friendsDockOpen', '1') === '1');
+  const [snapHint, setSnapHint] = useState(false);
+  useEffect(() => {
+    const offDock = api.friendsWindow?.onDock?.(() => { setDocked(true); setDockOpen(true); setFriendsDial(false); savePref('friendsDock', '1'); savePref('friendsDockOpen', '1'); });
+    const offSnap = api.friendsWindow?.onSnap?.((on) => setSnapHint(!!on));
+    return () => { offDock?.(); offSnap?.(); };
+  }, []);
+  const undock = () => { setDocked(false); savePref('friendsDock', '0'); api.friendsWindow?.open('all'); };
+  const toggleDock = () => setDockOpen((v) => { savePref('friendsDockOpen', v ? '0' : '1'); return !v; });
 
   const notify = useCallback((text, kind = 'info') => {
     setToast({ text, kind, key: Date.now() });
@@ -374,7 +386,7 @@ export default function App() {
         onAccount={() => api.friendsWindow?.open('all', true)}
         notify={notify}
       />
-      <div className={`app ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <div className={`app ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${docked ? (dockOpen ? 'dock-open' : 'dock-closed') : ''}`}>
         <Sidebar
           collapsed={sidebarCollapsed}
           onToggleCollapsed={() => { const v = !sidebarCollapsed; setSidebarCollapsed(v); savePref('sidebarCollapsed', v ? '1' : '0'); }}
@@ -527,9 +539,13 @@ export default function App() {
           />
         )}
 
+        {docked && <FriendsDock open={dockOpen} onToggle={toggleDock} onUndock={undock} providerById={providerById} notify={notify} />}
+        {/* Freundefenster wird an den rechten Rand gezogen: hier loslassen dockt es an */}
+        {snapHint && <div className="dock-snap-hint"><span>{t("Loslassen zum Andocken")}</span></div>}
+
         {/* Freunde: schwebender Knopf unten rechts – Zahl = ungelesene Nachrichten. Klick klappt runde Launcher-Knöpfe
             nach oben auf (bleiben offen, nochmal klicken schließt); jeder öffnet die passende Liste im Freundefenster. */}
-        {!dialog && (
+        {!dialog && !docked && (
           <div className={`friends-dial ${friendsDial ? 'open' : ''} ${dialClosing ? 'closing' : ''}`}>
             {dialShown && FRIEND_LISTS.map(([id, name], i) => (
               <button key={id} className="round-pick" style={{ '--i': FRIEND_LISTS.length - 1 - i }} title={name} aria-label={name}

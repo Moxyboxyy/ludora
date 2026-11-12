@@ -530,6 +530,12 @@ export default function FriendsPanel({ games, onLaunchGame, notify, providerById
             </button>
             <div className="fw-drag" data-tauri-drag-region />
             <div className="head-actions">
+              {api.friendsWindow?.dock && (
+                <button className="icon-btn fw-dock" onClick={() => api.friendsWindow.dock()}
+                  title={t("Im Hauptfenster andocken – oder das Fenster an den rechten Rand des Hauptfensters ziehen")} aria-label={t("Im Hauptfenster andocken")}>
+                  <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M15 4v16M8 12h4M10 10l2 2-2 2" /></svg>
+                </button>
+              )}
               <button className={`hub-btn ${hub.status === 'signedIn' ? 'on' : ''}`} onClick={() => setHubOpen(true)}
                 title={t("Dein Ludora-Konto: Freunde mit Ludora erkennen deine Konten automatisch")}>
                 {hub.status === 'signedIn' ? (hub.user?.display_name || t("Ludora-Konto")) : t("Ludora-Konto")}

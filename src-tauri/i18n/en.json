@@ -514,5 +514,13 @@
   "Ludora – Freunde": "Ludora – Friends",
   "Verknüpfe …": "Linking …",
   "Verknüpft: {0}": "Linked: {0}",
-  "Kein Launcher-Konto angemeldet – melde dich zuerst bei Steam, Epic, GOG oder Riot an.": "No launcher account signed in – sign in to Steam, Epic, GOG or Riot first."
+  "Kein Launcher-Konto angemeldet – melde dich zuerst bei Steam, Epic, GOG oder Riot an.": "No launcher account signed in – sign in to Steam, Epic, GOG or Riot first.",
+  "Freundesliste einklappen": "Collapse friends list",
+  "Freundesliste aufklappen": "Expand friends list",
+  "Als eigenes Fenster öffnen": "Open as separate window",
+  "Gerade ist niemand online.": "Nobody is online right now.",
+  "Kein Launcher angemeldet – öffne das Freundefenster, um dich anzumelden.": "No launcher signed in – open the friends window to sign in.",
+  "Loslassen zum Andocken": "Release to dock",
+  "Im Hauptfenster andocken – oder das Fenster an den rechten Rand des Hauptfensters ziehen": "Dock in the main window – or drag this window to the main window's right edge",
+  "Im Hauptfenster andocken": "Dock in main window"
 }

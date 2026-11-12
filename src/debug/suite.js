@@ -195,6 +195,8 @@ export const TESTS = [
     run: async () => { await call('friends:logout'); return ok('abgemeldet'); } },
   { id: 'friendsWindow', group: 'Freunde', name: 'Freundefenster öffnen', channels: ['friends:window'], kind: 'manual',
     run: async () => { okRes(await call('friends:window', 'all'), 'Freundefenster'); return ok('Fenster offen'); } },
+  { id: 'friendsDock', group: 'Freunde', name: 'Freundesliste im Hauptfenster andocken', channels: ['friends:dock'], kind: 'manual',
+    run: async () => { okRes(await call('friends:dock'), 'Andocken'); return ok('rechts im Hauptfenster angedockt'); } },
   { id: 'chatOpen', group: 'Steam', name: 'Chatfenster öffnen', channels: ['chat:open'], kind: 'manual', needs: 'friend',
     run: async (ctx, p) => { okRes(await call('chat:open', p.friend), 'Chat'); return ok('Fenster offen'); } },
   { id: 'chatSend', group: 'Steam', name: 'Nachricht senden', channels: ['chat:send'], kind: 'manual', needs: 'friend+text',
