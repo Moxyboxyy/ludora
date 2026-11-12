@@ -27,8 +27,8 @@ function savePref(key, value) {
 }
 
 const SHOW_OPTIONS = [
-  ['installed', t("Installiert")],
   ['all', t("Alle")],
+  ['installed', t("Installiert")],
   ['notInstalled', t("Nicht installiert")],
   ['stream', t("Stream")] // auf einem anderen deiner Geräte installiert
 ];
