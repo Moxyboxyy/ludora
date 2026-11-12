@@ -63,6 +63,16 @@ export default function App() {
   const [dockOpen, setDockOpen] = useState(() => loadPref('friendsDockOpen', '1') === '1');
   const [snapHint, setSnapHint] = useState(false);
   const [removing, setRemoving] = useState(null); // eigener Launcher, der entfernt werden soll (Rückfrage)
+  // Launcher aus- bzw. einblenden (gleiche Einstellung wie in Einstellungen -> Launcher)
+  const setLauncherHidden = async (p, hide) => {
+    try {
+      const s = await api.getSettings();
+      await api.setSettings({ enabledLaunchers: { ...(s.enabledLaunchers || {}), [p.id]: !hide } });
+      if (hide && filter === p.id) setFilter('all');
+      notify(hide ? t("{0} ausgeblendet – wieder einblenden: Rechtsklick auf eine freie Stelle der Seitenleiste", [p.name]) : t("{0} eingeblendet", [p.name]));
+      refresh();
+    } catch (err) { notify(String(err?.message || err), 'error'); }
+  };
   const removeLauncher = async (p) => {
     setRemoving(null);
     const r = await api.custom?.remove(p.id);
@@ -420,6 +430,7 @@ export default function App() {
           onAdd={() => setDialog('add')}
           onOpenLauncher={openLauncher}
           onRemoveLauncher={(p) => setRemoving(p)}
+          onHideLauncher={setLauncherHidden}
           downloads={downloadInfo}
           onDownloads={() => setDialog('downloads')}
         />

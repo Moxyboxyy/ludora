@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ControllerIcon, OpenIcon, LauncherLogo, DownloadIcon, StarIcon } from './bits.jsx';
 import { t } from '../i18n.js';
 
@@ -37,7 +37,7 @@ function Section({ id, title, count, open, onToggle, collapsed, children }) {
 }
 
 export default function Sidebar({
-  providers, counts, active, onSelect, onAdd, onOpenLauncher, onRemoveLauncher,
+  providers, counts, active, onSelect, onAdd, onOpenLauncher, onRemoveLauncher, onHideLauncher,
   downloads, onDownloads, collapsed, onToggleCollapsed
 }) {
   // Nur eingeschaltete Launcher anzeigen (Einstellungen -> Launcher)
@@ -51,11 +51,38 @@ export default function Sidebar({
   const [openEmpty, setOpenEmpty] = useState(() => loadPref('sec.empty', true));
   const toggle = (setter, key, cur) => () => { setter(!cur); savePref(key, !cur); };
 
+  // Rechtsklick-Menü: auf einem Launcher (ausblenden, öffnen, entfernen) oder auf freier Fläche (ausgeblendete einblenden)
+  const hidden = providers.filter((p) => p.enabled === false);
+  const [menu, setMenu] = useState(null); // { x, y, p? }
+  useEffect(() => {
+    if (!menu) return undefined;
+    const close = () => setMenu(null);
+    const key = (e) => { if (e.key === 'Escape') close(); };
+    const timer = setTimeout(() => { window.addEventListener('click', close); window.addEventListener('contextmenu', close); }, 0);
+    window.addEventListener('keydown', key);
+    window.addEventListener('blur', close);
+    window.addEventListener('resize', close);
+    return () => {
+      clearTimeout(timer);
+      ['click', 'contextmenu', 'blur', 'resize'].forEach((ev) => window.removeEventListener(ev, close));
+      window.removeEventListener('keydown', key);
+    };
+  }, [menu]);
+  const openMenu = (e, p = null) => {
+    if (!onHideLauncher) return;
+    e.preventDefault();
+    e.stopPropagation();
+    // Menü bleibt im Fenster
+    const h = p ? 150 : 60 + Math.max(1, hidden.length) * 38;
+    setMenu({ x: Math.min(e.clientX, window.innerWidth - 240), y: Math.min(e.clientY, window.innerHeight - h - 8), p });
+  };
+  const pick = (fn) => () => { setMenu(null); fn(); };
+
   // In der schmalen Leiste erklärt der Tooltip, was hinter dem Symbol steckt
   const tip = (text, n) => (collapsed ? `${text}${n ? ` (${n})` : ''}` : undefined);
 
   return (
-    (<aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    (<aside className={`sidebar ${collapsed ? 'collapsed' : ''}`} onContextMenu={(e) => openMenu(e)}>
       <div className="brand">
         {!collapsed && <span className="brand-name">{t("Bibliothek")}</span>}
         <button className="collapse-btn" onClick={onToggleCollapsed}
@@ -82,8 +109,8 @@ export default function Sidebar({
               <button
                 className={`nav-item ${active === p.id ? 'active' : ''}`}
                 onClick={() => onSelect(p.id)}
-                onContextMenu={isCustom(p) && onRemoveLauncher ? (e) => { e.preventDefault(); onRemoveLauncher(p); } : undefined}
-                title={collapsed ? tip(p.name, counts[p.id]) : p.error ? t("Hinweis: {0}", [p.error]) : isCustom(p) ? t("Eigener Launcher – Rechtsklick zum Entfernen") : undefined}
+                onContextMenu={(e) => openMenu(e, p)}
+                title={collapsed ? tip(p.name, counts[p.id]) : p.error ? t("Hinweis: {0}", [p.error]) : undefined}
               >
                 <span className="nav-icon"><LauncherLogo provider={p} /></span>
                 <span className="label">{p.name}</span>
@@ -104,7 +131,7 @@ export default function Sidebar({
             onToggle={toggle(setOpenEmpty, 'sec.empty', openEmpty)} collapsed={collapsed}>
             {empty.map((p) => (
               <div key={p.id} className="nav-row">
-                <div className="nav-item muted" title={collapsed ? t("{0} – nicht installiert", [p.name]) : p.error || (p.download ? t("{0} ist nicht installiert", [p.name]) : t("Launcher nicht installiert oder keine Spiele gefunden"))}>
+                <div className="nav-item muted" onContextMenu={(e) => openMenu(e, p)} title={collapsed ? t("{0} – nicht installiert", [p.name]) : p.error || (p.download ? t("{0} ist nicht installiert", [p.name]) : t("Launcher nicht installiert oder keine Spiele gefunden"))}>
                   <span className="nav-icon"><LauncherLogo provider={p} dim /></span>
                   <span className="label">{p.name}</span>
                   {p.error && <span className="warn">!</span>}
@@ -127,6 +154,36 @@ export default function Sidebar({
           {downloads.total > 0 && <span className={`tool-badge ${downloads.active ? 'live' : ''}`}>{downloads.progress != null && downloads.active ? `${Math.round(downloads.progress * 100)} %` : downloads.total}</span>}
         </button>
       </div>
+      {menu && (
+        <div className="context-menu sidebar-menu" style={{ left: menu.x, top: menu.y }} role="menu" onClick={(e) => e.stopPropagation()}>
+          {menu.p ? (
+            <>
+              <div className="cm-title">{menu.p.name}</div>
+              {menu.p.hasClient && menu.p.clientInstalled !== false && (
+                <button role="menuitem" onClick={pick(() => onOpenLauncher(menu.p.id, 'client'))}>{t("{0} öffnen", [menu.p.name])}</button>
+              )}
+              <button role="menuitem" onClick={pick(() => onHideLauncher(menu.p, true))}>{t("Ausblenden")}</button>
+              {isCustom(menu.p) && onRemoveLauncher && (
+                <>
+                  <hr />
+                  <button role="menuitem" className="cm-danger" onClick={pick(() => onRemoveLauncher(menu.p))}>{t("Entfernen …")}</button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="cm-title">{t("Ausgeblendete Launcher")}</div>
+              {hidden.length ? hidden.map((p) => (
+                <button key={p.id} role="menuitem" className="cm-launcher" onClick={pick(() => onHideLauncher(p, false))} title={t("{0} einblenden", [p.name])}>
+                  <span className="nav-icon"><LauncherLogo provider={p} small /></span>
+                  <span>{p.name}</span>
+                  <span className="cm-hint">{t("Einblenden")}</span>
+                </button>
+              )) : <div className="cm-empty">{t("Keine – Rechtsklick auf einen Launcher blendet ihn aus.")}</div>}
+            </>
+          )}
+        </div>
+      )}
       <div className="sidebar-actions">
         <button className="add-btn" onClick={onAdd} title={collapsed ? t("Spiel oder Launcher hinzufügen") : undefined}>
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>

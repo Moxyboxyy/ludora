@@ -564,8 +564,15 @@
   "Launcher entfernen": "Remove launcher",
   "„{0}“ aus Ludora entfernen?": "Remove “{0}” from Ludora?",
   "Die Spiele selbst bleiben auf deinem PC. Einzeln hinzugefügte Spiele findest du danach unter „Eigene Spiele“.": "The games stay on your PC. Games you added one by one move to “Own games”.",
-  "Eigener Launcher – Rechtsklick zum Entfernen": "Custom launcher – right-click to remove",
   "Spiel oder Launcher hinzufügen": "Add game or launcher",
   "Neues Spiel": "New game",
-  "Neuer Launcher": "New launcher"
+  "Neuer Launcher": "New launcher",
+  "Ausblenden": "Hide",
+  "Entfernen …": "Remove …",
+  "Ausgeblendete Launcher": "Hidden launchers",
+  "{0} einblenden": "Show {0}",
+  "Einblenden": "Show",
+  "Keine – Rechtsklick auf einen Launcher blendet ihn aus.": "None – right-click a launcher to hide it.",
+  "{0} ausgeblendet – wieder einblenden: Rechtsklick auf eine freie Stelle der Seitenleiste": "{0} hidden – to show it again, right-click an empty spot in the sidebar",
+  "{0} eingeblendet": "{0} shown"
 }
