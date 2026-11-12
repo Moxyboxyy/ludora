@@ -413,6 +413,8 @@ async fn connect_inner(token: String, first_access: Option<String>) {
             schedule_poll(my, 100);
             // Live-Chat (Nachrichten sofort, "schreibt gerade …") über die CM-Verbindung
             crate::steamcm::keep_alive(my, || S.lock().gen);
+            // Steam-Konto mit dem Ludora-Konto verknüpfen (wie bei Riot/Epic/GOG direkt nach der Anmeldung)
+            crate::hub::auto_link("steam");
         }
         Err(e) => {
             if S.lock().gen != my {

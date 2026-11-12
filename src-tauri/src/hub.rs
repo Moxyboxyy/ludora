@@ -387,44 +387,68 @@ pub fn set_link_error(launcher: &str, msg: Option<String>) {
     set(json!({ "linkErrors": le }));
 }
 
-/// Launcher-Konto mit dem Ludora-Konto verknüpfen (einmal pro Sitzung und Konto)
+/// Launcher-Konto mit dem Ludora-Konto verknüpfen (einmal pro Sitzung und Konto).
+/// None = dort nicht angemeldet, Some(Ok) = verknüpft (oder schon erledigt), Some(Err) = fehlgeschlagen.
+async fn link_one(launcher: &str) -> Option<Result<(), String>> {
+    let proof = crate::friends::link_proof(launcher).await?;
+    let acc = match &proof["accountId"] {
+        Value::String(s) => s.clone(),
+        Value::Null => return None,
+        v => v.to_string(),
+    };
+    if LINKED_ONCE.lock().get(launcher) == Some(&acc) {
+        return Some(Ok(()));
+    }
+    let r = link(launcher, proof["token"].as_str().unwrap_or(""), proof["claim"].clone()).await;
+    if r["ok"] == true {
+        LINKED_ONCE.lock().insert(launcher.to_string(), acc);
+        set_link_error(launcher, None);
+        Some(Ok(()))
+    } else {
+        let e = r["error"].as_str().unwrap_or("").to_string();
+        crate::log::warn(&format!("[hub] Verknüpfen {launcher} {e}"));
+        set_link_error(launcher, Some(e.clone()));
+        Some(Err(e))
+    }
+}
+
+/// Im Hintergrund verknüpfen – aufgerufen, sobald ein Launcher-Konto in Ludora angemeldet ist
 pub fn auto_link(launcher: &str) {
     if !is_signed_in() {
         return;
     }
     let launcher = launcher.to_string();
     tauri::async_runtime::spawn(async move {
-        let Some(proof) = crate::friends::link_proof(&launcher).await else { return };
-        let acc = match &proof["accountId"] {
-            Value::String(s) => s.clone(),
-            Value::Null => return,
-            v => v.to_string(),
-        };
-        if LINKED_ONCE.lock().get(&launcher) == Some(&acc) {
-            return;
-        }
-        let r = link(&launcher, proof["token"].as_str().unwrap_or(""), proof["claim"].clone()).await;
-        if r["ok"] == true {
-            LINKED_ONCE.lock().insert(launcher.clone(), acc);
-            set_link_error(&launcher, None);
-        } else {
-            let e = r["error"].as_str().unwrap_or("").to_string();
-            crate::log::warn(&format!("[hub] Verknüpfen {launcher} {e}"));
-            set_link_error(&launcher, Some(e));
-        }
+        link_one(&launcher).await;
     });
 }
 
+const LINKABLE: [&str; 4] = ["steam", "riot", "epic", "gog"];
+
 pub fn link_all() {
-    for l in ["steam", "riot", "epic", "gog"] {
+    for l in LINKABLE {
         auto_link(l);
     }
 }
 
-pub fn relink() -> Value {
+/// Knopf „Jetzt verknüpfen“: alle angemeldeten Launcher-Konten neu verknüpfen und das Ergebnis melden
+pub async fn relink() -> Value {
+    if !is_signed_in() {
+        return json!({ "ok": false, "error": t("Nicht bei Ludora angemeldet") });
+    }
     LINKED_ONCE.lock().clear();
-    link_all();
-    json!({ "ok": true })
+    let results = futures::future::join_all(LINKABLE.iter().map(|l| link_one(l))).await;
+    let (mut linked, mut failed) = (vec![], serde_json::Map::new());
+    for (l, r) in LINKABLE.iter().zip(results) {
+        match r {
+            Some(Ok(())) => linked.push(*l),
+            Some(Err(e)) => {
+                failed.insert(l.to_string(), Value::String(e));
+            }
+            None => {}
+        }
+    }
+    json!({ "ok": failed.is_empty(), "linked": linked, "failed": failed })
 }
 
 // ---------- Ludora-Freunde, Herzschlag ----------

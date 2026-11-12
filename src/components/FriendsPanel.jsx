@@ -85,6 +85,20 @@ export default function FriendsPanel({ games, onLaunchGame, notify, providerById
   const [tab, setTab] = useState(() => initialTab || loadPref('friendsTab', 'all'));
   const [switcher, setSwitcher] = useState(false); // Freundefenster: Auswahl der Liste (Klick auf die Leiste)
   const [switcherShown, switcherClosing] = useExit(switcher, 300);
+  // „Jetzt verknüpfen“ im Ludora-Konto: Ergebnis als Meldung zeigen
+  const [relinking, setRelinking] = useState(false);
+  const relink = async () => {
+    setRelinking(true);
+    try {
+      const r = await api.hub.relink();
+      const names = (ids) => ids.map((id) => LAUNCHERS.find((l) => l[0] === id)?.[1] || id).join(', ');
+      const failed = Object.keys(r?.failed || {});
+      if (r?.error) notify(r.error, 'error');
+      else if (failed.length) notify(t("Verknüpfen fehlgeschlagen: {0}", [`${names(failed)} – ${r.failed[failed[0]]}`]), 'error');
+      else if (r?.linked?.length) notify(t("Verknüpft: {0}", [names(r.linked)]));
+      else notify(t("Kein Launcher-Konto angemeldet – melde dich zuerst bei Steam, Epic, GOG oder Riot an."), 'error');
+    } finally { setRelinking(false); }
+  };
   // Freundefenster: Hauptfenster hat eine andere Liste gewählt
   useEffect(() => api.friendsWindow?.onTab?.((id) => { setTab(id); setSwitcher(false); }), []);
   const [query, setQuery] = useState('');
@@ -806,7 +820,7 @@ function HubDialog({ hub, providerById, notify, onClose }) {
             {hub.error && <p className="form-error">{hub.error}</p>}
             {hub.vaultError && <p className="form-error small">{hub.vaultError}</p>}
             <div className="hub-actions">
-              <button className="secondary small" onClick={() => api.hub.relink()}>{t("Jetzt verknüpfen")}</button>
+              <button className="secondary small" disabled={relinking} onClick={relink}>{relinking ? t("Verknüpfe …") : t("Jetzt verknüpfen")}</button>
               <button className="link" onClick={() => api.hub.logout()}>{t("Abmelden")}</button>
             </div>
             <button className="link danger small" onClick={async () => {

@@ -266,7 +266,7 @@ export const TESTS = [
       return r?.ok ? ok(`${items.length} geprüft, ${r.items.length} nutzen Ludora`) : fail(r?.error || 'Abgleich fehlgeschlagen');
     } },
   { id: 'hubRelink', group: 'Ludora-Konto', name: 'Launcher-Konten neu verknüpfen', channels: ['hub:relink'], kind: 'manual',
-    run: async () => { await call('hub:relink'); return ok('angestoßen – Fehler erscheinen bei „Anmeldung und Server“'); } },
+    run: async () => { const r = await call('hub:relink'); const f = Object.entries(r?.failed || {}); return r?.error ? fail(r.error) : f.length ? fail(f.map(([l, e]) => `${l}: ${e}`).join('; ')) : r?.linked?.length ? ok(`verknüpft: ${r.linked.join(', ')}`) : warn('kein Launcher-Konto angemeldet'); } },
   { id: 'hubLogin', group: 'Ludora-Konto', name: 'Anmelden', channels: ['hub:login'], kind: 'manual', needs: 'name+password',
     run: async (ctx, p) => { const r = okRes(await call('hub:login', p.name, p.password), 'Anmelden'); return ok(r.restored?.length ? `wiederhergestellt: ${r.restored.join(', ')}` : 'angemeldet'); } },
   { id: 'hubRegister', group: 'Ludora-Konto', name: 'Registrieren', channels: ['hub:register'], kind: 'manual', needs: 'name+password',

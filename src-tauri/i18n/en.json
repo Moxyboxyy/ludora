@@ -511,5 +511,8 @@
   "Freunde – {0} ungelesene Nachrichten": "Friends – {0} unread messages",
   "Neu laden": "Reload",
   "Neu laden – Bibliothek frisch einlesen": "Reload – rescan the library",
-  "Ludora – Freunde": "Ludora – Friends"
+  "Ludora – Freunde": "Ludora – Friends",
+  "Verknüpfe …": "Linking …",
+  "Verknüpft: {0}": "Linked: {0}",
+  "Kein Launcher-Konto angemeldet – melde dich zuerst bei Steam, Epic, GOG oder Riot an.": "No launcher account signed in – sign in to Steam, Epic, GOG or Riot first."
 }
