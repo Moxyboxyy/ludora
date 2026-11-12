@@ -163,7 +163,7 @@ svg.fill { fill: currentColor; stroke: none; }
 .banner.action { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text); }
 .banner.action .secondary { padding: 6px 12px; }
 
-.sidebar-actions { display: flex; gap: 8px; margin-top: 12px; }
+.sidebar-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 .sidebar-actions .add-btn { flex: 1; margin-top: 0; }
 
 .modal { max-height: 90vh; overflow-y: auto; }
@@ -435,7 +435,8 @@ svg.star.filled { fill: currentColor; }
 .chev.open { transform: rotate(90deg); }
 .nav-section { display: flex; flex-direction: column; gap: 2px; }
 .nav-sep { height: 1px; background: var(--line); margin: 10px 8px; flex-shrink: 0; }
-.add-btn .label { white-space: nowrap; }
+.add-btn .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-actions .add-btn { padding: 8px 10px; font-size: 13.5px; }
 
 .sidebar.collapsed { padding: 18px 8px; }
 .sidebar.collapsed .brand { flex-direction: column; gap: 10px; padding: 4px 0 14px; }

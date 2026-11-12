@@ -185,9 +185,14 @@ export default function Sidebar({
         </div>
       )}
       <div className="sidebar-actions">
-        <button className="add-btn" onClick={onAdd} title={collapsed ? t("Spiel oder Launcher hinzufügen") : undefined}>
+        {/* Zwei getrennte Knöpfe: Spiel hinzufügen | Launcher hinzufügen */}
+        <button className="add-btn" onClick={() => onAdd('game')} title={collapsed ? t("Spiel hinzufügen") : undefined}>
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
-          <span className="label">{t("Spiel oder Launcher hinzufügen")}</span>
+          <span className="label">{t("Spiel hinzufügen")}</span>
+        </button>
+        <button className="add-btn" onClick={() => onAdd('launcher')} title={collapsed ? t("Launcher hinzufügen") : undefined}>
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M12 8v8M8 12h8" /></svg>
+          <span className="label">{t("Launcher hinzufügen")}</span>
         </button>
       </div>
     </aside>)

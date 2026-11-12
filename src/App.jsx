@@ -62,6 +62,7 @@ export default function App() {
   const [docked, setDocked] = useState(() => loadPref('friendsDock', '0') === '1');
   const [dockOpen, setDockOpen] = useState(() => loadPref('friendsDockOpen', '1') === '1');
   const [snapHint, setSnapHint] = useState(false);
+  const [addMode, setAddMode] = useState('game'); // Hinzufügen-Fenster: Spiel oder Launcher
   const [removing, setRemoving] = useState(null); // eigener Launcher, der entfernt werden soll (Rückfrage)
   // Launcher aus- bzw. einblenden (gleiche Einstellung wie in Einstellungen -> Launcher)
   const setLauncherHidden = async (p, hide) => {
@@ -427,7 +428,7 @@ export default function App() {
           counts={counts}
           active={filter}
           onSelect={setFilter}
-          onAdd={() => setDialog('add')}
+          onAdd={(mode) => { setAddMode(mode === 'launcher' ? 'launcher' : 'game'); setDialog('add'); }}
           onOpenLauncher={openLauncher}
           onRemoveLauncher={(p) => setRemoving(p)}
           onHideLauncher={setLauncherHidden}
@@ -538,6 +539,7 @@ export default function App() {
 
         {dialog === 'add' && (
           <AddGameDialog
+            initialMode={addMode}
             customLaunchers={data.providers.filter((p) => /^x-/.test(p.id))}
             onClose={() => setDialog(null)}
             onAdded={(name, launcherId) => { setDialog(null); notify(t("{0} hinzugefügt", [name])); if (launcherId) setFilter(launcherId); refresh(); }}
