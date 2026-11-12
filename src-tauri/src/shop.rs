@@ -608,40 +608,84 @@ async fn cheapshark_store(launcher: &str, o: &Opts) -> anyhow::Result<List> {
     Ok(List { items, more: Some(arr.len() as i64 >= PAGE), total: None })
 }
 
-/// Spiele ohne Bild (Battle.net, Riot, Rockstar …): Cover über die gleichen Quellen wie die Bibliothek suchen
+/// Spiele ohne Bild (Battle.net, Riot, Rockstar …): zuerst über eine feste Steam-ID (falls bekannt), dann über die
+/// gleichen Quellen wie die Bibliothek, zuletzt das Vorschaubild der offiziellen Spieleseite
 async fn fill_missing_images(games: &mut [Value]) {
-    let todo: Vec<(usize, String)> = games
+    let fixed: HashMap<String, Value> = static_items().into_iter().map(|s| (norm_title(s["title"].as_str().unwrap_or("")), s)).collect();
+    let todo: Vec<(usize, String, Option<String>, Vec<String>)> = games
         .iter()
         .enumerate()
         .filter(|(_, g)| g["image"].is_null())
-        .filter_map(|(i, g)| g["title"].as_str().map(|t| (i, t.to_string())))
-        .take(16)
+        .filter_map(|(i, g)| {
+            let title = g["title"].as_str()?.to_string();
+            let fix = fixed.get(&norm_title(&title));
+            let steam_id = fix.and_then(|f| f["steamId"].as_str()).map(String::from);
+            // Offizielle Seiten: fester Eintrag zuerst, dann die Store-Links des Spiels (nur Hersteller-Seiten)
+            let mut pages: Vec<String> = fix.and_then(|f| f["store"]["url"].as_str()).map(String::from).into_iter().collect();
+            for st in g["stores"].as_array().into_iter().flatten() {
+                if let Some(u) = st["url"].as_str() {
+                    if ["battlenet", "rockstar", "riot"].contains(&st["launcher"].as_str().unwrap_or("")) && !pages.iter().any(|p| p == u) {
+                        pages.push(u.to_string());
+                    }
+                }
+            }
+            Some((i, title, steam_id, pages))
+        })
+        .take(24)
         .collect();
     if todo.is_empty() {
         return;
     }
-    let found = futures::future::join_all(todo.iter().map(|(_, title)| async move {
-        tokio::time::timeout(std::time::Duration::from_secs(8), crate::covers::find_by_title(title)).await.ok().flatten()
+    let found = futures::future::join_all(todo.iter().map(|(_, title, steam_id, pages)| async move {
+        let search = async {
+            if let Some(id) = steam_id {
+                if let Some(r) = crate::covers::steam_app_images(id).await {
+                    return Some(r);
+                }
+            }
+            if let Some(r) = crate::covers::find_by_title(title).await {
+                return Some(r);
+            }
+            for p in pages {
+                if let Some(r) = crate::covers::page_image(p).await {
+                    return Some(r);
+                }
+            }
+            None
+        };
+        tokio::time::timeout(std::time::Duration::from_secs(15), search).await.ok().flatten()
     }))
     .await;
-    for ((i, _), hit) in todo.iter().zip(found) {
-        if let Some((covers, wides)) = hit {
-            games[*i]["image"] = json!(wides.first().or(covers.first()));
-            games[*i]["imageFallback"] = json!(covers.first().or(wides.first()));
+    let mut missing = vec![];
+    for ((i, title, ..), hit) in todo.iter().zip(found) {
+        match hit {
+            Some((covers, wides)) => {
+                games[*i]["image"] = json!(wides.first().or(covers.first()));
+                games[*i]["imageFallback"] = json!(covers.first().or(wides.first()));
+            }
+            None => missing.push(title.as_str()),
         }
+    }
+    if !missing.is_empty() {
+        crate::log::info(&format!("[shop] kein Cover für: {}", missing.join(", ")));
     }
 }
 
 fn static_items() -> Vec<Value> {
     let bn = |title: &str, code: &str, url: &str| json!({ "title": title, "image": null, "store": store("battlenet", url.into(), Some(format!("battlenet://{code}")), None, None, None, 0) });
+    // Gibt es das Spiel auch auf Steam, kommt das Cover sicher über die Steam-ID (die Titelsuche trifft z. B. bei GTA V nicht)
+    let steam = |mut v: Value, id: &str| {
+        v["steamId"] = json!(id);
+        v
+    };
     let riot = |title: &str, url: &str| json!({ "title": title, "image": null, "store": store("riot", url.into(), None, Some(0.0), Some(t("Kostenlos")), None, 0) });
     let r = |title: &str, url: &str| json!({ "title": title, "image": null, "store": store("rockstar", url.into(), None, None, None, None, 0) });
     vec![
         bn("World of Warcraft", "WoW", "https://worldofwarcraft.blizzard.com/de-de/"),
-        bn("Diablo IV", "Fen", "https://diablo4.blizzard.com/de-de/"),
-        bn("Overwatch 2", "Pro", "https://overwatch.blizzard.com/de-de/"),
+        steam(bn("Diablo IV", "Fen", "https://diablo4.blizzard.com/de-de/"), "2344520"),
+        steam(bn("Overwatch 2", "Pro", "https://overwatch.blizzard.com/de-de/"), "2357570"),
         bn("Hearthstone", "WTCG", "https://hearthstone.blizzard.com/de-de/"),
-        bn("Diablo II: Resurrected", "OSI", "https://diablo2.blizzard.com/de-de/"),
+        steam(bn("Diablo II: Resurrected", "OSI", "https://diablo2.blizzard.com/de-de/"), "2536520"),
         bn("Diablo III", "D3", "https://eu.diablo3.blizzard.com/de-de/"),
         bn("StarCraft II", "S2", "https://starcraft2.blizzard.com/de-de/"),
         bn("Heroes of the Storm", "Hero", "https://heroesofthestorm.blizzard.com/de-de/"),
@@ -650,8 +694,8 @@ fn static_items() -> Vec<Value> {
         riot("VALORANT", "https://playvalorant.com/de-de/"),
         riot("Teamfight Tactics", "https://teamfighttactics.leagueoflegends.com/de-de/"),
         riot("Legends of Runeterra", "https://playruneterra.com/de-de/"),
-        r("Grand Theft Auto V", "https://www.rockstargames.com/de/gta-v"),
-        r("Red Dead Redemption 2", "https://www.rockstargames.com/de/reddeadredemption2"),
+        steam(r("Grand Theft Auto V", "https://www.rockstargames.com/de/gta-v"), "271590"),
+        steam(r("Red Dead Redemption 2", "https://www.rockstargames.com/de/reddeadredemption2"), "1174180"),
     ]
 }
 
@@ -899,6 +943,22 @@ mod tests {
         assert_eq!(m[0]["stores"][0]["launcher"], "steam");
         assert_eq!(m[0]["minPrice"], 3.0);
         assert_eq!(m[0]["image"], "s");
+    }
+    #[test]
+    fn og_images() {
+        let wow = r#"<meta charset="utf-8"><meta property="og:image" content="https://blz-contentstack-images.akamaized.net/v3/assets/x/wow-thumbnail-homepage.jpg">"#;
+        assert_eq!(crate::covers::og_image(wow).as_deref(), Some("https://blz-contentstack-images.akamaized.net/v3/assets/x/wow-thumbnail-homepage.jpg"));
+        let rev = r#"<META content='//cdn.example.com/a.jpg?x=1&amp;y=2' name='twitter:image'>"#;
+        assert_eq!(crate::covers::og_image(rev).as_deref(), Some("https://cdn.example.com/a.jpg?x=1&y=2"));
+        assert_eq!(crate::covers::og_image(r#"<meta property="og:title" content="https://x.y/z.jpg">"#), None);
+        assert_eq!(crate::covers::og_image(r#"<meta property="og:image" content="http://unsicher.de/a.jpg">"#), None);
+    }
+    #[test]
+    fn fixed_steam_ids() {
+        let items = static_items();
+        let id = |t: &str| items.iter().find(|s| s["title"] == t).and_then(|s| s["steamId"].as_str()).map(String::from);
+        assert_eq!(id("Grand Theft Auto V").as_deref(), Some("271590"));
+        assert_eq!(id("World of Warcraft"), None);
     }
     #[test]
     fn allowed() {

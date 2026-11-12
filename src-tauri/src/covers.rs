@@ -283,6 +283,91 @@ async fn from_epic_store(g: &Value) -> Option<(Vec<String>, Vec<String>)> {
     crate::shop::epic_images(name.trim()).await
 }
 
+/// Shop: Cover einer bekannten Steam-App (feste Einträge wie GTA V oder Overwatch 2, die die Titelsuche nicht sicher findet)
+pub async fn steam_app_images(appid: &str) -> Option<(Vec<String>, Vec<String>)> {
+    if appid.is_empty() || !appid.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let key = format!("steamapp:{appid}");
+    let cached = CACHE.lock().get().get(&key).cloned();
+    if let Some(r) = cached.as_ref().and_then(to_images) {
+        return Some(r);
+    }
+    let mut found = steam_assets(appid).await;
+    if found.is_none() {
+        let (covers, wides) = steam_cdn(appid);
+        if head_ok(&wides[0]).await {
+            found = Some((covers, wides));
+        }
+    }
+    if let Some(r) = &found {
+        let mut c = CACHE.lock();
+        let mut e = imgs_json(r);
+        e["at"] = json!(now());
+        c.get().insert(key, e);
+        c.save();
+    }
+    found
+}
+
+/// Shop: Vorschaubild der offiziellen Spieleseite (og:image / twitter:image) – für Spiele, die es in keinem
+/// großen Store gibt (z. B. World of Warcraft, Hearthstone, StarCraft II). Fehlschläge nur einen Tag merken.
+pub async fn page_image(page: &str) -> Option<(Vec<String>, Vec<String>)> {
+    if !page.starts_with("https://") {
+        return None;
+    }
+    let key = format!("page:{page}");
+    let cached = CACHE.lock().get().get(&key).cloned();
+    if let Some(hit) = cached {
+        if let Some(r) = to_images(&hit) {
+            return Some(r);
+        }
+        if now() - hit["at"].as_i64().unwrap_or(0) < 24 * 3600 * 1000 {
+            return None;
+        }
+    }
+    let found = async {
+        let res = crate::net::client()
+            .get(page)
+            .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36")
+            .header("accept-language", "de-DE,de;q=0.9,en;q=0.8")
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await
+            .ok()?;
+        if !res.status().is_success() {
+            return None;
+        }
+        let html = res.text().await.ok()?;
+        let img = og_image(&html)?;
+        if head_ok(&img).await { Some((vec![], vec![img])) } else { None }
+    }
+    .await;
+    let mut c = CACHE.lock();
+    let mut e = found.as_ref().map(imgs_json).unwrap_or(json!({}));
+    e["at"] = json!(now());
+    c.get().insert(key, e);
+    c.save();
+    found
+}
+
+/// og:image bzw. twitter:image aus HTML (Attribute in beliebiger Reihenfolge)
+pub fn og_image(html: &str) -> Option<String> {
+    for tag in crate::re!(r"(?is)<meta\b[^>]*>").find_iter(html) {
+        let t = tag.as_str();
+        if !crate::re!(r#"(?i)(property|name)\s*=\s*["'](og:image(:secure_url)?|twitter:image(:src)?)["']"#).is_match(t) {
+            continue;
+        }
+        let Some(c) = crate::re!(r#"(?i)content\s*=\s*["']([^"']+)["']"#).captures(t) else { continue };
+        let url = c[1].trim().replace("&amp;", "&");
+        let url = if url.starts_with("//") { format!("https:{url}") } else { url };
+        if url.starts_with("https://") {
+            return Some(url);
+        }
+    }
+    None
+}
+
 /// Cover zu einem Spieltitel (Shop: Spiele ohne eigenes Bild); Treffer und Fehlschläge werden gemerkt
 pub async fn find_by_title(title: &str) -> Option<(Vec<String>, Vec<String>)> {
     let key = format!("title:{}", title.to_lowercase());
