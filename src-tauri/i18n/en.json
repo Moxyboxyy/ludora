@@ -522,5 +522,8 @@
   "Kein Launcher angemeldet – öffne das Freundefenster, um dich anzumelden.": "No launcher signed in – open the friends window to sign in.",
   "Loslassen zum Andocken": "Release to dock",
   "Im Hauptfenster andocken – oder das Fenster an den rechten Rand des Hauptfensters ziehen": "Dock in the main window – or drag this window to the main window's right edge",
-  "Im Hauptfenster andocken": "Dock in main window"
+  "Im Hauptfenster andocken": "Dock in main window",
+  "Liste wählen – gerade: {0}": "Choose list – current: {0}",
+  "Ungelesene Nachrichten in anderen Listen": "Unread messages in other lists",
+  "Bei {0} nicht angemeldet – öffne das Freundefenster, um dich anzumelden.": "Not signed in to {0} – open the friends window to sign in."
 }

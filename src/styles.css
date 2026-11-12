@@ -839,3 +839,26 @@ svg.star.filled { fill: currentColor; }
 .dock-snap-hint span { writing-mode: vertical-rl; font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--text); text-shadow: 0 1px 6px rgba(0,0,0,.6); }
 @keyframes snap-pulse { from { opacity: .65; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .friends-dock, .dock-snap-hint { animation: none; } .fd-chev { transition: none; } }
+
+/* Listenwahl in der angedockten Liste */
+.fd-head { position: relative; }
+.fd-current { position: relative; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; background: var(--panel-2); border: 1px solid var(--line); transition: border-color .12s; }
+.fd-current:hover, .fd-current[aria-expanded="true"] { border-color: var(--accent); }
+.fd-current svg, .fd-current .launcher-logo, .fd-current .launcher-badge { width: 20px; height: 20px; }
+.fd-current .launcher-badge { font-size: 11px; }
+.fd-dot { position: absolute; top: -1px; right: -1px; width: 9px; height: 9px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 2px var(--panel); }
+.fd-picker {
+  position: absolute; top: calc(100% + 2px); z-index: 40; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 6px; border-radius: 26px; background: rgba(21,24,32,.97); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.5);
+  transition: opacity .2s ease, transform .2s ease; transform-origin: top center;
+}
+.friends-dock.open .fd-picker { left: 40px; }
+.friends-dock:not(.open) .fd-picker { left: 50%; translate: -50% 0; }
+.fd-picker .round-pick { width: 38px; height: 38px; animation-name: dial-down; }
+.fd-picker .round-pick svg, .fd-picker .round-pick .launcher-logo, .fd-picker .round-pick .launcher-badge { width: 22px; height: 22px; }
+.fd-picker .round-pick .launcher-badge { font-size: 12px; }
+.fd-picker.closing { opacity: 0; transform: translateY(-6px) scaleY(.9); pointer-events: none; }
+.fd-picker.closing .round-pick { animation: dial-down-out .16s calc((4 - var(--i, 0)) * 25ms) ease-in both; }
+.friends-dock { overflow: visible; }
+.fd-list { overflow-x: hidden; }
+@media (prefers-reduced-motion: reduce) { .fd-picker, .fd-picker .round-pick { animation: none; transition: none; } }
