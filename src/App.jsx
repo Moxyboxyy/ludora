@@ -8,6 +8,7 @@ import DownloadsPanel from './components/DownloadsPanel.jsx';
 import SettingsDialog from './components/SettingsDialog.jsx';
 import ShopView from './components/ShopView.jsx';
 import FriendsDock from './components/FriendsDock.jsx';
+import ConfirmDialog from './components/ConfirmDialog.jsx';
 import TitleBar from './components/TitleBar.jsx';
 import { OpenIcon, StoreIcon, UsersIcon, LauncherLogo } from './components/bits.jsx';
 import { reloadApp } from './reload.js';
@@ -61,6 +62,13 @@ export default function App() {
   const [docked, setDocked] = useState(() => loadPref('friendsDock', '0') === '1');
   const [dockOpen, setDockOpen] = useState(() => loadPref('friendsDockOpen', '1') === '1');
   const [snapHint, setSnapHint] = useState(false);
+  const [removing, setRemoving] = useState(null); // eigener Launcher, der entfernt werden soll (Rückfrage)
+  const removeLauncher = async (p) => {
+    setRemoving(null);
+    const r = await api.custom?.remove(p.id);
+    if (r?.ok) { notify(t("{0} entfernt", [p.name])); if (filter === p.id) setFilter('all'); refresh(); }
+    else notify(r?.error || t("Nicht möglich"), 'error');
+  };
   useEffect(() => {
     const offDock = api.friendsWindow?.onDock?.(() => { setDocked(true); setDockOpen(true); setFriendsDial(false); savePref('friendsDock', '1'); savePref('friendsDockOpen', '1'); });
     const offSnap = api.friendsWindow?.onSnap?.((on) => setSnapHint(!!on));
@@ -411,11 +419,7 @@ export default function App() {
           onSelect={setFilter}
           onAdd={() => setDialog('add')}
           onOpenLauncher={openLauncher}
-          onRemoveLauncher={async (p) => {
-            const r = await api.custom?.remove(p.id);
-            if (r?.ok) { notify(t("{0} entfernt", [p.name])); if (filter === p.id) setFilter('all'); refresh(); }
-            else if (r && !r.cancelled) notify(r.error || t("Nicht möglich"), 'error');
-          }}
+          onRemoveLauncher={(p) => setRemoving(p)}
           downloads={downloadInfo}
           onDownloads={() => setDialog('downloads')}
         />
@@ -581,6 +585,16 @@ export default function App() {
               {unread.total > 0 && <span className="fab-badge">{unread.total}</span>}
             </button>
           </div>
+        )}
+
+        {removing && (
+          <ConfirmDialog danger
+            title={t("Launcher entfernen")}
+            message={t("„{0}“ aus Ludora entfernen?", [removing.name])}
+            detail={t("Die Spiele selbst bleiben auf deinem PC. Einzeln hinzugefügte Spiele findest du danach unter „Eigene Spiele“.")}
+            confirmLabel={t("Entfernen")}
+            onConfirm={() => removeLauncher(removing)}
+            onCancel={() => setRemoving(null)} />
         )}
 
         {toast && <div key={toast.key} className={`toast ${toast.kind}`}>{toast.text}</div>}

@@ -175,26 +175,14 @@ pub async fn dispatch(app: &AppHandle, channel: &str, args: Vec<Value>) -> Resul
                 Err(e) => json!({ "ok": false, "error": e }),
             }
         }
+        // Rückfrage zeigt die Oberfläche (Ludora-Fenster), hier nur noch entfernen
         "custom:remove" => {
             let Some(l) = crate::providers::custom::load().into_iter().find(|l| l["id"] == a0.as_str()) else {
                 return Ok(json!({ "ok": false, "error": t("Unbekannter Launcher") }));
             };
-            let name = l["name"].as_str().unwrap_or("").to_string();
-            let sure = crate::dialogs::confirm(
-                app,
-                &t("Launcher entfernen"),
-                &t_args("„{0}“ aus Ludora entfernen?", &[&name]),
-                &t("Die Spiele selbst bleiben auf deinem PC. Einzeln hinzugefügte Spiele findest du danach unter „Eigene Spiele“."),
-                &t("Entfernen"),
-            )
-            .await;
-            if !sure {
-                json!({ "ok": false, "cancelled": true })
-            } else {
-                crate::providers::custom::remove(&a0);
-                crate::providers::reload();
-                json!({ "ok": true, "name": name })
-            }
+            crate::providers::custom::remove(&a0);
+            crate::providers::reload();
+            json!({ "ok": true, "name": l["name"] })
         }
 
         // ---------- Shop ----------

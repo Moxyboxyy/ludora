@@ -10,6 +10,7 @@ const P = {
   amazon: { name: 'Amazon Games', color: '#1a2330', accent: '#ff9900' },
   riot: { name: 'Riot Games', color: '#2b0d0f', accent: '#ff4655' },
   rockstar: { name: 'Rockstar', color: '#2a2306', accent: '#fcaf17' },
+  'x-00000001': { name: 'itch.io', color: '#1d2230', accent: '#ff7aa2' }, // eigener Launcher
   manual: { name: t('Eigene Spiele'), color: '#1f2a24', accent: '#7ee2a8' }
 };
 
@@ -44,6 +45,7 @@ export function demoScan() {
     other('rockstar', 'Grand Theft Auto V'),
     other('amazon', 'Fallout 76'),
     { ...other('manual', 'Minecraft'), removable: true },
+    other('x-00000001', 'Celeste'),
     { ...steam(292030, 'The Witcher 3: Wild Hunt'), status: 'notInstalled', playtimeMin: 4210 },
     { ...steam(1174180, 'Red Dead Redemption 2'), status: 'notInstalled', playtimeMin: 830 },
     { ...steam(367520, 'Hollow Knight'), status: 'notInstalled', playtimeMin: 0 },
@@ -52,7 +54,7 @@ export function demoScan() {
     .sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }));
 
   const providers = Object.entries(P).map(([id, p]) => ({
-    id, ...p, enabled: id !== 'amazon', hasClient: id !== 'manual', hasStore: id !== 'manual', count: games.filter((g) => g.provider === id).length, error: null
+    id, ...p, enabled: id !== 'amazon', hasClient: id !== 'manual', hasStore: id !== 'manual' && !id.startsWith('x-'), count: games.filter((g) => g.provider === id).length, error: null
   }));
   return { games, providers, scannedAt: new Date().toISOString() };
 }

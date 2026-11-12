@@ -868,3 +868,10 @@ svg.star.filled { fill: currentColor; }
 .add-mode { margin: 4px 0 2px; }
 .modal-select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; outline: none; width: 100%; color: var(--text); }
 .modal-select:focus { border-color: var(--accent); }
+
+/* Rückfrage im Ludora-Stil */
+.modal.confirm { width: min(400px, 92vw); }
+.confirm-msg { margin: 2px 0 0; font-size: 14.5px; }
+.danger-btn { padding: 9px 16px; border-radius: 9px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #ff6b6b, #e04b6b); }
+.danger-btn:hover { filter: brightness(1.08); }
+.danger-btn:focus-visible { outline: 2px solid rgba(255,107,107,.6); outline-offset: 2px; }
