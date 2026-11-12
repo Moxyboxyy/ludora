@@ -562,7 +562,7 @@ fn apply_io(id: &str, u: &Value, speed: Option<f64>, delta: f64) -> Value {
 
 pub async fn downloads_status() -> Value {
     let enabled = settings::get("enabledLaunchers").unwrap_or(json!({}));
-    let tasks = providers::providers().iter().filter(|&p| enabled[p.id()] != false).cloned().map(|p| {
+    let tasks = providers::providers().into_iter().filter(|p| enabled[p.id()] != false).map(|p| {
         tokio::spawn(async move {
             let list = p.updates().await?;
             let downloading: Vec<&Value> = list.iter().filter(|u| u["update"]["state"] == "downloading").collect();

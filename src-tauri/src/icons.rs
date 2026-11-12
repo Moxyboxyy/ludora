@@ -160,7 +160,7 @@ static SKIP_EXE: Lazy<Regex> = Lazy::new(|| {
 });
 
 /// Haupt-EXE raten: größte passende .exe im Ordner (und eine Ebene tiefer in bin/binaries/win64/x64/game)
-fn guess_game_exe(dir: &Path) -> Option<PathBuf> {
+pub fn guess_game_exe(dir: &Path) -> Option<PathBuf> {
     let mut found: Vec<(PathBuf, u64)> = vec![];
     fn scan(d: &Path, depth: u8, found: &mut Vec<(PathBuf, u64)>) {
         let Ok(rd) = std::fs::read_dir(d) else { return };

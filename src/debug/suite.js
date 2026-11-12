@@ -148,6 +148,17 @@ export const TESTS = [
     } },
   { id: 'pickExe', group: 'Bibliothek', name: 'Programm auswählen (Dialog)', channels: ['manual:pickExe'], kind: 'manual',
     run: async () => { const r = await call('manual:pickExe'); return r ? ok(r) : warn('abgebrochen'); } },
+  { id: 'pickFolder', group: 'Bibliothek', name: 'Ordner auswählen (Dialog)', channels: ['manual:pickFolder', 'manual:pickLauncher'], kind: 'manual',
+    run: async () => { const r = await call('manual:pickFolder'); return r ? ok(r) : warn('abgebrochen'); } },
+  { id: 'customLauncher', group: 'Bibliothek', name: 'Eigenen Launcher anlegen und entfernen', channels: ['custom:list', 'custom:add', 'custom:remove'], kind: 'manual',
+    run: async () => {
+      const r = await call('custom:add', { name: `Testlauncher ${Date.now() % 10000}`, exe: '', folder: '.' });
+      if (!r?.ok) return fail(r?.error || 'nicht angelegt');
+      const list = await call('custom:list');
+      if (!list.some((l) => l.id === r.launcher.id)) return fail('nicht in der Liste');
+      const rm = await call('custom:remove', r.launcher.id);
+      return rm?.ok ? ok('angelegt und wieder entfernt') : warn('angelegt, Entfernen abgebrochen');
+    } },
   { id: 'launch', group: 'Spiel', name: 'Spiel starten', channels: ['game:launch'], kind: 'manual', needs: 'game',
     run: async (ctx, p) => { okRes(await call('game:launch', p.game), 'Start'); return ok('gestartet – läuft es?'); } },
   { id: 'focus', group: 'Spiel', name: 'Laufendes Spiel nach vorne holen', channels: ['game:focus'], kind: 'manual', needs: 'game',

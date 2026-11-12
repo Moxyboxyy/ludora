@@ -25,7 +25,8 @@ fn save(list: &[Value]) {
     let _ = std::fs::write(f, serde_json::to_string_pretty(list).unwrap_or_default());
 }
 
-pub fn add(name: &str, exe: &str, args: &str) -> Value {
+/// launcher: "manual" (Eigene Spiele) oder die ID eines eigenen Launchers
+pub fn add(name: &str, exe: &str, args: &str, launcher: &str) -> Value {
     let mut list = load();
     let stem = Path::new(exe).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     let entry = json!({
@@ -33,6 +34,7 @@ pub fn add(name: &str, exe: &str, args: &str) -> Value {
         "name": if name.trim().is_empty() { stem } else { name.to_string() },
         "exe": exe,
         "args": args,
+        "launcher": if super::custom::is_custom_id(launcher) { launcher } else { "manual" },
     });
     list.push(entry.clone());
     save(&list);
@@ -42,6 +44,32 @@ pub fn add(name: &str, exe: &str, args: &str) -> Value {
 pub fn remove(id: &str) {
     let list: Vec<Value> = load().into_iter().filter(|g| g["id"] != id).collect();
     save(&list);
+}
+
+/// Spiele eines eigenen Launchers einem anderen zuordnen (Launcher entfernt -> zurück zu „Eigene Spiele“)
+pub fn reassign(from: &str, to: &str) {
+    let list: Vec<Value> = load()
+        .into_iter()
+        .map(|mut g| {
+            if g["launcher"] == from {
+                g["launcher"] = json!(to);
+            }
+            g
+        })
+        .collect();
+    save(&list);
+}
+
+/// Eintrag aus manual-games.json -> Spiel im Bibliotheksformat
+pub fn to_game(g: &Value) -> Value {
+    let exe = g["exe"].as_str().unwrap_or("").to_string();
+    let dir = Path::new(&exe).parent().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default();
+    json!({
+        "nativeId": g["id"], "name": g["name"], "installDir": dir,
+        "status": if Path::new(&exe).exists() { "installed" } else { "missing" },
+        "covers": [], "removable": true,
+        "launch": { "type": "exe", "target": exe, "args": split_args(g["args"].as_str().unwrap_or("")), "cwd": dir },
+    })
 }
 
 /// "a \"b c\" d" -> ["a", "b c", "d"]
@@ -62,18 +90,11 @@ impl Provider for Manual {
     fn has_client(&self) -> bool { false }
 
     async fn detect(&self) -> anyhow::Result<Detected> {
+        // Spiele, die einem eigenen Launcher gehören, zeigt dieser Launcher (custom.rs)
         Ok(load()
-            .into_iter()
-            .map(|g| {
-                let exe = g["exe"].as_str().unwrap_or("").to_string();
-                let dir = Path::new(&exe).parent().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default();
-                json!({
-                    "nativeId": g["id"], "name": g["name"], "installDir": dir,
-                    "status": if Path::new(&exe).exists() { "installed" } else { "missing" },
-                    "covers": [], "removable": true,
-                    "launch": { "type": "exe", "target": exe, "args": split_args(g["args"].as_str().unwrap_or("")), "cwd": dir },
-                })
-            })
+            .iter()
+            .filter(|g| !g["launcher"].as_str().is_some_and(super::custom::is_custom_id))
+            .map(to_game)
             .collect::<Vec<_>>()
             .into())
     }

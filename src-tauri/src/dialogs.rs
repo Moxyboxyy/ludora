@@ -29,3 +29,12 @@ pub async fn pick_file(app: &AppHandle, title: &str, filters: &[(&str, &[&str])]
     });
     rx.await.ok().flatten()
 }
+
+/// Ordner auswählen; None = abgebrochen
+pub async fn pick_folder(app: &AppHandle, title: &str) -> Option<String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog().file().set_title(title).pick_folder(move |f| {
+        let _ = tx.send(f.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().into_owned()));
+    });
+    rx.await.ok().flatten()
+}

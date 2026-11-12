@@ -863,3 +863,8 @@ svg.star.filled { fill: currentColor; }
 .friends-dock { overflow: visible; }
 .fd-list { overflow-x: hidden; }
 @media (prefers-reduced-motion: reduce) { .fd-picker, .fd-picker .round-pick { animation: none; transition: none; } }
+
+/* Spiel / Launcher hinzufügen */
+.add-mode { margin: 4px 0 2px; }
+.modal-select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; outline: none; width: 100%; color: var(--text); }
+.modal-select:focus { border-color: var(--accent); }

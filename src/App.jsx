@@ -411,6 +411,11 @@ export default function App() {
           onSelect={setFilter}
           onAdd={() => setDialog('add')}
           onOpenLauncher={openLauncher}
+          onRemoveLauncher={async (p) => {
+            const r = await api.custom?.remove(p.id);
+            if (r?.ok) { notify(t("{0} entfernt", [p.name])); if (filter === p.id) setFilter('all'); refresh(); }
+            else if (r && !r.cancelled) notify(r.error || t("Nicht möglich"), 'error');
+          }}
           downloads={downloadInfo}
           onDownloads={() => setDialog('downloads')}
         />
@@ -518,8 +523,9 @@ export default function App() {
 
         {dialog === 'add' && (
           <AddGameDialog
+            customLaunchers={data.providers.filter((p) => /^x-/.test(p.id))}
             onClose={() => setDialog(null)}
-            onAdded={(name) => { setDialog(null); notify(t("{0} hinzugefügt", [name])); refresh(); }}
+            onAdded={(name, launcherId) => { setDialog(null); notify(t("{0} hinzugefügt", [name])); if (launcherId) setFilter(launcherId); refresh(); }}
           />
         )}
         {dialog === 'settings' && (

@@ -37,13 +37,15 @@ function Section({ id, title, count, open, onToggle, collapsed, children }) {
 }
 
 export default function Sidebar({
-  providers, counts, active, onSelect, onAdd, onOpenLauncher,
+  providers, counts, active, onSelect, onAdd, onOpenLauncher, onRemoveLauncher,
   downloads, onDownloads, collapsed, onToggleCollapsed
 }) {
   // Nur eingeschaltete Launcher anzeigen (Einstellungen -> Launcher)
   const enabled = providers.filter((p) => p.enabled !== false);
-  const withGames = enabled.filter((p) => p.count > 0);
-  const empty = enabled.filter((p) => p.count === 0 && p.id !== 'manual');
+  // Eigene Launcher (x-…) stehen immer bei den Launchern, auch ohne Spiele
+  const isCustom = (p) => /^x-/.test(p.id);
+  const withGames = enabled.filter((p) => p.count > 0 || isCustom(p));
+  const empty = enabled.filter((p) => p.count === 0 && p.id !== 'manual' && !isCustom(p));
 
   const [openLaunchers, setOpenLaunchers] = useState(() => loadPref('sec.launchers', true));
   const [openEmpty, setOpenEmpty] = useState(() => loadPref('sec.empty', true));
@@ -80,7 +82,8 @@ export default function Sidebar({
               <button
                 className={`nav-item ${active === p.id ? 'active' : ''}`}
                 onClick={() => onSelect(p.id)}
-                title={collapsed ? tip(p.name, counts[p.id]) : p.error ? t("Hinweis: {0}", [p.error]) : undefined}
+                onContextMenu={isCustom(p) && onRemoveLauncher ? (e) => { e.preventDefault(); onRemoveLauncher(p); } : undefined}
+                title={collapsed ? tip(p.name, counts[p.id]) : p.error ? t("Hinweis: {0}", [p.error]) : isCustom(p) ? t("Eigener Launcher – Rechtsklick zum Entfernen") : undefined}
               >
                 <span className="nav-icon"><LauncherLogo provider={p} /></span>
                 <span className="label">{p.name}</span>
@@ -125,9 +128,9 @@ export default function Sidebar({
         </button>
       </div>
       <div className="sidebar-actions">
-        <button className="add-btn" onClick={onAdd} title={collapsed ? t("Spiel hinzufügen") : undefined}>
+        <button className="add-btn" onClick={onAdd} title={collapsed ? t("Spiel oder Launcher hinzufügen") : undefined}>
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
-          <span className="label">{t("Spiel hinzufügen")}</span>
+          <span className="label">{t("Spiel oder Launcher hinzufügen")}</span>
         </button>
       </div>
     </aside>)

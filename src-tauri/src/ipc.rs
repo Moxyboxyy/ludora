@@ -143,18 +143,59 @@ pub async fn dispatch(app: &AppHandle, channel: &str, args: Vec<Value>) -> Resul
             if exe.is_empty() {
                 json!({ "ok": false, "error": t("Keine Datei gewählt.") })
             } else {
-                crate::providers::manual::add(d["name"].as_str().unwrap_or(""), exe, d["args"].as_str().unwrap_or(""));
+                crate::providers::manual::add(d["name"].as_str().unwrap_or(""), exe, d["args"].as_str().unwrap_or(""), d["launcher"].as_str().unwrap_or("manual"));
                 ok()
             }
         }
+        // Einzeln hinzugefügte Spiele (auch die eines eigenen Launchers) – nicht die aus dessen Spieleordner
         "manual:remove" => match crate::library::find_game(&a0) {
-            Ok(g) if g["provider"] == "manual" => {
+            Ok(g) if g["removable"] == true && (g["provider"] == "manual" || g["provider"].as_str().is_some_and(crate::providers::custom::is_custom_id)) => {
                 crate::providers::manual::remove(g["nativeId"].as_str().unwrap_or(""));
                 ok()
             }
             Ok(_) => json!({ "ok": false, "error": t("Nur eigene Spiele können entfernt werden.") }),
             Err(e) => json!({ "ok": false, "error": e.to_string() }),
         },
+
+        "manual:pickFolder" => crate::dialogs::pick_folder(app, &t("Spieleordner auswählen")).await.map_or(Value::Null, Value::String),
+        "manual:pickLauncher" => {
+            let filters: Vec<(&str, &[&str])> = if cfg!(target_os = "macos") { vec![("Programme", &["app"])] } else { vec![("Programme", &["exe", "lnk", "bat", "url"]), ("Alle Dateien", &["*"])] };
+            crate::dialogs::pick_file(app, &t("Launcher-Programm auswählen"), &filters).await.map_or(Value::Null, Value::String)
+        }
+
+        // ---------- Eigene Launcher ----------
+        "custom:list" => json!(crate::providers::custom::load()),
+        "custom:add" => {
+            let d = arg(&args, 0);
+            match crate::providers::custom::add(d["name"].as_str().unwrap_or(""), d["exe"].as_str().unwrap_or(""), d["folder"].as_str().unwrap_or("")) {
+                Ok(l) => {
+                    crate::providers::reload();
+                    json!({ "ok": true, "launcher": l })
+                }
+                Err(e) => json!({ "ok": false, "error": e }),
+            }
+        }
+        "custom:remove" => {
+            let Some(l) = crate::providers::custom::load().into_iter().find(|l| l["id"] == a0.as_str()) else {
+                return Ok(json!({ "ok": false, "error": t("Unbekannter Launcher") }));
+            };
+            let name = l["name"].as_str().unwrap_or("").to_string();
+            let sure = crate::dialogs::confirm(
+                app,
+                &t("Launcher entfernen"),
+                &t_args("„{0}“ aus Ludora entfernen?", &[&name]),
+                &t("Die Spiele selbst bleiben auf deinem PC. Einzeln hinzugefügte Spiele findest du danach unter „Eigene Spiele“."),
+                &t("Entfernen"),
+            )
+            .await;
+            if !sure {
+                json!({ "ok": false, "cancelled": true })
+            } else {
+                crate::providers::custom::remove(&a0);
+                crate::providers::reload();
+                json!({ "ok": true, "name": name })
+            }
+        }
 
         // ---------- Shop ----------
         "shop:query" => crate::shop::query(&arg(&args, 0)).await,
@@ -382,8 +423,8 @@ fn settings_set(app: &AppHandle, patch: &Value) -> Value {
         }
     }
     if let Some(o) = patch["enabledLaunchers"].as_object() {
-        let ids: Vec<&str> = crate::providers::providers().iter().map(|p| p.id()).collect();
-        let m: Map<String, Value> = o.iter().filter(|(k, v)| ids.contains(&k.as_str()) && v.is_boolean()).map(|(k, v)| (k.clone(), v.clone())).collect();
+        let ids: Vec<String> = crate::providers::providers().iter().map(|p| p.id().to_string()).collect();
+        let m: Map<String, Value> = o.iter().filter(|(k, v)| ids.contains(k) && v.is_boolean()).map(|(k, v)| (k.clone(), v.clone())).collect();
         allowed.insert("enabledLaunchers".into(), Value::Object(m));
     }
     let new_key = allowed.get("steamGridDbKey").and_then(|v| v.as_str()).map(String::from);

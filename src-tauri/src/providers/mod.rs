@@ -10,6 +10,7 @@ use crate::util::{normalize, t};
 
 pub mod amazon;
 pub mod battlenet;
+pub mod custom;
 pub mod ea;
 pub mod epic;
 pub mod galaxy;
@@ -127,19 +128,26 @@ pub fn all() -> Vec<P> {
         Arc::new(rockstar::Rockstar),
     ];
     list.extend(linux::providers());
+    list.extend(custom::providers());
     list.push(Arc::new(manual::Manual));
     let plat = current_platform();
     list.into_iter().filter(|p| p.platforms().contains(&plat)).collect()
 }
 
-static PROVIDERS: once_cell::sync::Lazy<Vec<P>> = once_cell::sync::Lazy::new(all);
+// Eigene Launcher können dazukommen oder wegfallen -> Liste lässt sich neu aufbauen
+static PROVIDERS: once_cell::sync::Lazy<parking_lot::RwLock<Vec<P>>> = once_cell::sync::Lazy::new(|| parking_lot::RwLock::new(all()));
 
-pub fn providers() -> &'static [P] {
-    &PROVIDERS
+pub fn providers() -> Vec<P> {
+    PROVIDERS.read().clone()
+}
+
+/// Nach dem Hinzufügen/Entfernen eines eigenen Launchers
+pub fn reload() {
+    *PROVIDERS.write() = all();
 }
 
 pub fn by_id(id: &str) -> Option<P> {
-    PROVIDERS.iter().find(|p| p.id() == id).cloned()
+    PROVIDERS.read().iter().find(|p| p.id() == id).cloned()
 }
 
 /// Prozessnamen des Launchers auf diesem System (None = keine bekannt)
@@ -199,7 +207,7 @@ pub async fn scan_all(enabled: &serde_json::Map<String, Value>) -> Value {
     linux::clear_cache();
     let started = std::time::Instant::now();
 
-    let tasks = providers().iter().cloned().map(|p| {
+    let tasks = providers().into_iter().map(|p| {
         let on = enabled.get(p.id()).and_then(|v| v.as_bool()) != Some(false);
         tokio::spawn(async move {
             let t0 = std::time::Instant::now();
