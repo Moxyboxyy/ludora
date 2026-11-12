@@ -161,6 +161,8 @@ export default function App() {
   // Favoriten (Spiel-IDs, launcherübergreifend)
   const [favorites, setFavorites] = useState(() => new Set());
   useEffect(() => { api.favorites.get().then((l) => setFavorites(new Set(l))).catch(() => {}); }, []);
+  // Favoriten hängen am Ludora-Konto: auf einem anderen Gerät geändert -> hier übernehmen
+  useEffect(() => api.favorites.onUpdate?.((l) => setFavorites(new Set(l || []))), []);
   const toggleFavorite = useCallback(async (game) => {
     setFavorites((prev) => { const n = new Set(prev); if (n.has(game.id)) n.delete(game.id); else n.add(game.id); return n; });
     try { setFavorites(new Set(await api.favorites.toggle(game.id))); } catch { /* bleibt lokal */ }

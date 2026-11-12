@@ -82,7 +82,7 @@ export async function installTauriBridge() {
     setCover: call('game:setCover'),
     running: call('games:running'),
     shop: { query: call('shop:query'), more: call('shop:more'), open: call('shop:open') },
-    favorites: { get: call('favorites:get'), toggle: call('favorites:toggle') },
+    favorites: { get: call('favorites:get'), toggle: call('favorites:toggle'), onUpdate: on('favorites:update') },
     focusGame: call('game:focus'),
     uninstall: call('game:uninstall'),
     openFolder: call('game:openFolder'),

@@ -487,6 +487,7 @@ pub fn toggle_favorite(key: &str) -> Value {
     let mut p = Map::new();
     p.insert("favorites".into(), json!(next));
     settings::set(p);
+    crate::vault::favorites_changed();
     json!(next)
 }
 

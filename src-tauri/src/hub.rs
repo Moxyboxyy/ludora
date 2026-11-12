@@ -16,6 +16,10 @@ const SECRET: &str = "hubSession";
 const MIN_PASSWORD: usize = 10;
 
 static APP: OnceCell<AppHandle> = OnceCell::new();
+
+pub fn app() -> Option<&'static AppHandle> {
+    APP.get()
+}
 static STATE: Lazy<Mutex<Value>> = Lazy::new(|| {
     Mutex::new(json!({ "status": "signedOut", "error": null, "friends": [], "user": null, "links": [], "configured": false }))
 });
@@ -516,9 +520,17 @@ fn start_loops() {
         n
     };
     tauri::async_runtime::spawn(async move {
+        let mut beats = 0u32;
         while LOOP_GEN.load(Ordering::SeqCst) == my {
             let _ = request("POST", "/rest/v1/rpc/heartbeat", Some(json!({})), true, &[]).await;
             tokio::time::sleep(Duration::from_secs(30)).await;
+            // Alle 5 Minuten den Tresor abgleichen – z. B. Favoriten, die auf einem anderen Gerät geändert wurden
+            beats += 1;
+            if beats % 10 == 0 && crate::vault::has_key() {
+                if let Err(e) = crate::vault::sync().await {
+                    crate::log::warn(&format!("[vault] {e}"));
+                }
+            }
         }
     });
     tauri::async_runtime::spawn(async move {

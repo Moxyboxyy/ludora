@@ -1,4 +1,4 @@
-//! Tresor: Anmeldungen (Epic, GOG) verschlüsselt im Ludora-Konto, damit sie auf anderen Geräten
+//! Tresor: Anmeldungen (Epic, GOG) und Favoriten verschlüsselt im Ludora-Konto, damit sie auf anderen Geräten
 //! mitkommen. Schlüssel per scrypt aus dem Passwort (gleiches Format wie die frühere Electron-Version).
 
 use aes_gcm::aead::{Aead, KeyInit, Payload};
@@ -9,7 +9,9 @@ use parking_lot::Mutex;
 use serde_json::{json, Map, Value};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
-pub const SYNCED: [&str; 2] = ["friendsEpic", "friendsGog"];
+pub const SYNCED: [&str; 3] = ["friendsEpic", "friendsGog", FAVORITES];
+/// Favoriten gehören zum Ludora-Konto, nicht zum Gerät (liegen lokal in settings.json, nicht bei den Geheimnissen)
+const FAVORITES: &str = "favorites";
 const KEY_SECRET: &str = "vaultKey";
 
 static USER: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
@@ -83,10 +85,14 @@ pub fn detach(forget: bool) {
 
 fn local_entries() -> Map<String, Value> {
     let mut out = Map::new();
-    for name in SYNCED {
+    let fav_at = crate::settings::get("favoritesAt").and_then(|v| v.as_i64()).unwrap_or(0);
+    if fav_at > 0 {
+        out.insert(FAVORITES.into(), json!({ "value": crate::settings::get("favorites").unwrap_or(json!([])), "at": fav_at }));
+    }
+    for name in SYNCED.iter().filter(|n| **n != FAVORITES) {
         let at = crate::secrets::changed_at(name);
         if at > 0 {
-            out.insert(name.into(), json!({ "value": crate::secrets::get(name), "at": at }));
+            out.insert(name.to_string(), json!({ "value": crate::secrets::get(name), "at": at }));
         }
     }
     out
@@ -100,6 +106,24 @@ pub async fn sync() -> anyhow::Result<Vec<String>> {
     let remote: Map<String, Value> = raw.and_then(|r| decrypt(&r, &k)).and_then(|v| v["entries"].as_object().cloned()).unwrap_or_default();
     let mut local = local_entries();
     let mut restored = vec![];
+    // Erstes Mal mit diesem Konto auf diesem Gerät: Favoriten von hier und aus dem Konto zusammenführen
+    // (danach gewinnt wie bei allem anderen die neuere Seite)
+    // – war hier vorher ein anderes Konto angemeldet, gelten nur die Favoriten des neuen Kontos
+    let fav_user = crate::settings::get("favoritesUser").and_then(|v| v.as_str().map(String::from));
+    if fav_user.as_deref() != Some(uid.as_str()) {
+        let mut all: Vec<Value> = if fav_user.is_none() { crate::settings::get("favorites").and_then(|v| v.as_array().cloned()).unwrap_or_default() } else { vec![] };
+        for f in remote.get(FAVORITES).and_then(|r| r["value"].as_array()).cloned().unwrap_or_default() {
+            if !all.contains(&f) {
+                all.push(f);
+            }
+        }
+        let now = chrono::Utc::now().timestamp_millis();
+        set_favorites(json!(all), now);
+        let mut p = Map::new();
+        p.insert("favoritesUser".into(), json!(uid));
+        crate::settings::set(p);
+        local.insert(FAVORITES.into(), json!({ "value": all, "at": now }));
+    }
     APPLYING.store(true, Ordering::SeqCst);
     for (name, r) in &remote {
         let Some(at) = r["at"].as_i64() else { continue };
@@ -107,6 +131,11 @@ pub async fn sync() -> anyhow::Result<Vec<String>> {
             continue;
         }
         if local.get(name).and_then(|l| l["at"].as_i64()).is_some_and(|l| l >= at) {
+            continue;
+        }
+        if name == FAVORITES {
+            set_favorites(r["value"].clone(), at);
+            local.insert(name.clone(), r.clone());
             continue;
         }
         crate::secrets::set_with(name, r["value"].clone(), Some(at), true);
@@ -132,6 +161,27 @@ pub async fn sync() -> anyhow::Result<Vec<String>> {
         crate::friends::on_restore(name);
     }
     Ok(restored)
+}
+
+/// Favoriten aus dem Konto übernehmen: speichern, Oberfläche und Tray-Menü aktualisieren
+fn set_favorites(list: Value, at: i64) {
+    let list = if list.is_array() { list } else { json!([]) };
+    let mut p = Map::new();
+    p.insert("favorites".into(), list.clone());
+    p.insert("favoritesAt".into(), json!(at));
+    crate::settings::set(p);
+    if let Some(app) = crate::hub::app() {
+        crate::broadcast(app, "favorites:update", list);
+        crate::tray::refresh(app);
+    }
+}
+
+/// Favoriten wurden hier geändert: Zeitpunkt merken und (angemeldet) ins Konto übertragen
+pub fn favorites_changed() {
+    let mut p = Map::new();
+    p.insert("favoritesAt".into(), json!(chrono::Utc::now().timestamp_millis()));
+    crate::settings::set(p);
+    schedule_push();
 }
 
 fn schedule_push() {
