@@ -15,6 +15,7 @@ pub mod hide;
 pub mod hub;
 pub mod icons;
 pub mod io;
+pub mod jumplist;
 pub mod ipc;
 pub mod library;
 pub mod log;
@@ -225,8 +226,14 @@ pub fn run() {
     log::info(&format!("[app] Ludora {} startet (Tauri)", env!("CARGO_PKG_VERSION")));
     let start_hidden = std::env::args().any(|a| a == "--hidden");
     tauri::Builder::default()
-        // Zweiter Start: nur das offene Fenster nach vorne holen
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| show_main(app)))
+        // Zweiter Start: das offene Fenster nach vorne holen – oder, mit --quit (Taskleiste „Ludora beenden“), beenden
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            if argv.iter().any(|a| a == jumplist::QUIT_ARG) {
+                quit(app);
+            } else {
+                show_main(app);
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -241,6 +248,12 @@ pub fn run() {
 
         .setup(move |app| {
             let h = app.handle().clone();
+            // „Ludora beenden“ aus der Taskleiste, aber Ludora lief gar nicht: gleich wieder schließen
+            if std::env::args().any(|a| a == jumplist::QUIT_ARG) {
+                h.exit(0);
+                return Ok(());
+            }
+            jumplist::install();
             if let Some(w) = app.get_webview_window("main") {
                 // Hauptfenster startet unsichtbar (tauri.conf.json): normal erst nach der Logo-Animation zeigen,
                 // beim Autostart (--hidden) bleibt es im Tray

@@ -67,6 +67,7 @@
     "linux": {
       "deb": {
         "depends": [],
+        "desktopTemplate": "linux/ludora.desktop",
         "files": {
           "/opt/Ludora/ludora": "linux/opt-ludora.sh"
         }
